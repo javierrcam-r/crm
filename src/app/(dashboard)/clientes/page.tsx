@@ -137,13 +137,15 @@ export default function ClientesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Clientes y Prospectos</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Clientes y Prospectos</h1>
+          <p className="text-gray-500 text-sm md:text-base mt-1">
             Gestiona tu cartera de clientes
           </p>
         </div>
-        <Link href="/clientes/nuevo">
-          <Button icon={<Plus className="h-4 w-4" />}>Nuevo Cliente</Button>
+        <Link href="/clientes/nuevo" className="w-full md:w-auto">
+          <Button icon={<Plus className="h-4 w-4" />} className="w-full md:w-auto">
+            Nuevo Cliente
+          </Button>
         </Link>
       </div>
 

@@ -241,4 +241,27 @@ export async function getVisitStats() {
   };
 }
 
+export async function getVisitsByDate(date: string) {
+  const supabase = getSupabaseClient();
+  
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const { data, error } = await supabase
+    .from('visits')
+    .select(`
+      *,
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad)
+    `)
+    .is('deleted_at', null)
+    .gte('scheduled_at', startOfDay.toISOString())
+    .lte('scheduled_at', endOfDay.toISOString())
+    .order('scheduled_at');
+
+  if (error) throw error;
+  return data as Visit[];
+}
+
 export type { Visit };

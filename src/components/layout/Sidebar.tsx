@@ -43,8 +43,8 @@ export default function Sidebar() {
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="p-6 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+      <div className="p-4 md:p-6 border-b border-gray-100">
+        <h1 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight">
           <span className="text-indigo-600">CRM</span> Camila Fernández
         </h1>
         <p className="text-xs text-gray-400 mt-0.5">Sistema de Gestión</p>
@@ -117,7 +117,8 @@ export default function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-white border border-gray-200 shadow-sm"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-white border border-gray-200 shadow-md active:scale-95 transition-transform"
+        aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
       >
         {mobileOpen ? (
           <X className="h-5 w-5 text-gray-600" />

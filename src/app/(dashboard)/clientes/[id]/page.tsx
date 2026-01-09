@@ -17,6 +17,9 @@ import {
   UserPlus,
   UserX,
   Plus,
+  CreditCard,
+  Star,
+  Tag,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -31,6 +34,9 @@ import {
   formatCurrency,
   visitStatusLabels,
   orderStatusLabels,
+  formaPagoLabels,
+  calidadPagoLabels,
+  calidadPagoColors,
   cn,
 } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -167,7 +173,8 @@ export default function ClienteDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Información del Cliente */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-4">
+          {/* Información de Contacto */}
           <Card>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Información</h2>
@@ -185,22 +192,27 @@ export default function ClienteDetailPage() {
             </div>
 
             <div className="space-y-4">
-              {customer.telefono && (
+              {customer.telefono ? (
                 <div className="flex items-center gap-3">
                   <Phone className="h-5 w-5 text-indigo-500" />
                   <div>
                     <p className="text-xs text-gray-400">Teléfono</p>
                     <a
                       href={`tel:${customer.telefono}`}
-                      className="text-gray-900 hover:text-indigo-600"
+                      className="text-gray-900 hover:text-indigo-600 font-medium"
                     >
                       {customer.telefono}
                     </a>
                   </div>
                 </div>
+              ) : (
+                <div className="flex items-center gap-3 text-gray-300">
+                  <Phone className="h-5 w-5" />
+                  <span className="text-sm">Sin teléfono</span>
+                </div>
               )}
 
-              {customer.email && (
+              {customer.email ? (
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-indigo-500" />
                   <div>
@@ -213,9 +225,14 @@ export default function ClienteDetailPage() {
                     </a>
                   </div>
                 </div>
+              ) : (
+                <div className="flex items-center gap-3 text-gray-300">
+                  <Mail className="h-5 w-5" />
+                  <span className="text-sm">Sin email</span>
+                </div>
               )}
 
-              {customer.direccion && (
+              {customer.direccion ? (
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-indigo-500 mt-0.5" />
                   <div>
@@ -228,36 +245,102 @@ export default function ClienteDetailPage() {
                     )}
                   </div>
                 </div>
+              ) : (
+                <div className="flex items-center gap-3 text-gray-300">
+                  <MapPin className="h-5 w-5" />
+                  <span className="text-sm">Sin dirección</span>
+                </div>
               )}
             </div>
-
-            {customer.etiquetas && customer.etiquetas.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-2">Etiquetas</p>
-                <div className="flex flex-wrap gap-2">
-                  {customer.etiquetas.map((tag) => (
-                    <Badge key={tag} variant="gray">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {customer.notas && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-400 mb-2">Notas</p>
-                <p className="text-sm text-gray-500 whitespace-pre-wrap">
+                <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">
                   {customer.notas}
                 </p>
               </div>
             )}
           </Card>
 
+          {/* Perfil Comercial */}
+          <Card>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-indigo-500" />
+              Perfil Comercial
+            </h2>
+
+            <div className="space-y-4">
+              {/* Forma de Pago */}
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <p className="text-xs text-gray-400">Forma de Pago</p>
+                  {customer.forma_pago ? (
+                    <Badge variant="blue">
+                      {formaPagoLabels[customer.forma_pago] || customer.forma_pago}
+                    </Badge>
+                  ) : (
+                    <span className="text-sm text-gray-400">Sin especificar</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Calidad de Pago */}
+              <div className="flex items-center gap-3">
+                <Star className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <p className="text-xs text-gray-400">Calidad de Pago</p>
+                  {customer.calidad_pago ? (
+                    <Badge 
+                      variant={
+                        customer.calidad_pago === 'buena' ? 'green' :
+                        customer.calidad_pago === 'regular' ? 'yellow' : 'red'
+                      }
+                    >
+                      {calidadPagoLabels[customer.calidad_pago] || customer.calidad_pago}
+                    </Badge>
+                  ) : (
+                    <span className="text-sm text-gray-400">Sin especificar</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Categoría de Compra */}
+              <div className="flex items-center gap-3">
+                <Tag className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <p className="text-xs text-gray-400">Categoría de Compra</p>
+                  {customer.categoria_compra ? (
+                    <Badge variant="purple">
+                      {customer.categoria_compra}
+                    </Badge>
+                  ) : (
+                    <span className="text-sm text-gray-400">Sin especificar</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Etiquetas generales */}
+              {customer.etiquetas && customer.etiquetas.length > 0 && (
+                <div className="pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-400 mb-2">Etiquetas</p>
+                  <div className="flex flex-wrap gap-2">
+                    {customer.etiquetas.map((tag) => (
+                      <Badge key={tag} variant="gray">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
           {/* Stats */}
           <Card>
             <h3 className="text-sm font-semibold text-gray-500 mb-4">Resumen</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="text-center p-3 rounded-lg bg-gray-50">
                 <p className="text-2xl font-bold text-gray-900">{visits.length}</p>
                 <p className="text-xs text-gray-500">Visitas</p>

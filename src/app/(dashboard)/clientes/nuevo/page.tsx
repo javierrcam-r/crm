@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CreditCard, Tag } from 'lucide-react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -11,7 +11,7 @@ import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { createCustomer } from '@/lib/services/customers';
 import toast from 'react-hot-toast';
-import type { CustomerInsert } from '@/types/database';
+import type { CustomerInsert, FormaPago, CalidadPago } from '@/types/database';
 
 type EstadoCliente = 'prospecto' | 'cliente' | 'perdido';
 
@@ -28,6 +28,9 @@ export default function NuevoClientePage() {
     ciudad: '',
     notas: '',
     etiquetas: [],
+    forma_pago: null,
+    calidad_pago: null,
+    categoria_compra: '',
   });
   const [etiquetasText, setEtiquetasText] = useState('');
 
@@ -64,6 +67,9 @@ export default function NuevoClientePage() {
         tipo,
         etapa_embudo,
         etiquetas,
+        forma_pago: formData.forma_pago || null,
+        calidad_pago: formData.calidad_pago || null,
+        categoria_compra: formData.categoria_compra || null,
       });
 
       toast.success('Cliente creado exitosamente');
@@ -80,6 +86,22 @@ export default function NuevoClientePage() {
     { value: 'prospecto', label: 'Prospecto' },
     { value: 'cliente', label: 'Cliente' },
     { value: 'perdido', label: 'Perdido' },
+  ];
+
+  const formaPagoOptions = [
+    { value: '', label: 'Sin especificar' },
+    { value: 'contado', label: 'Contado' },
+    { value: 'cheque', label: 'Cheque' },
+    { value: 'plazos_cortos', label: 'Plazos cortos (hasta 30 días)' },
+    { value: 'plazos_medios', label: 'Plazos medios (30-60 días)' },
+    { value: 'plazos_largos', label: 'Plazos largos (+60 días)' },
+  ];
+
+  const calidadPagoOptions = [
+    { value: '', label: 'Sin especificar' },
+    { value: 'buena', label: 'Buena paga' },
+    { value: 'regular', label: 'Regular' },
+    { value: 'mala', label: 'Mala paga' },
   ];
 
   return (
@@ -167,6 +189,35 @@ export default function NuevoClientePage() {
                 placeholder="Ciudad"
               />
             </div>
+          </div>
+
+          {/* Información Comercial */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-indigo-500" />
+              Información Comercial
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label="Forma de Pago"
+                options={formaPagoOptions}
+                value={formData.forma_pago || ''}
+                onChange={(e) => setFormData({ ...formData, forma_pago: (e.target.value || null) as FormaPago | null })}
+              />
+              <Select
+                label="Calidad de Pago"
+                options={calidadPagoOptions}
+                value={formData.calidad_pago || ''}
+                onChange={(e) => setFormData({ ...formData, calidad_pago: (e.target.value || null) as CalidadPago | null })}
+              />
+            </div>
+            <Input
+              label="Categoría de Compra Principal"
+              value={formData.categoria_compra || ''}
+              onChange={(e) => setFormData({ ...formData, categoria_compra: e.target.value })}
+              placeholder="Ej: Cosmética, Farmacia, Limpieza..."
+              icon={<Tag className="h-4 w-4" />}
+            />
           </div>
 
           {/* Adicional */}

@@ -349,4 +349,21 @@ export async function getTopProducts(days: number = 30) {
   return Object.values(productStats).sort((a, b) => b.totalQty - a.totalQty);
 }
 
+export async function getOrdersByDate(date: string) {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      customer:customers(id, nombre, telefono, direccion)
+    `)
+    .is('deleted_at', null)
+    .eq('order_date', date)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data as Order[];
+}
+
 export type { Order, OrderItem };

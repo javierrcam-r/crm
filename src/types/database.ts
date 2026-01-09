@@ -6,6 +6,8 @@ export type CustomerType = 'cliente' | 'prospecto';
 export type FunnelStage = 'nuevo' | 'contactado' | 'interesado' | 'negociacion' | 'ganado' | 'perdido';
 export type VisitStatus = 'programada' | 'completada' | 'cancelada' | 'no_atendio' | 'reprogramada';
 export type OrderStatus = 'borrador' | 'enviado' | 'confirmado' | 'entregado' | 'cancelado';
+export type FormaPago = 'contado' | 'cheque' | 'plazos_cortos' | 'plazos_medios' | 'plazos_largos';
+export type CalidadPago = 'buena' | 'regular' | 'mala';
 
 // =====================================================
 // CUSTOMER
@@ -23,6 +25,9 @@ export interface Customer {
   ciudad: string | null;
   etiquetas: string[];
   notas: string | null;
+  forma_pago: FormaPago | null;
+  calidad_pago: CalidadPago | null;
+  categoria_compra: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -39,6 +44,9 @@ export interface CustomerInsert {
   ciudad?: string | null;
   etiquetas?: string[];
   notas?: string | null;
+  forma_pago?: FormaPago | null;
+  calidad_pago?: CalidadPago | null;
+  categoria_compra?: string | null;
 }
 
 export interface CustomerUpdate extends Partial<CustomerInsert> {}

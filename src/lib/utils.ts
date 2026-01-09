@@ -127,6 +127,26 @@ export const funnelStageColors: Record<string, string> = {
   perdido: 'bg-red-100 text-red-800',
 };
 
+export const formaPagoLabels: Record<string, string> = {
+  contado: 'Contado',
+  cheque: 'Cheque',
+  plazos_cortos: 'Plazos cortos',
+  plazos_medios: 'Plazos medios',
+  plazos_largos: 'Plazos largos',
+};
+
+export const calidadPagoLabels: Record<string, string> = {
+  buena: 'Buena paga',
+  regular: 'Regular',
+  mala: 'Mala paga',
+};
+
+export const calidadPagoColors: Record<string, string> = {
+  buena: 'bg-green-100 text-green-800',
+  regular: 'bg-amber-100 text-amber-800',
+  mala: 'bg-red-100 text-red-800',
+};
+
 // =====================================================
 // EXPORT CSV
 // =====================================================

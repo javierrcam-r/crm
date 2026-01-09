@@ -17,6 +17,7 @@ import {
   Truck,
   XCircle,
   Printer,
+  Edit,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -197,6 +198,17 @@ export default function PedidoDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            {order.status !== 'entregado' && order.status !== 'cancelado' && (
+              <Link href={`/pedidos/${orderId}/editar`}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Edit className="h-4 w-4" />}
+                >
+                  Editar
+                </Button>
+              </Link>
+            )}
             <Button
               variant="ghost"
               size="sm"
