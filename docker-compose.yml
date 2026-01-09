@@ -1,0 +1,57 @@
+# =====================================================
+# CRM Camila Fernández - Docker Compose
+# =====================================================
+# 
+# Uso rápido:
+#   1. Copia .env.example a .env y configura las variables
+#   2. Ejecuta: docker-compose up -d
+#   3. Abre: http://localhost:3000
+#
+# Comandos útiles:
+#   - Iniciar:      docker-compose up -d
+#   - Detener:      docker-compose down
+#   - Ver logs:     docker-compose logs -f
+#   - Reconstruir:  docker-compose up -d --build
+#
+# =====================================================
+
+services:
+  crm-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-camila-fernandez
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# =====================================================
+# Configuración opcional con Traefik (para producción)
+# =====================================================
+# Descomenta las siguientes líneas si usas Traefik como reverse proxy
+#
+#   crm-app:
+#     labels:
+#       - "traefik.enable=true"
+#       - "traefik.http.routers.crm.rule=Host(`tu-dominio.com`)"
+#       - "traefik.http.routers.crm.entrypoints=websecure"
+#       - "traefik.http.routers.crm.tls.certresolver=letsencrypt"
+#       - "traefik.http.services.crm.loadbalancer.server.port=3000"
+#     networks:
+#       - traefik-network
+#
+# networks:
+#   traefik-network:
+#     external: true
+

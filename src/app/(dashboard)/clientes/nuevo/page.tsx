@@ -1,0 +1,205 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
+import { createCustomer } from '@/lib/services/customers';
+import toast from 'react-hot-toast';
+import type { CustomerInsert } from '@/types/database';
+
+type EstadoCliente = 'prospecto' | 'cliente' | 'perdido';
+
+export default function NuevoClientePage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [estadoCliente, setEstadoCliente] = useState<EstadoCliente>('prospecto');
+  const [formData, setFormData] = useState<Omit<CustomerInsert, 'tipo' | 'etapa_embudo'>>({
+    nombre: '',
+    telefono: '',
+    email: '',
+    direccion: '',
+    zona: '',
+    ciudad: '',
+    notas: '',
+    etiquetas: [],
+  });
+  const [etiquetasText, setEtiquetasText] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.nombre.trim()) {
+      toast.error('El nombre es obligatorio');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const etiquetas = etiquetasText
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      // Mapear el estado seleccionado a tipo y etapa_embudo
+      let tipo: 'cliente' | 'prospecto' = 'prospecto';
+      let etapa_embudo: CustomerInsert['etapa_embudo'] = 'nuevo';
+      
+      if (estadoCliente === 'cliente') {
+        tipo = 'cliente';
+        etapa_embudo = 'ganado';
+      } else if (estadoCliente === 'perdido') {
+        tipo = 'prospecto';
+        etapa_embudo = 'perdido';
+      }
+
+      await createCustomer({
+        ...formData,
+        tipo,
+        etapa_embudo,
+        etiquetas,
+      });
+
+      toast.success('Cliente creado exitosamente');
+      router.push('/clientes');
+    } catch (error) {
+      console.error('Error creando cliente:', error);
+      toast.error('Error al crear el cliente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const estadoOptions = [
+    { value: 'prospecto', label: 'Prospecto' },
+    { value: 'cliente', label: 'Cliente' },
+    { value: 'perdido', label: 'Perdido' },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/clientes">
+          <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
+            Volver
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Nuevo Cliente</h1>
+          <p className="text-gray-500">Agrega un nuevo cliente o prospecto</p>
+        </div>
+      </div>
+
+      {/* Form */}
+      <Card>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Datos básicos */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+              Datos Básicos
+            </h3>
+            <Input
+              label="Nombre *"
+              value={formData.nombre}
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+              placeholder="Nombre del cliente o empresa"
+              required
+            />
+            <Select
+              label="Estado"
+              options={estadoOptions}
+              value={estadoCliente}
+              onChange={(e) => setEstadoCliente(e.target.value as EstadoCliente)}
+            />
+          </div>
+
+          {/* Contacto */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+              Información de Contacto
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Teléfono"
+                value={formData.telefono || ''}
+                onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                placeholder="+595 XXX XXX XXX"
+              />
+              <Input
+                label="Email"
+                type="email"
+                value={formData.email || ''}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="correo@ejemplo.com"
+              />
+            </div>
+          </div>
+
+          {/* Ubicación */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+              Ubicación
+            </h3>
+            <Input
+              label="Dirección"
+              value={formData.direccion || ''}
+              onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+              placeholder="Calle, número, referencias"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Zona"
+                value={formData.zona || ''}
+                onChange={(e) => setFormData({ ...formData, zona: e.target.value })}
+                placeholder="Barrio o zona"
+              />
+              <Input
+                label="Ciudad"
+                value={formData.ciudad || ''}
+                onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
+                placeholder="Ciudad"
+              />
+            </div>
+          </div>
+
+          {/* Adicional */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+              Información Adicional
+            </h3>
+            <Input
+              label="Etiquetas"
+              value={etiquetasText}
+              onChange={(e) => setEtiquetasText(e.target.value)}
+              placeholder="farmacia, mayorista, zona norte (separadas por coma)"
+            />
+            <Textarea
+              label="Notas"
+              value={formData.notas || ''}
+              onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
+              placeholder="Notas adicionales sobre el cliente..."
+              rows={4}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <Link href="/clientes">
+              <Button variant="secondary">Cancelar</Button>
+            </Link>
+            <Button type="submit" loading={loading}>
+              Guardar Cliente
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}

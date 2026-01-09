@@ -1,0 +1,483 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import {
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  List,
+  Grid,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+} from 'lucide-react';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
+import { getVisits, getPendingVisits, type Visit } from '@/lib/services/visits';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  isToday,
+  addMonths,
+  subMonths,
+  addWeeks,
+  subWeeks,
+} from 'date-fns';
+import { es } from 'date-fns/locale';
+import {
+  formatTime,
+  visitStatusLabels,
+  visitStatusColors,
+  cn,
+} from '@/lib/utils';
+
+type ViewType = 'month' | 'week' | 'list';
+
+export default function CalendarioPage() {
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [pendingVisits, setPendingVisits] = useState<Visit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState<ViewType>('month');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, [currentDate, view]);
+
+  const loadData = async () => {
+    try {
+      let dateFrom: string;
+      let dateTo: string;
+
+      if (view === 'month') {
+        const start = startOfWeek(startOfMonth(currentDate), { locale: es });
+        const end = endOfWeek(endOfMonth(currentDate), { locale: es });
+        dateFrom = start.toISOString();
+        dateTo = end.toISOString();
+      } else if (view === 'week') {
+        const start = startOfWeek(currentDate, { locale: es });
+        const end = endOfWeek(currentDate, { locale: es });
+        dateFrom = start.toISOString();
+        dateTo = end.toISOString();
+      } else {
+        const start = new Date();
+        start.setDate(start.getDate() - 7);
+        const end = new Date();
+        end.setDate(end.getDate() + 30);
+        dateFrom = start.toISOString();
+        dateTo = end.toISOString();
+      }
+
+      const [visitsData, pendingData] = await Promise.all([
+        getVisits({ date_from: dateFrom, date_to: dateTo }),
+        getPendingVisits(),
+      ]);
+
+      setVisits(visitsData);
+      setPendingVisits(pendingData);
+    } catch (error) {
+      console.error('Error cargando visitas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const navigatePrevious = () => {
+    if (view === 'month') {
+      setCurrentDate(subMonths(currentDate, 1));
+    } else if (view === 'week') {
+      setCurrentDate(subWeeks(currentDate, 1));
+    }
+  };
+
+  const navigateNext = () => {
+    if (view === 'month') {
+      setCurrentDate(addMonths(currentDate, 1));
+    } else if (view === 'week') {
+      setCurrentDate(addWeeks(currentDate, 1));
+    }
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+  };
+
+  const getVisitsForDay = (date: Date) => {
+    return visits.filter((visit) =>
+      isSameDay(new Date(visit.scheduled_at), date)
+    );
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completada': return 'bg-emerald-50 text-emerald-700';
+      case 'programada': return 'bg-blue-50 text-blue-700';
+      case 'cancelada': return 'bg-gray-100 text-gray-600';
+      case 'no_atendio': return 'bg-amber-50 text-amber-700';
+      default: return 'bg-purple-50 text-purple-700';
+    }
+  };
+
+  // Generar días del calendario
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarStart = startOfWeek(monthStart, { locale: es });
+  const calendarEnd = endOfWeek(monthEnd, { locale: es });
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  // Semana actual
+  const weekStart = startOfWeek(currentDate, { locale: es });
+  const weekEnd = endOfWeek(currentDate, { locale: es });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Cargando calendario...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Calendario</h1>
+          <p className="text-gray-500 mt-1">Gestiona tu agenda de visitas</p>
+        </div>
+        <Link href="/calendario/nueva">
+          <Button icon={<Plus className="h-4 w-4" />}>Nueva Visita</Button>
+        </Link>
+      </div>
+
+      {/* Visitas Pendientes */}
+      {pendingVisits.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/30">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <h2 className="font-semibold text-gray-900">
+              Visitas Vencidas
+              <Badge variant="yellow" className="ml-2">{pendingVisits.length}</Badge>
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pendingVisits.slice(0, 6).map((visit) => (
+              <Link
+                key={visit.id}
+                href={`/calendario/${visit.id}`}
+                className="flex items-center gap-3 p-3 rounded-lg bg-amber-100/50 hover:bg-amber-100 transition-colors"
+              >
+                <Clock className="h-4 w-4 text-amber-600" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">
+                    {visit.customer?.nombre}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {format(new Date(visit.scheduled_at), "dd MMM 'a las' HH:mm", { locale: es })}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Calendar Controls */}
+      <Card padding="sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={navigatePrevious}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h2 className="text-lg font-semibold text-gray-900 min-w-[200px] text-center">
+              {view === 'month'
+                ? format(currentDate, 'MMMM yyyy', { locale: es })
+                : view === 'week'
+                ? `${format(weekStart, 'd MMM', { locale: es })} - ${format(weekEnd, 'd MMM yyyy', { locale: es })}`
+                : 'Próximas Visitas'}
+            </h2>
+            <Button variant="ghost" size="sm" onClick={navigateNext}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={goToToday} className="ml-2">
+              Hoy
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={view === 'month' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setView('month')}
+              icon={<Grid className="h-4 w-4" />}
+            >
+              Mes
+            </Button>
+            <Button
+              variant={view === 'week' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setView('week')}
+              icon={<CalendarIcon className="h-4 w-4" />}
+            >
+              Semana
+            </Button>
+            <Button
+              variant={view === 'list' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setView('list')}
+              icon={<List className="h-4 w-4" />}
+            >
+              Lista
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Calendar Views */}
+      {view === 'month' && (
+        <Card padding="none">
+          {/* Days Header */}
+          <div className="grid grid-cols-7 border-b border-gray-200">
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
+              <div
+                key={day}
+                className="p-3 text-center text-sm font-semibold text-gray-500 bg-gray-50"
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7">
+            {calendarDays.map((day, index) => {
+              const dayVisits = getVisitsForDay(day);
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const isSelected = selectedDate && isSameDay(day, selectedDate);
+              const today = isToday(day);
+
+              return (
+                <div
+                  key={index}
+                  onClick={() => setSelectedDate(day)}
+                  className={cn(
+                    'calendar-day min-h-[100px] cursor-pointer',
+                    !isCurrentMonth && 'calendar-day-other-month',
+                    today && 'calendar-day-today',
+                    isSelected && 'ring-2 ring-indigo-500 ring-inset'
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className={cn(
+                        'text-sm font-medium',
+                        today ? 'bg-indigo-500 text-white px-2 py-0.5 rounded' : 'text-gray-900'
+                      )}
+                    >
+                      {format(day, 'd')}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {dayVisits.slice(0, 3).map((visit) => (
+                      <Link
+                        key={visit.id}
+                        href={`/calendario/${visit.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                          'calendar-event block',
+                          getStatusColor(visit.status)
+                        )}
+                      >
+                        <span className="font-medium">{formatTime(visit.scheduled_at)}</span>
+                        <span className="ml-1 truncate">{visit.customer?.nombre}</span>
+                      </Link>
+                    ))}
+                    {dayVisits.length > 3 && (
+                      <p className="text-xs text-gray-400 pl-1">
+                        +{dayVisits.length - 3} más
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {view === 'week' && (
+        <Card padding="none">
+          <div className="grid grid-cols-7 divide-x divide-gray-200">
+            {weekDays.map((day, index) => {
+              const dayVisits = getVisitsForDay(day);
+              const today = isToday(day);
+
+              return (
+                <div key={index} className="min-h-[400px]">
+                  <div
+                    className={cn(
+                      'p-3 text-center border-b border-gray-200',
+                      today && 'bg-indigo-50'
+                    )}
+                  >
+                    <p className="text-xs text-gray-500">
+                      {format(day, 'EEEE', { locale: es })}
+                    </p>
+                    <p
+                      className={cn(
+                        'text-xl font-bold mt-1',
+                        today ? 'text-indigo-600' : 'text-gray-900'
+                      )}
+                    >
+                      {format(day, 'd')}
+                    </p>
+                  </div>
+                  <div className="p-2 space-y-2">
+                    {dayVisits.map((visit) => (
+                      <Link
+                        key={visit.id}
+                        href={`/calendario/${visit.id}`}
+                        className={cn(
+                          'block p-2 rounded-lg text-sm',
+                          getStatusColor(visit.status)
+                        )}
+                      >
+                        <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                        <p className="truncate">{visit.customer?.nombre}</p>
+                        {visit.objetivo && (
+                          <p className="text-xs opacity-80 truncate mt-1">
+                            {visit.objetivo}
+                          </p>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {view === 'list' && (
+        <Card>
+          {visits.length === 0 ? (
+            <EmptyState
+              icon={CalendarIcon}
+              title="No hay visitas programadas"
+              description="Programa tu primera visita"
+              action={{
+                label: 'Nueva Visita',
+                onClick: () => (window.location.href = '/calendario/nueva'),
+              }}
+            />
+          ) : (
+            <div className="space-y-3">
+              {visits.map((visit) => (
+                <Link
+                  key={visit.id}
+                  href={`/calendario/${visit.id}`}
+                  className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="text-center min-w-[60px]">
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(visit.scheduled_at), 'EEE', { locale: es })}
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {format(new Date(visit.scheduled_at), 'd')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(visit.scheduled_at), 'MMM', { locale: es })}
+                      </p>
+                    </div>
+                    <div className="border-l border-gray-200 pl-4">
+                      <p className="font-semibold text-indigo-600">
+                        {formatTime(visit.scheduled_at)}
+                      </p>
+                      <p className="font-medium text-gray-900">
+                        {visit.customer?.nombre}
+                      </p>
+                      {visit.objetivo && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {visit.objetivo}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge
+                    variant={
+                      visit.status === 'completada' ? 'green' :
+                      visit.status === 'programada' ? 'blue' :
+                      visit.status === 'cancelada' ? 'gray' : 'yellow'
+                    }
+                  >
+                    {visitStatusLabels[visit.status]}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Selected Day Detail */}
+      {selectedDate && view === 'month' && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900">
+              {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+            </h3>
+            <Link href={`/calendario/nueva?date=${selectedDate.toISOString()}`}>
+              <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />}>
+                Agregar
+              </Button>
+            </Link>
+          </div>
+          {getVisitsForDay(selectedDate).length === 0 ? (
+            <p className="text-center text-gray-500 py-4">
+              No hay visitas para este día
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {getVisitsForDay(selectedDate).map((visit) => (
+                <Link
+                  key={visit.id}
+                  href={`/calendario/${visit.id}`}
+                  className={cn(
+                    'flex items-center justify-between p-3 rounded-lg',
+                    getStatusColor(visit.status)
+                  )}
+                >
+                  <div>
+                    <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                    <p>{visit.customer?.nombre}</p>
+                  </div>
+                  <Badge
+                    variant={
+                      visit.status === 'completada' ? 'green' :
+                      visit.status === 'programada' ? 'blue' : 'gray'
+                    }
+                  >
+                    {visitStatusLabels[visit.status]}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  );
+}

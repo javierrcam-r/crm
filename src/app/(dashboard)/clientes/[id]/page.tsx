@@ -1,0 +1,430 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  ArrowLeft,
+  Phone,
+  Mail,
+  MapPin,
+  Edit,
+  Trash2,
+  Calendar,
+  ShoppingCart,
+  Clock,
+  Building,
+  UserPlus,
+  UserX,
+  Plus,
+} from 'lucide-react';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import { getCustomer, deleteCustomer, type Customer } from '@/lib/services/customers';
+import { getVisits, type Visit } from '@/lib/services/visits';
+import { getOrders, type Order } from '@/lib/services/orders';
+import {
+  formatDate,
+  formatDateTime,
+  formatCurrency,
+  visitStatusLabels,
+  orderStatusLabels,
+  cn,
+} from '@/lib/utils';
+import toast from 'react-hot-toast';
+
+// Helper para obtener el estado simplificado
+const getEstadoCliente = (customer: Customer) => {
+  if (customer.etapa_embudo === 'perdido') {
+    return { label: 'Perdido', variant: 'red' as const, icon: UserX };
+  }
+  if (customer.tipo === 'cliente' || customer.etapa_embudo === 'ganado') {
+    return { label: 'Cliente', variant: 'green' as const, icon: Building };
+  }
+  return { label: 'Prospecto', variant: 'blue' as const, icon: UserPlus };
+};
+
+export default function ClienteDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const customerId = params.id as string;
+
+  useEffect(() => {
+    loadData();
+  }, [customerId]);
+
+  const loadData = async () => {
+    try {
+      const [customerData, visitsData, ordersData] = await Promise.all([
+        getCustomer(customerId),
+        getVisits({ customer_id: customerId }),
+        getOrders({ customer_id: customerId }),
+      ]);
+      setCustomer(customerData);
+      setVisits(visitsData);
+      setOrders(ordersData);
+    } catch (error) {
+      console.error('Error cargando cliente:', error);
+      toast.error('Error al cargar el cliente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteCustomer(customerId);
+      toast.success('Cliente eliminado');
+      router.push('/clientes');
+    } catch (error) {
+      console.error('Error eliminando:', error);
+      toast.error('Error al eliminar el cliente');
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Cargando cliente...</div>
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl text-gray-900">Cliente no encontrado</h2>
+        <Link href="/clientes">
+          <Button variant="secondary" className="mt-4">
+            Volver a Clientes
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const estadoInfo = getEstadoCliente(customer);
+  const IconoEstado = estadoInfo.icon;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/clientes">
+            <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
+              Volver
+            </Button>
+          </Link>
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                'p-3 rounded-xl',
+                estadoInfo.variant === 'green' ? 'bg-emerald-50' : 
+                estadoInfo.variant === 'red' ? 'bg-red-50' : 'bg-blue-50'
+              )}
+            >
+              <IconoEstado className={cn(
+                'h-6 w-6',
+                estadoInfo.variant === 'green' ? 'text-emerald-600' : 
+                estadoInfo.variant === 'red' ? 'text-red-600' : 'text-blue-600'
+              )} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{customer.nombre}</h1>
+              <Badge variant={estadoInfo.variant}>
+                {estadoInfo.label}
+              </Badge>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Link href={`/calendario/nueva?customer=${customerId}`}>
+            <Button variant="secondary" icon={<Calendar className="h-4 w-4" />}>
+              Programar Visita
+            </Button>
+          </Link>
+          <Link href={`/pedidos/nuevo?customer=${customerId}`}>
+            <Button icon={<ShoppingCart className="h-4 w-4" />}>
+              Crear Pedido
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Información del Cliente */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Información</h2>
+              <div className="flex gap-2">
+                <Link href={`/clientes/${customerId}/editar`}>
+                  <Button variant="ghost" size="sm" icon={<Edit className="h-4 w-4" />} />
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Trash2 className="h-4 w-4 text-red-500" />}
+                  onClick={() => setShowDeleteModal(true)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {customer.telefono && (
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-indigo-500" />
+                  <div>
+                    <p className="text-xs text-gray-400">Teléfono</p>
+                    <a
+                      href={`tel:${customer.telefono}`}
+                      className="text-gray-900 hover:text-indigo-600"
+                    >
+                      {customer.telefono}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {customer.email && (
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-indigo-500" />
+                  <div>
+                    <p className="text-xs text-gray-400">Email</p>
+                    <a
+                      href={`mailto:${customer.email}`}
+                      className="text-gray-900 hover:text-indigo-600"
+                    >
+                      {customer.email}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {customer.direccion && (
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-indigo-500 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-gray-400">Dirección</p>
+                    <p className="text-gray-900">{customer.direccion}</p>
+                    {(customer.zona || customer.ciudad) && (
+                      <p className="text-sm text-gray-500">
+                        {[customer.zona, customer.ciudad].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {customer.etiquetas && customer.etiquetas.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-2">Etiquetas</p>
+                <div className="flex flex-wrap gap-2">
+                  {customer.etiquetas.map((tag) => (
+                    <Badge key={tag} variant="gray">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {customer.notas && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-2">Notas</p>
+                <p className="text-sm text-gray-500 whitespace-pre-wrap">
+                  {customer.notas}
+                </p>
+              </div>
+            )}
+          </Card>
+
+          {/* Stats */}
+          <Card>
+            <h3 className="text-sm font-semibold text-gray-500 mb-4">Resumen</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <p className="text-2xl font-bold text-gray-900">{visits.length}</p>
+                <p className="text-xs text-gray-500">Visitas</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                <p className="text-xs text-gray-500">Pedidos</p>
+              </div>
+              <div className="col-span-2 text-center p-3 rounded-lg bg-emerald-50">
+                <p className="text-2xl font-bold text-emerald-600">
+                  {formatCurrency(orders.reduce((sum, o) => sum + o.total, 0))}
+                </p>
+                <p className="text-xs text-gray-500">Total Compras</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Timeline */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Visitas */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Visitas
+                <Badge variant="blue" className="ml-2">
+                  {visits.length}
+                </Badge>
+              </h2>
+              <Link href={`/calendario/nueva?customer=${customerId}`}>
+                <Button variant="ghost" size="sm" icon={<Plus className="h-4 w-4" />}>
+                  Nueva
+                </Button>
+              </Link>
+            </div>
+
+            {visits.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">
+                No hay visitas registradas
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {visits.map((visit) => (
+                  <Link
+                    key={visit.id}
+                    href={`/calendario/${visit.id}`}
+                    className="block p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-blue-50">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {formatDateTime(visit.scheduled_at)}
+                          </p>
+                          {visit.objetivo && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              {visit.objetivo}
+                            </p>
+                          )}
+                          {visit.observaciones && (
+                            <p className="text-sm text-gray-400 mt-1 italic">
+                              "{visit.observaciones}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          visit.status === 'completada' ? 'green' :
+                          visit.status === 'programada' ? 'blue' :
+                          visit.status === 'cancelada' ? 'gray' : 'yellow'
+                        }
+                      >
+                        {visitStatusLabels[visit.status]}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Pedidos */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Pedidos
+                <Badge variant="green" className="ml-2">
+                  {orders.length}
+                </Badge>
+              </h2>
+              <Link href={`/pedidos/nuevo?customer=${customerId}`}>
+                <Button variant="ghost" size="sm" icon={<Plus className="h-4 w-4" />}>
+                  Nuevo
+                </Button>
+              </Link>
+            </div>
+
+            {orders.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">
+                No hay pedidos registrados
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {orders.map((order) => (
+                  <Link
+                    key={order.id}
+                    href={`/pedidos/${order.id}`}
+                    className="block p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-50">
+                          <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {formatDate(order.order_date)}
+                          </p>
+                          <p className="text-sm text-emerald-600">
+                            {formatCurrency(order.total)}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          order.status === 'entregado' ? 'green' :
+                          order.status === 'confirmado' ? 'blue' :
+                          order.status === 'cancelado' ? 'red' : 'gray'
+                        }
+                      >
+                        {orderStatusLabels[order.status]}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Delete Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Eliminar Cliente"
+        size="sm"
+      >
+        <div className="p-6">
+          <p className="text-gray-500 mb-6">
+            ¿Estás segura de eliminar a <strong className="text-gray-900">{customer.nombre}</strong>?
+            Esta acción no se puede deshacer.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDelete} loading={deleting}>
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
