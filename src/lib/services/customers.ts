@@ -118,7 +118,7 @@ export async function getCities() {
 
   if (error) throw error;
   
-  const cities = [...new Set(data.map(c => c.ciudad).filter(Boolean))];
+  const cities = Array.from(new Set(data.map(c => c.ciudad).filter(Boolean)));
   return cities as string[];
 }
 
@@ -133,7 +133,7 @@ export async function getZones() {
 
   if (error) throw error;
   
-  const zones = [...new Set(data.map(c => c.zona).filter(Boolean))];
+  const zones = Array.from(new Set(data.map(c => c.zona).filter(Boolean)));
   return zones as string[];
 }
 

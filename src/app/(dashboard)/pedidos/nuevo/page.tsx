@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -9,6 +9,7 @@ import {
   Plus,
   Trash2,
   Gift,
+  Loader2,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -32,7 +33,23 @@ interface OrderItemDraft {
   observacion_item: string;
 }
 
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+    </div>
+  );
+}
+
 export default function NuevoPedidoPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <NuevoPedidoContent />
+    </Suspense>
+  );
+}
+
+function NuevoPedidoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedCustomerId = searchParams.get('customer');

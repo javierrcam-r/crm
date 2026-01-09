@@ -62,8 +62,10 @@ export function formatNumber(num: number) {
 // CLASES CSS
 // =====================================================
 
-export function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(' ');
+type ClassValue = string | number | bigint | boolean | null | undefined;
+
+export function cn(...classes: ClassValue[]) {
+  return classes.filter((c): c is string => typeof c === 'string' && Boolean(c)).join(' ');
 }
 
 // =====================================================

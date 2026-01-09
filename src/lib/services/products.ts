@@ -107,7 +107,7 @@ export async function getCategories() {
 
   if (error) throw error;
   
-  const categories = [...new Set(data.map(p => p.categoria).filter(Boolean))];
+  const categories = Array.from(new Set(data.map(p => p.categoria).filter(Boolean)));
   return categories as string[];
 }
 
