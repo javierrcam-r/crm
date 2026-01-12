@@ -69,6 +69,15 @@ function NuevoPedidoContent() {
   const [productSearch, setProductSearch] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
 
+  // Fecha local (YYYY-MM-DD) sin depender de zona horaria UTC
+  const getLocalDateISO = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const d = now.getDate();
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -164,6 +173,7 @@ function NuevoPedidoContent() {
       const order = await createOrder({
         customer_id: customerId,
         observacion_general: observacionGeneral || undefined,
+        order_date: getLocalDateISO(),
         status: 'borrador',
       });
 

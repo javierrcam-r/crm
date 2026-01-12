@@ -33,6 +33,7 @@ import {
 import {
   formatDate,
   formatCurrency,
+  formatTime,
   orderStatusLabels,
 } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -107,6 +108,43 @@ export default function PedidoDetailPage() {
     }
   };
 
+  // Formateo de fecha sin desfase por zona horaria (YYYY-MM-DD)
+  const formatOrderDateLocal = (dateInput: string | Date | null | undefined) => {
+    if (!dateInput) return '';
+    // Si es Date, usar componentes UTC para evitar desfase por timezone
+    if (dateInput instanceof Date) {
+      const y = dateInput.getUTCFullYear();
+      const m = dateInput.getUTCMonth() + 1;
+      const d = dateInput.getUTCDate();
+      return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+    }
+    // Si es string YYYY-MM-DD, formatear sin crear Date con TZ
+    const parts = dateInput.split('-').map(Number);
+    if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+      const [year, month, day] = parts;
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
+    return formatDate(dateInput);
+  };
+
+  // Para nombre de archivo (yyyy-MM-dd) sin desfase
+  const formatOrderDateFile = (dateInput: string | Date | null | undefined) => {
+    if (!dateInput) return 'fecha';
+    if (dateInput instanceof Date) {
+      const y = dateInput.getUTCFullYear();
+      const m = dateInput.getUTCMonth() + 1;
+      const d = dateInput.getUTCDate();
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    const parts = (dateInput as string).split('-').map(Number);
+    if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+      const [year, month, day] = parts;
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    // fallback
+    return formatDate(dateInput, 'yyyy-MM-dd');
+  };
+
   const exportToPDF = () => {
     if (!order) return;
 
@@ -146,7 +184,7 @@ export default function PedidoDetailPage() {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
-    let subInfo = formatDate(order.order_date);
+    let subInfo = formatOrderDateLocal(order.order_date as string);
     if (order.customer?.telefono) {
       subInfo += `   |   Tel: ${order.customer.telefono}`;
     }
@@ -296,14 +334,14 @@ export default function PedidoDetailPage() {
     doc.setFontSize(6);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `CRM Vendedora • ${formatDate(new Date(), 'dd/MM/yyyy HH:mm')}`,
+      `CRM Vendedora • ${formatOrderDateLocal(new Date().toISOString().split('T')[0])} ${formatTime(new Date())}`,
       pageWidth / 2,
       288,
       { align: 'center' }
     );
 
     // Guardar
-    const fileName = `Pedido_${order.customer?.nombre?.replace(/\s+/g, '_') || 'cliente'}_${formatDate(order.order_date, 'yyyy-MM-dd')}.pdf`;
+    const fileName = `Pedido_${order.customer?.nombre?.replace(/\s+/g, '_') || 'cliente'}_${formatOrderDateFile(order.order_date as string)}.pdf`;
     doc.save(fileName);
     toast.success('PDF exportado');
   };
@@ -347,7 +385,7 @@ export default function PedidoDetailPage() {
                   {orderStatusLabels[order.status]}
                 </Badge>
                 <span className="text-sm text-gray-500">
-                  {formatDate(order.order_date)}
+                  {formatOrderDateLocal(order.order_date as string)}
                 </span>
               </div>
             </div>
