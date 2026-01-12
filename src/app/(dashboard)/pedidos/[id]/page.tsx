@@ -333,8 +333,8 @@ export default function PedidoDetailPage() {
     <>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
             <Link href="/pedidos">
               <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
                 Volver
@@ -352,13 +352,14 @@ export default function PedidoDetailPage() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col xs:flex-row flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
             {order.status !== 'entregado' && order.status !== 'cancelado' && (
               <Link href={`/pedidos/${orderId}/editar`}>
                 <Button
                   variant="secondary"
                   size="sm"
                   icon={<Edit className="h-4 w-4" />}
+                  className="w-full xs:w-auto"
                 >
                   Editar
                 </Button>
@@ -369,6 +370,7 @@ export default function PedidoDetailPage() {
               size="sm"
               icon={<FileDown className="h-4 w-4" />}
               onClick={exportToPDF}
+              className="w-full xs:w-auto"
             >
               Exportar PDF
             </Button>
@@ -377,6 +379,7 @@ export default function PedidoDetailPage() {
               size="sm"
               icon={<Trash2 className="h-4 w-4 text-red-500" />}
               onClick={() => setShowDeleteModal(true)}
+              className="w-full xs:w-auto justify-center"
             />
           </div>
         </div>

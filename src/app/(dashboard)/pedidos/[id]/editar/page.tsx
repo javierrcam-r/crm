@@ -199,12 +199,9 @@ function EditarPedidoContent() {
     setSaving(true);
 
     try {
-      // Update order
-      await updateOrder(orderId, {
-        customer_id: customerId,
-        observacion_general: observacionGeneral || undefined,
-      });
-
+      // IMPORTANTE: Primero actualizar items, luego el pedido
+      // porque el trigger recalcula totales cuando se modifican items
+      
       // Delete removed items
       for (const itemId of deletedItemIds) {
         await deleteOrderItem(itemId);
@@ -231,6 +228,28 @@ function EditarPedidoContent() {
             observacion_item: item.observacion_item || undefined,
           });
         }
+      }
+
+      // Update order AL FINAL (después de items) para que no sea sobrescrito por el trigger
+      const finalObservation = observacionGeneral.trim();
+      const obsToSend = finalObservation === '' ? null : finalObservation;
+      const updated = await updateOrder(orderId, {
+        customer_id: customerId,
+        observacion_general: obsToSend,
+      });
+
+      // Validar inmediatamente que el valor se guardó
+      const reloaded = await getOrder(orderId);
+      if ((reloaded.observacion_general || '') !== (obsToSend || '')) {
+        console.warn('La observación no coincidió después de guardar', {
+          enviado: finalObservation,
+          enviadoFinal: obsToSend,
+          recibido: reloaded.observacion_general,
+          updatedReturn: updated?.observacion_general,
+        });
+        toast.error('No se pudo actualizar la observación. Intenta de nuevo.');
+        setSaving(false);
+        return;
       }
 
       toast.success('Pedido actualizado exitosamente');
