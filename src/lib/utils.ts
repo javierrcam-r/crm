@@ -235,3 +235,73 @@ export function extractCoordsFromGoogleMapsUrl(url: string): Coordinates | null 
 export function generateGoogleMapsUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps?q=${lat},${lng}`;
 }
+
+export interface ReverseGeocodeResult {
+  direccion: string;
+  zona?: string;
+  ciudad?: string;
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { headers: { 'Accept-Language': 'es', 'User-Agent': 'CRM-App' } }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data || !data.address) return null;
+    const addr = data.address;
+    const parts: string[] = [];
+    if (addr.road) {
+      parts.push(addr.road + (addr.house_number ? ` ${addr.house_number}` : ''));
+    }
+    if (addr.neighbourhood || addr.suburb) parts.push(addr.neighbourhood || addr.suburb);
+    const ciudad = addr.city || addr.town || addr.municipality || '';
+    const zona = addr.neighbourhood || addr.suburb || addr.quarter || '';
+    return {
+      direccion: parts.join(', ') || data.display_name?.split(',').slice(0, 3).join(',') || '',
+      zona,
+      ciudad,
+    };
+  } catch (error) {
+    console.error('Error geocoding:', error);
+    return null;
+  }
+}
+
+/**
+ * Resuelve un enlace de Google Maps (corto o largo) y obtiene las coordenadas
+ * Para enlaces cortos (goo.gl, maps.app.goo.gl) usa la API del servidor
+ */
+export async function resolveGoogleMapsUrl(url: string): Promise<Coordinates | null> {
+  if (!url || typeof url !== 'string') return null;
+  
+  const trimmedUrl = url.trim();
+  
+  // Primero intentar extraer coordenadas directamente
+  const directCoords = extractCoordsFromGoogleMapsUrl(trimmedUrl);
+  if (directCoords) return directCoords;
+  
+  // Si es un enlace corto, usar la API del servidor
+  if (trimmedUrl.includes('goo.gl') || trimmedUrl.includes('maps.app.goo.gl')) {
+    try {
+      const response = await fetch('/api/resolve-maps-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: trimmedUrl }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.lat && data.lng) {
+          return { lat: data.lat, lng: data.lng };
+        }
+      }
+    } catch (error) {
+      console.error('Error resolviendo enlace corto:', error);
+    }
+  }
+  
+  return null;
+}

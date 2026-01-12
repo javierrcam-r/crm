@@ -12,7 +12,7 @@ import Textarea from '@/components/ui/Textarea';
 import { createCustomer } from '@/lib/services/customers';
 import toast from 'react-hot-toast';
 import type { CustomerInsert, FormaPago, CalidadPago } from '@/types/database';
-import { extractCoordsFromGoogleMapsUrl, generateGoogleMapsUrl } from '@/lib/utils';
+import { extractCoordsFromGoogleMapsUrl, generateGoogleMapsUrl, reverseGeocode, resolveGoogleMapsUrl } from '@/lib/utils';
 
 type EstadoCliente = 'prospecto' | 'cliente' | 'perdido';
 
@@ -111,21 +111,59 @@ export default function NuevoClientePage() {
     { value: 'mala', label: 'Mala paga' },
   ];
 
-  // Función para extraer coordenadas del link de Google Maps
-  const handleMapsLinkChange = (link: string) => {
+  const [loadingLocation, setLoadingLocation] = useState(false);
+
+  // Función para extraer coordenadas del link de Google Maps (soporta enlaces cortos)
+  const handleMapsLinkChange = async (link: string) => {
     setMapsLink(link);
     setCoordsExtracted(false);
     
     if (!link.trim()) return;
     
-    const coords = extractCoordsFromGoogleMapsUrl(link);
-    if (coords) {
-      setFormData(prev => ({
-        ...prev,
-        latitud: coords.lat,
-        longitud: coords.lng
-      }));
-      setCoordsExtracted(true);
+    // Si es un enlace corto, mostrar loading
+    const isShortUrl = link.includes('goo.gl') || link.includes('maps.app.goo.gl');
+    if (isShortUrl) {
+      setLoadingLocation(true);
+    }
+    
+    try {
+      // Usar resolveGoogleMapsUrl que maneja enlaces largos y cortos
+      const coords = await resolveGoogleMapsUrl(link);
+      
+      if (coords) {
+        setFormData(prev => ({
+          ...prev,
+          latitud: coords.lat,
+          longitud: coords.lng
+        }));
+        setCoordsExtracted(true);
+        
+        // Obtener dirección automáticamente
+        const geoResult = await reverseGeocode(coords.lat, coords.lng);
+        if (geoResult) {
+          setFormData(prev => ({
+            ...prev,
+            direccion: geoResult.direccion || prev.direccion,
+            zona: geoResult.zona || prev.zona,
+            ciudad: geoResult.ciudad || prev.ciudad,
+          }));
+          toast.success('Ubicación y dirección detectadas');
+        }
+      } else if (isShortUrl) {
+        // Si es enlace corto y no se pudo resolver, dar instrucciones
+        toast.error('Abre el enlace en tu navegador y copia la URL completa de la barra de direcciones', {
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Error obteniendo ubicación:', error);
+      if (isShortUrl) {
+        toast.error('Abre el enlace en tu navegador y copia la URL completa', { duration: 5000 });
+      } else {
+        toast.error('No se pudo obtener la ubicación');
+      }
+    } finally {
+      setLoadingLocation(false);
     }
   };
 
@@ -222,8 +260,11 @@ export default function NuevoClientePage() {
                 <Link2 className="h-4 w-4" />
                 Ubicación en el Mapa
               </p>
-              <p className="text-xs text-indigo-700 mb-3">
-                Pega el link de Google Maps para extraer automáticamente las coordenadas
+              <p className="text-xs text-indigo-700 mb-2">
+                Pega el link de Google Maps para extraer automáticamente las coordenadas.
+              </p>
+              <p className="text-xs text-indigo-600 mb-3 bg-indigo-100 p-2 rounded-lg">
+                💡 <strong>Tip:</strong> Si usas un enlace corto (maps.app.goo.gl), ábrelo primero en tu navegador y copia la URL completa de la barra de direcciones.
               </p>
               
               {/* Campo para pegar link de Google Maps */}
@@ -236,20 +277,31 @@ export default function NuevoClientePage() {
                     type="text"
                     value={mapsLink}
                     onChange={(e) => handleMapsLinkChange(e.target.value)}
-                    placeholder="Pega aquí el link de Google Maps..."
+                    placeholder="Pega aquí el link de Google Maps (o enlace compartido)..."
+                    disabled={loadingLocation}
                     className={`w-full px-3 py-2.5 pr-10 text-sm bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
                       coordsExtracted 
                         ? 'border-emerald-300 focus:ring-emerald-200' 
                         : 'border-indigo-200 focus:ring-indigo-200'
-                    }`}
+                    } ${loadingLocation ? 'opacity-70' : ''}`}
                   />
-                  {coordsExtracted && (
+                  {loadingLocation && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="animate-spin h-5 w-5 border-2 border-indigo-300 border-t-indigo-600 rounded-full"></div>
+                    </div>
+                  )}
+                  {coordsExtracted && !loadingLocation && (
                     <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-500" />
                   )}
                 </div>
-                {mapsLink && !coordsExtracted && (
+                {mapsLink && !coordsExtracted && !loadingLocation && (
                   <p className="text-xs text-amber-600 mt-1">
                     No se pudieron extraer coordenadas. Intenta con otro formato de link.
+                  </p>
+                )}
+                {loadingLocation && (
+                  <p className="text-xs text-indigo-600 mt-1">
+                    Resolviendo enlace compartido...
                   </p>
                 )}
               </div>
