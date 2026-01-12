@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CreditCard, TrendingUp, Tag } from 'lucide-react';
+import { ArrowLeft, CreditCard, Tag, MapPin } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -32,6 +32,8 @@ export default function EditarClientePage() {
     forma_pago: null,
     calidad_pago: null,
     categoria_compra: '',
+    latitud: null,
+    longitud: null,
   });
   const [estado, setEstado] = useState('prospecto');
   const [etiquetasText, setEtiquetasText] = useState('');
@@ -69,6 +71,8 @@ export default function EditarClientePage() {
         forma_pago: customer.forma_pago,
         calidad_pago: customer.calidad_pago,
         categoria_compra: customer.categoria_compra || '',
+        latitud: customer.latitud,
+        longitud: customer.longitud,
       });
       setEtiquetasText(customer.etiquetas?.join(', ') || '');
     } catch (error) {
@@ -115,6 +119,8 @@ export default function EditarClientePage() {
         forma_pago: formData.forma_pago || null,
         calidad_pago: formData.calidad_pago || null,
         categoria_compra: formData.categoria_compra || null,
+        latitud: formData.latitud || null,
+        longitud: formData.longitud || null,
       });
 
       toast.success('Cliente actualizado');
@@ -219,7 +225,8 @@ export default function EditarClientePage() {
 
           {/* Ubicación */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-indigo-500" />
               Ubicación
             </h3>
             <Input
@@ -241,6 +248,43 @@ export default function EditarClientePage() {
                 onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
                 placeholder="Ciudad"
               />
+            </div>
+            
+            {/* Coordenadas para el mapa */}
+            <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+              <p className="text-sm font-medium text-indigo-900 mb-3">
+                📍 Coordenadas para el Mapa de Visitas
+              </p>
+              <p className="text-xs text-indigo-700 mb-3">
+                Puedes obtener las coordenadas buscando la dirección en{' '}
+                <a 
+                  href="https://www.google.com/maps" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-indigo-900"
+                >
+                  Google Maps
+                </a>
+                {' '}y haciendo clic derecho en la ubicación.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Latitud"
+                  type="number"
+                  step="any"
+                  value={formData.latitud || ''}
+                  onChange={(e) => setFormData({ ...formData, latitud: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="-25.2867"
+                />
+                <Input
+                  label="Longitud"
+                  type="number"
+                  step="any"
+                  value={formData.longitud || ''}
+                  onChange={(e) => setFormData({ ...formData, longitud: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="-57.6470"
+                />
+              </div>
             </div>
           </div>
 

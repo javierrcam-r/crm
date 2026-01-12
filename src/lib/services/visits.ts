@@ -8,7 +8,7 @@ export async function getVisits(filters?: VisitFilters) {
     .from('visits')
     .select(`
       *,
-      customer:customers(id, nombre, telefono, direccion, zona, ciudad)
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud)
     `)
     .is('deleted_at', null)
     .order('scheduled_at', { ascending: true });
@@ -60,7 +60,7 @@ export async function getTodayVisits() {
     .from('visits')
     .select(`
       *,
-      customer:customers(id, nombre, telefono, direccion, zona, ciudad)
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud)
     `)
     .is('deleted_at', null)
     .gte('scheduled_at', today.toISOString())
@@ -79,7 +79,7 @@ export async function getPendingVisits() {
     .from('visits')
     .select(`
       *,
-      customer:customers(id, nombre, telefono, direccion, zona, ciudad)
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud)
     `)
     .is('deleted_at', null)
     .eq('status', 'programada')
@@ -101,7 +101,7 @@ export async function getUpcomingVisits(days: number = 7) {
     .from('visits')
     .select(`
       *,
-      customer:customers(id, nombre, telefono, direccion, zona, ciudad)
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud)
     `)
     .is('deleted_at', null)
     .eq('status', 'programada')
@@ -244,20 +244,19 @@ export async function getVisitStats() {
 export async function getVisitsByDate(date: string) {
   const supabase = getSupabaseClient();
   
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Usar directamente el string de fecha para evitar problemas de zona horaria
+  const startOfDay = `${date}T00:00:00`;
+  const endOfDay = `${date}T23:59:59`;
 
   const { data, error } = await supabase
     .from('visits')
     .select(`
       *,
-      customer:customers(id, nombre, telefono, direccion, zona, ciudad)
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud)
     `)
     .is('deleted_at', null)
-    .gte('scheduled_at', startOfDay.toISOString())
-    .lte('scheduled_at', endOfDay.toISOString())
+    .gte('scheduled_at', startOfDay)
+    .lte('scheduled_at', endOfDay)
     .order('scheduled_at');
 
   if (error) throw error;

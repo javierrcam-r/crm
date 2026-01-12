@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Plus,
+  Map,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clientes', href: '/clientes', icon: Users },
   { name: 'Calendario', href: '/calendario', icon: Calendar },
+  { name: 'Mapa Visitas', href: '/mapa', icon: Map },
   { name: 'Productos', href: '/productos', icon: Package },
   { name: 'Pedidos', href: '/pedidos', icon: ShoppingCart },
   { name: 'Reportes', href: '/reportes', icon: BarChart3 },

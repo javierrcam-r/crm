@@ -28,6 +28,8 @@ export interface Customer {
   forma_pago: FormaPago | null;
   calidad_pago: CalidadPago | null;
   categoria_compra: string | null;
+  latitud: number | null;
+  longitud: number | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -47,6 +49,8 @@ export interface CustomerInsert {
   forma_pago?: FormaPago | null;
   calidad_pago?: CalidadPago | null;
   categoria_compra?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export interface CustomerUpdate extends Partial<CustomerInsert> {}
