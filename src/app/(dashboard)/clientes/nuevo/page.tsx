@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CreditCard, Tag, MapPin } from 'lucide-react';
+import { ArrowLeft, CreditCard, Tag, MapPin, Link2, CheckCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -12,6 +12,7 @@ import Textarea from '@/components/ui/Textarea';
 import { createCustomer } from '@/lib/services/customers';
 import toast from 'react-hot-toast';
 import type { CustomerInsert, FormaPago, CalidadPago } from '@/types/database';
+import { extractCoordsFromGoogleMapsUrl, generateGoogleMapsUrl } from '@/lib/utils';
 
 type EstadoCliente = 'prospecto' | 'cliente' | 'perdido';
 
@@ -35,6 +36,8 @@ export default function NuevoClientePage() {
     longitud: null,
   });
   const [etiquetasText, setEtiquetasText] = useState('');
+  const [mapsLink, setMapsLink] = useState('');
+  const [coordsExtracted, setCoordsExtracted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,6 +110,24 @@ export default function NuevoClientePage() {
     { value: 'regular', label: 'Regular' },
     { value: 'mala', label: 'Mala paga' },
   ];
+
+  // Función para extraer coordenadas del link de Google Maps
+  const handleMapsLinkChange = (link: string) => {
+    setMapsLink(link);
+    setCoordsExtracted(false);
+    
+    if (!link.trim()) return;
+    
+    const coords = extractCoordsFromGoogleMapsUrl(link);
+    if (coords) {
+      setFormData(prev => ({
+        ...prev,
+        latitud: coords.lat,
+        longitud: coords.lng
+      }));
+      setCoordsExtracted(true);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -197,39 +218,87 @@ export default function NuevoClientePage() {
             
             {/* Coordenadas para el mapa */}
             <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-              <p className="text-sm font-medium text-indigo-900 mb-3">
-                📍 Coordenadas para el Mapa de Visitas
+              <p className="text-sm font-medium text-indigo-900 mb-2 flex items-center gap-2">
+                <Link2 className="h-4 w-4" />
+                Ubicación en el Mapa
               </p>
               <p className="text-xs text-indigo-700 mb-3">
-                Puedes obtener las coordenadas buscando la dirección en{' '}
-                <a 
-                  href="https://www.google.com/maps" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline hover:text-indigo-900"
-                >
-                  Google Maps
-                </a>
-                {' '}y haciendo clic derecho en la ubicación.
+                Pega el link de Google Maps para extraer automáticamente las coordenadas
               </p>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Latitud"
-                  type="number"
-                  step="any"
-                  value={formData.latitud || ''}
-                  onChange={(e) => setFormData({ ...formData, latitud: e.target.value ? parseFloat(e.target.value) : null })}
-                  placeholder="-25.2867"
-                />
-                <Input
-                  label="Longitud"
-                  type="number"
-                  step="any"
-                  value={formData.longitud || ''}
-                  onChange={(e) => setFormData({ ...formData, longitud: e.target.value ? parseFloat(e.target.value) : null })}
-                  placeholder="-57.6470"
-                />
+              
+              {/* Campo para pegar link de Google Maps */}
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-indigo-800 mb-1.5">
+                  Link de Google Maps
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={mapsLink}
+                    onChange={(e) => handleMapsLinkChange(e.target.value)}
+                    placeholder="Pega aquí el link de Google Maps..."
+                    className={`w-full px-3 py-2.5 pr-10 text-sm bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                      coordsExtracted 
+                        ? 'border-emerald-300 focus:ring-emerald-200' 
+                        : 'border-indigo-200 focus:ring-indigo-200'
+                    }`}
+                  />
+                  {coordsExtracted && (
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-500" />
+                  )}
+                </div>
+                {mapsLink && !coordsExtracted && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    No se pudieron extraer coordenadas. Intenta con otro formato de link.
+                  </p>
+                )}
               </div>
+
+              {/* Mostrar coordenadas extraídas */}
+              {(formData.latitud && formData.longitud) && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-100">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Coordenadas detectadas</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {formData.latitud?.toFixed(6)}, {formData.longitud?.toFixed(6)}
+                    </p>
+                  </div>
+                  <a
+                    href={generateGoogleMapsUrl(formData.latitud, formData.longitud)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Ver en Maps
+                  </a>
+                </div>
+              )}
+              
+              {/* Campos ocultos para edición manual avanzada */}
+              <details className="mt-3">
+                <summary className="text-xs text-indigo-600 cursor-pointer hover:text-indigo-800">
+                  Editar coordenadas manualmente
+                </summary>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <Input
+                    label="Latitud"
+                    type="number"
+                    step="any"
+                    value={formData.latitud || ''}
+                    onChange={(e) => setFormData({ ...formData, latitud: e.target.value ? parseFloat(e.target.value) : null })}
+                    placeholder="-25.2867"
+                  />
+                  <Input
+                    label="Longitud"
+                    type="number"
+                    step="any"
+                    value={formData.longitud || ''}
+                    onChange={(e) => setFormData({ ...formData, longitud: e.target.value ? parseFloat(e.target.value) : null })}
+                    placeholder="-57.6470"
+                  />
+                </div>
+              </details>
             </div>
           </div>
 

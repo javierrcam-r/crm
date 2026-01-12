@@ -29,18 +29,16 @@ export default function MapView({
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  const initializedRef = useRef(false);
+  const markersRef = useRef<MapMarker[]>(markers);
+
+  // Actualizar referencia de markers
+  markersRef.current = markers;
 
   useEffect(() => {
     // Solo ejecutar en el cliente
     if (typeof window === 'undefined') return;
-    
-    // Evitar doble inicialización en StrictMode
-    if (initializedRef.current && mapInstanceRef.current) {
-      // Actualizar marcadores en mapa existente
-      updateMarkers();
-      return;
-    }
+
+    let isMounted = true;
 
     const initMap = async () => {
       try {
@@ -52,17 +50,17 @@ export default function MapView({
           const link = document.createElement('link');
           link.rel = 'stylesheet';
           link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
           link.crossOrigin = '';
           document.head.appendChild(link);
           // Esperar a que el CSS cargue
           await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        if (!mapRef.current) return;
+        if (!mapRef.current || !isMounted) return;
 
-        // Si ya hay un mapa, no crear otro
+        // Si ya hay un mapa, actualizar marcadores
         if (mapInstanceRef.current) {
+          updateMarkersOnMap(L, mapInstanceRef.current);
           return;
         }
 
@@ -80,7 +78,6 @@ export default function MapView({
         }).addTo(map);
 
         mapInstanceRef.current = map;
-        initializedRef.current = true;
 
         // Agregar marcadores
         addMarkersToMap(L, map);
@@ -90,23 +87,19 @@ export default function MapView({
       }
     };
 
-    const updateMarkers = async () => {
-      if (!mapInstanceRef.current) return;
-      
-      const L = (await import('leaflet')).default;
-      const map = mapInstanceRef.current;
-      
-      // Limpiar marcadores existentes
+    const updateMarkersOnMap = async (L: any, map: any) => {
+      // Limpiar marcadores y polylines existentes
       map.eachLayer((layer: any) => {
         if (layer instanceof L.Marker || layer instanceof L.Polyline) {
           map.removeLayer(layer);
         }
       });
-
       addMarkersToMap(L, map);
     };
 
     const addMarkersToMap = (L: any, map: any) => {
+      const currentMarkers = markersRef.current;
+      
       // Función para crear icono numerado
       const createNumberedIcon = (number: number, isCompleted: boolean = false) => {
         const color = isCompleted ? '#10b981' : '#6366f1';
@@ -129,7 +122,7 @@ export default function MapView({
       // Agregar marcadores
       const bounds: [number, number][] = [];
       
-      markers.forEach((marker) => {
+      currentMarkers.forEach((marker) => {
         const icon = createNumberedIcon(marker.order, marker.isCompleted);
         const leafletMarker = L.marker(marker.position, { icon }).addTo(map);
         
@@ -152,8 +145,8 @@ export default function MapView({
       });
 
       // Dibujar ruta si hay más de un marcador
-      if (showRoute && markers.length > 1) {
-        const sortedPositions = [...markers]
+      if (showRoute && currentMarkers.length > 1) {
+        const sortedPositions = [...currentMarkers]
           .sort((a, b) => a.order - b.order)
           .map(m => m.position);
         
@@ -176,10 +169,10 @@ export default function MapView({
 
     // Cleanup
     return () => {
+      isMounted = false;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
-        initializedRef.current = false;
       }
     };
   }, [markers, center, zoom, showRoute]);

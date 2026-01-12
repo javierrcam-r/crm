@@ -188,3 +188,50 @@ export function exportToCSV<T extends Record<string, unknown>>(
   URL.revokeObjectURL(url);
 }
 
+
+// =====================================================
+// GOOGLE MAPS COORDINATES EXTRACTION
+// =====================================================
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export function extractCoordsFromGoogleMapsUrl(url: string): Coordinates | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmedUrl = url.trim();
+  const directPattern = /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/;
+  const directMatch = trimmedUrl.match(directPattern);
+  if (directMatch) {
+    const lat = parseFloat(directMatch[1]);
+    const lng = parseFloat(directMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+  }
+  const atPattern = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/;
+  const atMatch = trimmedUrl.match(atPattern);
+  if (atMatch) {
+    const lat = parseFloat(atMatch[1]);
+    const lng = parseFloat(atMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+  }
+  const qPattern = /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/;
+  const qMatch = trimmedUrl.match(qPattern);
+  if (qMatch) {
+    const lat = parseFloat(qMatch[1]);
+    const lng = parseFloat(qMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+  }
+  const dataPattern = /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/;
+  const dataMatch = trimmedUrl.match(dataPattern);
+  if (dataMatch) {
+    const lat = parseFloat(dataMatch[1]);
+    const lng = parseFloat(dataMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+  }
+  return null;
+}
+
+export function generateGoogleMapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps?q=${lat},${lng}`;
+}
