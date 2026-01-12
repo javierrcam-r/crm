@@ -16,9 +16,10 @@ import {
   CheckCircle,
   Truck,
   XCircle,
-  Printer,
+  FileDown,
   Edit,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -106,6 +107,207 @@ export default function PedidoDetailPage() {
     }
   };
 
+  const exportToPDF = () => {
+    if (!order) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    let y = 20;
+
+    // Definir columnas con posiciones absolutas
+    const colWidths = { cod: 25, producto: 80, cant: 20, obs: 61 };
+    const colPos = {
+      cod: margin,
+      producto: margin + colWidths.cod,
+      cant: margin + colWidths.cod + colWidths.producto,
+      obs: margin + colWidths.cod + colWidths.producto + colWidths.cant
+    };
+    const tableWidth = colWidths.cod + colWidths.producto + colWidths.cant + colWidths.obs;
+
+    // ===== ENCABEZADO =====
+    // Línea superior decorativa
+    doc.setDrawColor(50, 50, 50);
+    doc.setLineWidth(1);
+    doc.line(margin, y - 5, margin + tableWidth, y - 5);
+
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont('helvetica', 'normal');
+    doc.text('PEDIDO', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    doc.setFontSize(18);
+    doc.setTextColor(30, 30, 30);
+    doc.setFont('helvetica', 'bold');
+    doc.text(order.customer?.nombre || 'Sin cliente', pageWidth / 2, y, { align: 'center' });
+    y += 7;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    let subInfo = formatDate(order.order_date);
+    if (order.customer?.telefono) {
+      subInfo += `   |   Tel: ${order.customer.telefono}`;
+    }
+    doc.text(subInfo, pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    // ===== FUNCIÓN PARA DIBUJAR ENCABEZADO DE TABLA =====
+    let headerY = 0;
+    const drawTableHeader = () => {
+      headerY = y;
+      // Fondo del encabezado
+      doc.setFillColor(45, 45, 45);
+      doc.rect(margin, y, tableWidth, 10, 'F');
+      
+      // Textos del encabezado
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CÓDIGO', colPos.cod + 3, y + 7);
+      doc.text('PRODUCTO', colPos.producto + 3, y + 7);
+      doc.text('CANT.', colPos.cant + colWidths.cant / 2, y + 7, { align: 'center' });
+      doc.text('OBSERVACIÓN', colPos.obs + 3, y + 7);
+      y += 12;
+    };
+
+    drawTableHeader();
+
+    // ===== FILAS DE PRODUCTOS =====
+    order.items?.forEach((item, index) => {
+      const codigo = item.product?.sku || '-';
+      const nombre = item.product?.nombre || 'Producto';
+      const cantidad = String(item.qty);
+      let obs = item.observacion_item || '';
+      if (item.bonificado && item.motivo_bonificado) {
+        obs = obs ? `${obs} | ${item.motivo_bonificado}` : item.motivo_bonificado;
+      }
+      if (item.bonificado && !obs) {
+        obs = 'Bonificado';
+      }
+      if (!obs) obs = '-';
+
+      // Calcular altura de fila
+      doc.setFontSize(9);
+      const nombreLines = doc.splitTextToSize(nombre, colWidths.producto - 6);
+      doc.setFontSize(8);
+      const obsLines = doc.splitTextToSize(obs, colWidths.obs - 6);
+      const maxLines = Math.max(nombreLines.length, obsLines.length, 1);
+      const rowHeight = maxLines * 5 + 6;
+
+      // Nueva página si es necesario
+      if (y + rowHeight > 270) {
+        // Cerrar tabla actual
+        doc.setDrawColor(45, 45, 45);
+        doc.setLineWidth(0.5);
+        doc.rect(margin, headerY, tableWidth, y - headerY);
+        // Líneas verticales internas
+        doc.line(colPos.producto, headerY, colPos.producto, y);
+        doc.line(colPos.cant, headerY, colPos.cant, y);
+        doc.line(colPos.obs, headerY, colPos.obs, y);
+        
+        doc.addPage();
+        y = 20;
+        drawTableHeader();
+      }
+
+      // Fondo alterno
+      if (index % 2 === 0) {
+        doc.setFillColor(248, 248, 248);
+        doc.rect(margin, y - 1, tableWidth, rowHeight, 'F');
+      }
+
+      const textY = y + 4;
+
+      // Código
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont('helvetica', 'normal');
+      doc.text(codigo, colPos.cod + 3, textY);
+
+      // Producto
+      doc.setFontSize(9);
+      doc.setTextColor(20, 20, 20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(nombreLines, colPos.producto + 3, textY);
+
+      // Cantidad
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 30, 30);
+      doc.text(cantidad, colPos.cant + colWidths.cant / 2, textY, { align: 'center' });
+
+      // Observación
+      doc.setFontSize(8);
+      doc.setTextColor(70, 70, 70);
+      doc.setFont('helvetica', 'normal');
+      doc.text(obsLines, colPos.obs + 3, textY);
+
+      y += rowHeight;
+
+      // Línea horizontal entre filas
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y - 1, margin + tableWidth, y - 1);
+    });
+
+    // Cerrar tabla - borde exterior
+    doc.setDrawColor(45, 45, 45);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, headerY, tableWidth, y - headerY);
+    
+    // Líneas verticales internas
+    doc.line(colPos.producto, headerY, colPos.producto, y);
+    doc.line(colPos.cant, headerY, colPos.cant, y);
+    doc.line(colPos.obs, headerY, colPos.obs, y);
+
+    y += 12;
+
+    // ===== OBSERVACIONES GENERALES =====
+    if (order.observacion_general) {
+      if (y > 250) {
+        doc.addPage();
+        y = 15;
+      }
+
+      doc.setFillColor(30, 30, 30);
+      doc.rect(margin, y - 3, pageWidth - margin * 2, 6, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OBSERVACIONES GENERALES', margin + 2, y + 1);
+      y += 6;
+
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      const obsLines = doc.splitTextToSize(order.observacion_general, pageWidth - margin * 2 - 6);
+      
+      doc.setFillColor(250, 250, 250);
+      doc.setDrawColor(180, 180, 180);
+      const boxHeight = obsLines.length * 4 + 6;
+      doc.rect(margin, y - 2, pageWidth - margin * 2, boxHeight, 'FD');
+      doc.text(obsLines, margin + 3, y + 2);
+      y += boxHeight + 5;
+    }
+
+    // ===== PIE DE PÁGINA =====
+    doc.setFontSize(6);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `CRM Vendedora • ${formatDate(new Date(), 'dd/MM/yyyy HH:mm')}`,
+      pageWidth / 2,
+      288,
+      { align: 'center' }
+    );
+
+    // Guardar
+    const fileName = `Pedido_${order.customer?.nombre?.replace(/\s+/g, '_') || 'cliente'}_${formatDate(order.order_date, 'yyyy-MM-dd')}.pdf`;
+    doc.save(fileName);
+    toast.success('PDF exportado');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -129,54 +331,7 @@ export default function PedidoDetailPage() {
 
   return (
     <>
-      {/* ========== VERSIÓN PARA IMPRIMIR (Minimalista) ========== */}
-      <div className="print-only">
-        <div className="print-header">
-          <h1>Pedido</h1>
-          <p>{formatDate(order.order_date)}</p>
-        </div>
-
-        <div className="print-cliente">
-          <strong>Cliente:</strong> {order.customer?.nombre || 'Sin nombre'}
-        </div>
-
-        <table className="print-table">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th style={{ width: '60px', textAlign: 'center' }}>Cant.</th>
-              <th>Observación</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items?.map((item, index) => (
-              <tr key={item.id}>
-                <td>
-                  <span className="print-producto-nombre">{item.product?.nombre || 'Producto'}</span>
-                  {item.bonificado && <span className="print-bonificado"> (Bonificado)</span>}
-                </td>
-                <td style={{ textAlign: 'center' }}>{item.qty}</td>
-                <td className="print-obs">
-                  {item.observacion_item || '-'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {order.observacion_general && (
-          <div className="print-observacion-general">
-            <strong>Observación:</strong> {order.observacion_general}
-          </div>
-        )}
-
-        <div className="print-footer">
-          CRM Camila Fernández
-        </div>
-      </div>
-
-      {/* ========== VERSIÓN NORMAL (pantalla) ========== */}
-      <div className="no-print max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -210,12 +365,12 @@ export default function PedidoDetailPage() {
               </Link>
             )}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              icon={<Printer className="h-4 w-4" />}
-              onClick={() => window.print()}
+              icon={<FileDown className="h-4 w-4" />}
+              onClick={exportToPDF}
             >
-              Imprimir
+              Exportar PDF
             </Button>
             <Button
               variant="ghost"

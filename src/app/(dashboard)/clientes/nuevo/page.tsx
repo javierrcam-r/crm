@@ -12,7 +12,8 @@ import Textarea from '@/components/ui/Textarea';
 import { createCustomer } from '@/lib/services/customers';
 import toast from 'react-hot-toast';
 import type { CustomerInsert, FormaPago, CalidadPago } from '@/types/database';
-import { extractCoordsFromGoogleMapsUrl, generateGoogleMapsUrl, reverseGeocode, resolveGoogleMapsUrl } from '@/lib/utils';
+import { extractCoordsFromGoogleMapsUrl, generateGoogleMapsUrl } from '@/lib/utils';
+import { reverseGeocode, resolveGoogleMapsUrl } from '@/lib/geocode';
 
 type EstadoCliente = 'prospecto' | 'cliente' | 'perdido';
 

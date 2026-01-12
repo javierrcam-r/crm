@@ -21,6 +21,7 @@ import { getCustomers, type Customer } from '@/lib/services/customers';
 import { getActiveProducts, type Product } from '@/lib/services/products';
 import { createOrder, addOrderItem } from '@/lib/services/orders';
 import { formatCurrency, cn } from '@/lib/utils';
+import { searchProducts, searchCustomers } from '@/lib/search';
 import toast from 'react-hot-toast';
 
 interface OrderItemDraft {
@@ -87,17 +88,15 @@ function NuevoPedidoContent() {
 
   const selectedCustomer = customers.find((c) => c.id === customerId);
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      c.telefono?.toLowerCase().includes(customerSearch.toLowerCase())
-  );
+  // Búsqueda robusta de clientes (ignora tildes, busca en cualquier orden)
+  const filteredCustomers = customerSearch.trim()
+    ? searchCustomers(customers, customerSearch)
+    : customers;
 
-  const filteredProducts = products.filter(
-    (p) =>
-      p.nombre.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.sku.toLowerCase().includes(productSearch.toLowerCase())
-  );
+  // Búsqueda robusta de productos (ignora tildes, busca en cualquier orden)
+  const filteredProducts = productSearch.trim()
+    ? searchProducts(products, productSearch)
+    : products;
 
   const addItem = (product: Product) => {
     // Check if product already in items

@@ -27,10 +27,11 @@ import {
   type Product,
 } from '@/lib/services/products';
 import { formatCurrency, cn } from '@/lib/utils';
+import { searchProducts } from '@/lib/search';
 import toast from 'react-hot-toast';
 
 export default function ProductosPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
@@ -44,20 +45,13 @@ export default function ProductosPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadProducts();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search, filterCategoria, filterActivo]);
-
   const loadData = async () => {
     try {
       const [productsData, categoriesData] = await Promise.all([
         getProducts(),
         getCategories(),
       ]);
-      setProducts(productsData);
+      setAllProducts(productsData);
       setCategories(categoriesData);
     } catch (error) {
       console.error('Error cargando productos:', error);
@@ -66,23 +60,33 @@ export default function ProductosPage() {
     }
   };
 
-  const loadProducts = async () => {
-    try {
-      const data = await getProducts({
-        search: search || undefined,
-        categoria: filterCategoria || undefined,
-        activo: filterActivo ? filterActivo === 'true' : undefined,
-      });
-      setProducts(data);
-    } catch (error) {
-      console.error('Error filtrando productos:', error);
+  // Filtrado robusto en el cliente (ignora tildes, busca en cualquier orden)
+  const products = (() => {
+    let filtered = allProducts;
+    
+    // Filtro por categoría
+    if (filterCategoria) {
+      filtered = filtered.filter(p => p.categoria === filterCategoria);
     }
-  };
+    
+    // Filtro por estado activo
+    if (filterActivo) {
+      const isActivo = filterActivo === 'true';
+      filtered = filtered.filter(p => p.activo === isActivo);
+    }
+    
+    // Búsqueda robusta por texto
+    if (search.trim()) {
+      filtered = searchProducts(filtered, search);
+    }
+    
+    return filtered;
+  })();
 
   const toggleActivo = async (product: Product) => {
     try {
       await updateProduct(product.id, { activo: !product.activo });
-      setProducts((prev) =>
+      setAllProducts((prev) =>
         prev.map((p) =>
           p.id === product.id ? { ...p, activo: !p.activo } : p
         )
@@ -101,7 +105,7 @@ export default function ProductosPage() {
     setDeleting(true);
     try {
       await deleteProduct(deleteModal.id);
-      setProducts((prev) => prev.filter((p) => p.id !== deleteModal.id));
+      setAllProducts((prev) => prev.filter((p) => p.id !== deleteModal.id));
       toast.success('Producto eliminado');
       setDeleteModal(null);
     } catch (error) {
@@ -290,18 +294,18 @@ export default function ProductosPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="text-center">
-          <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+          <p className="text-2xl font-bold text-gray-900">{allProducts.length}</p>
           <p className="text-sm text-gray-500">Total Productos</p>
         </Card>
         <Card className="text-center">
           <p className="text-2xl font-bold text-emerald-600">
-            {products.filter((p) => p.activo).length}
+            {allProducts.filter((p) => p.activo).length}
           </p>
           <p className="text-sm text-gray-500">Activos</p>
         </Card>
         <Card className="text-center">
           <p className="text-2xl font-bold text-gray-400">
-            {products.filter((p) => !p.activo).length}
+            {allProducts.filter((p) => !p.activo).length}
           </p>
           <p className="text-sm text-gray-500">Inactivos</p>
         </Card>

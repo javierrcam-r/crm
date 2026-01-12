@@ -12,7 +12,8 @@ import Textarea from '@/components/ui/Textarea';
 import { getCustomer, updateCustomer, type Customer } from '@/lib/services/customers';
 import toast from 'react-hot-toast';
 import type { CustomerUpdate, FormaPago, CalidadPago } from '@/types/database';
-import { extractCoordsFromGoogleMapsUrl, generateGoogleMapsUrl, reverseGeocode, resolveGoogleMapsUrl } from '@/lib/utils';
+import { extractCoordsFromGoogleMapsUrl, generateGoogleMapsUrl } from '@/lib/utils';
+import { reverseGeocode, resolveGoogleMapsUrl } from '@/lib/geocode';
 
 export default function EditarClientePage() {
   const params = useParams();

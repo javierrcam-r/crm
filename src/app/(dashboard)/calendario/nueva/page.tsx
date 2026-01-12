@@ -11,6 +11,7 @@ import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { getCustomers, type Customer } from '@/lib/services/customers';
 import { createVisit } from '@/lib/services/visits';
+import { searchCustomers } from '@/lib/search';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import type { VisitInsert } from '@/types/database';
@@ -75,11 +76,10 @@ function NuevaVisitaContent() {
     }
   };
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.telefono?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Búsqueda robusta de clientes (ignora tildes, busca en cualquier orden)
+  const filteredCustomers = searchTerm.trim()
+    ? searchCustomers(customers, searchTerm)
+    : customers;
 
   const selectedCustomer = customers.find((c) => c.id === formData.customer_id);
 
