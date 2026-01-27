@@ -19,10 +19,10 @@ export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
 }
 
 // Generar un challenge aleatorio
-function generateChallenge(): Uint8Array {
+function generateChallenge(): ArrayBuffer {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return array;
+  return array.buffer;
 }
 
 // Convertir ArrayBuffer a Base64
@@ -45,6 +45,12 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+// Codificar string a ArrayBuffer
+function stringToArrayBuffer(str: string): ArrayBuffer {
+  const encoder = new TextEncoder();
+  return encoder.encode(str).buffer;
+}
+
 // Registrar nueva credencial biométrica
 export async function registerBiometric(
   userId: string,
@@ -59,15 +65,16 @@ export async function registerBiometric(
   }
 
   const challenge = generateChallenge();
+  const userIdBuffer = stringToArrayBuffer(userId);
 
   const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
-    challenge,
+    challenge: challenge,
     rp: {
       name: 'CRM Disfero',
       id: window.location.hostname,
     },
     user: {
-      id: new TextEncoder().encode(userId),
+      id: userIdBuffer,
       name: username,
       displayName: displayName,
     },
@@ -99,8 +106,8 @@ export async function registerBiometric(
       credentialId: arrayBufferToBase64(credential.rawId),
       publicKey: arrayBufferToBase64(response.getPublicKey() || response.attestationObject),
     };
-  } catch (error: any) {
-    if (error.name === 'NotAllowedError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'NotAllowedError') {
       throw new Error('Autenticación cancelada por el usuario');
     }
     throw error;
@@ -127,7 +134,7 @@ export async function authenticateWithBiometric(
   const challenge = generateChallenge();
 
   const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions = {
-    challenge,
+    challenge: challenge,
     rpId: window.location.hostname,
     allowCredentials: credentialIds.map(id => ({
       id: base64ToArrayBuffer(id),
@@ -155,8 +162,8 @@ export async function authenticateWithBiometric(
       authenticatorData: arrayBufferToBase64(response.authenticatorData),
       clientDataJSON: arrayBufferToBase64(response.clientDataJSON),
     };
-  } catch (error: any) {
-    if (error.name === 'NotAllowedError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'NotAllowedError') {
       throw new Error('Autenticación cancelada por el usuario');
     }
     throw error;
