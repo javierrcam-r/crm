@@ -1,8 +1,11 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Order, OrderInsert, OrderUpdate, OrderFilters, OrderItem, OrderItemInsert, OrderItemUpdate } from '@/types/database';
+import { getCurrentUserId, isCurrentUserAdmin } from '@/lib/auth/getCurrentUserId';
 
 export async function getOrders(filters?: OrderFilters) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   let query = supabase
     .from('orders')
@@ -12,6 +15,11 @@ export async function getOrders(filters?: OrderFilters) {
     `)
     .is('deleted_at', null)
     .order('order_date', { ascending: false });
+
+  // Filtrar por usuario (excepto admin que ve todo)
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
 
   if (filters?.status) {
     query = query.eq('status', filters.status);
@@ -54,9 +62,11 @@ export async function getOrder(id: string) {
 
 export async function getTodayOrders() {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   const today = new Date().toISOString().split('T')[0];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('orders')
     .select(`
       *,
@@ -66,6 +76,11 @@ export async function getTodayOrders() {
     .eq('order_date', today)
     .order('created_at', { ascending: false });
 
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data as Order[];
 }
@@ -205,22 +220,32 @@ export async function deleteOrderItem(id: string) {
 
 export async function getOrderStats() {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
 
-  const { data: todayData } = await supabase
+  let todayQuery = supabase
     .from('orders')
     .select('status, total')
     .is('deleted_at', null)
     .eq('order_date', today);
 
-  const { data: weekData } = await supabase
+  let weekQuery = supabase
     .from('orders')
     .select('status, total')
     .is('deleted_at', null)
     .gte('order_date', weekAgo.toISOString().split('T')[0]);
+
+  if (!isAdmin && userId) {
+    todayQuery = todayQuery.eq('user_id', userId);
+    weekQuery = weekQuery.eq('user_id', userId);
+  }
+
+  const { data: todayData } = await todayQuery;
+  const { data: weekData } = await weekQuery;
 
   return {
     todayCount: todayData?.length || 0,
@@ -351,8 +376,10 @@ export async function getTopProducts(days: number = 30) {
 
 export async function getOrdersByDate(date: string) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('orders')
     .select(`
       *,
@@ -362,6 +389,11 @@ export async function getOrdersByDate(date: string) {
     .eq('order_date', date)
     .order('created_at', { ascending: false });
 
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data as Order[];
 }

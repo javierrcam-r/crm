@@ -1,8 +1,11 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Visit, VisitInsert, VisitUpdate, VisitFilters } from '@/types/database';
+import { getCurrentUserId, isCurrentUserAdmin } from '@/lib/auth/getCurrentUserId';
 
 export async function getVisits(filters?: VisitFilters) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   let query = supabase
     .from('visits')
@@ -12,6 +15,11 @@ export async function getVisits(filters?: VisitFilters) {
     `)
     .is('deleted_at', null)
     .order('scheduled_at', { ascending: true });
+
+  // Filtrar por usuario (excepto admin que ve todo)
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
 
   if (filters?.status) {
     query = query.eq('status', filters.status);
@@ -50,13 +58,15 @@ export async function getVisit(id: string) {
 
 export async function getTodayVisits() {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('visits')
     .select(`
       *,
@@ -67,15 +77,22 @@ export async function getTodayVisits() {
     .lt('scheduled_at', tomorrow.toISOString())
     .order('scheduled_at');
 
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data as Visit[];
 }
 
 export async function getPendingVisits() {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('visits')
     .select(`
       *,
@@ -86,6 +103,11 @@ export async function getPendingVisits() {
     .lt('scheduled_at', now)
     .order('scheduled_at');
 
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data as Visit[];
 }
@@ -203,6 +225,8 @@ export async function deleteVisit(id: string) {
 
 export async function getVisitStats() {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -211,26 +235,36 @@ export async function getVisitStats() {
   const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 7);
 
-  const { data: todayData } = await supabase
+  let todayQuery = supabase
     .from('visits')
     .select('status')
     .is('deleted_at', null)
     .gte('scheduled_at', today.toISOString())
     .lt('scheduled_at', tomorrow.toISOString());
-
-  const { data: pendingData } = await supabase
+  
+  let pendingQuery = supabase
     .from('visits')
     .select('id')
     .is('deleted_at', null)
     .eq('status', 'programada')
     .lt('scheduled_at', new Date().toISOString());
 
-  const { data: weekData } = await supabase
+  let weekQuery = supabase
     .from('visits')
     .select('status')
     .is('deleted_at', null)
     .gte('scheduled_at', weekAgo.toISOString())
     .lt('scheduled_at', tomorrow.toISOString());
+
+  if (!isAdmin && userId) {
+    todayQuery = todayQuery.eq('user_id', userId);
+    pendingQuery = pendingQuery.eq('user_id', userId);
+    weekQuery = weekQuery.eq('user_id', userId);
+  }
+
+  const { data: todayData } = await todayQuery;
+  const { data: pendingData } = await pendingQuery;
+  const { data: weekData } = await weekQuery;
 
   return {
     today: todayData?.length || 0,
@@ -243,12 +277,14 @@ export async function getVisitStats() {
 
 export async function getVisitsByDate(date: string) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   // Usar directamente el string de fecha para evitar problemas de zona horaria
   const startOfDay = `${date}T00:00:00`;
   const endOfDay = `${date}T23:59:59`;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('visits')
     .select(`
       *,
@@ -259,6 +295,11 @@ export async function getVisitsByDate(date: string) {
     .lte('scheduled_at', endOfDay)
     .order('scheduled_at');
 
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data as Visit[];
 }

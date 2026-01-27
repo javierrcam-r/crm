@@ -1,14 +1,22 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Customer, CustomerInsert, CustomerUpdate, CustomerFilters } from '@/types/database';
+import { getCurrentUserId, isCurrentUserAdmin } from '@/lib/auth/getCurrentUserId';
 
 export async function getCustomers(filters?: CustomerFilters) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   let query = supabase
     .from('customers')
     .select('*')
     .is('deleted_at', null)
     .order('nombre');
+
+  // Filtrar por usuario (excepto admin que ve todo)
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
 
   if (filters?.tipo) {
     query = query.eq('tipo', filters.tipo);
@@ -85,12 +93,19 @@ export async function deleteCustomer(id: string) {
 
 export async function getCustomerStats() {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
-  const { data, error } = await supabase
+  let query = supabase
     .from('customers')
     .select('tipo, etapa_embudo')
     .is('deleted_at', null);
 
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
 
   const stats = {

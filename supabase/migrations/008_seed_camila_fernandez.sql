@@ -1,0 +1,83 @@
+-- =====================================================
+-- CREAR USUARIO INICIAL: Camila Fernandez
+-- =====================================================
+-- Este script crea el usuario de Camila Fernandez como vendedora
+-- con todos los accesos (rol: vendedor)
+-- =====================================================
+-- INSTRUCCIONES PARA CREAR EL USUARIO INICIAL:
+-- =====================================================
+-- 
+-- OPCIÓN 1: Usar la interfaz web del CRM (Recomendado)
+-- 1. Inicia sesión como administrador
+-- 2. Ve a la sección "Usuarios" en el menú
+-- 3. Haz clic en "Nuevo Usuario"
+-- 4. Completa el formulario:
+--    - Nombre Completo: Camila Fernandez
+--    - Email: camila.fernandez@crm.com (o el email que prefieras)
+--    - Rol: Vendedor
+--    - Activo: Sí
+-- 5. El sistema enviará una invitación por email
+--
+-- OPCIÓN 2: Crear manualmente en Supabase
+-- 1. Ve a Authentication > Users en el dashboard de Supabase
+-- 2. Crea un nuevo usuario con email: camila.fernandez@crm.com
+-- 3. Establece una contraseña temporal
+-- 4. Copia el UUID del usuario creado
+-- 5. Ejecuta el siguiente INSERT reemplazando 'USER_UUID_AQUI' con el UUID real:
+--
+-- INSERT INTO users_profile (
+--     user_id,
+--     nombre_completo,
+--     email,
+--     telefono,
+--     rol,
+--     activo
+-- ) VALUES (
+--     'USER_UUID_AQUI',  -- Reemplazar con UUID real de auth.users
+--     'Camila Fernandez',
+--     'camila.fernandez@crm.com',
+--     NULL,
+--     'vendedor',
+--     TRUE
+-- )
+-- ON CONFLICT (user_id) DO UPDATE SET
+--     nombre_completo = EXCLUDED.nombre_completo,
+--     rol = EXCLUDED.rol,
+--     activo = EXCLUDED.activo,
+--     updated_at = NOW();
+--
+-- OPCIÓN 3: Usar SQL directo (si ya existe el usuario en auth.users)
+-- Si el usuario ya existe en auth.users, puedes ejecutar:
+--
+-- INSERT INTO users_profile (
+--     user_id,
+--     nombre_completo,
+--     email,
+--     telefono,
+--     rol,
+--     activo,
+--     created_at
+-- )
+-- SELECT 
+--     id,
+--     'Camila Fernandez',
+--     email,
+--     NULL,
+--     'vendedor',
+--     TRUE,
+--     NOW()
+-- FROM auth.users
+-- WHERE email = 'camila.fernandez@crm.com'
+-- ON CONFLICT (user_id) DO UPDATE SET
+--     nombre_completo = EXCLUDED.nombre_completo,
+--     rol = EXCLUDED.rol,
+--     activo = EXCLUDED.activo,
+--     updated_at = NOW();
+--
+-- =====================================================
+-- NOTAS IMPORTANTES:
+-- =====================================================
+-- - El rol 'vendedor' tiene acceso completo a todas las funcionalidades del CRM
+-- - Para dar acceso de administrador, usa el rol 'admin'
+-- - Los usuarios inactivos no pueden iniciar sesión
+-- =====================================================

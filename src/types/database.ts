@@ -8,6 +8,7 @@ export type VisitStatus = 'programada' | 'completada' | 'cancelada' | 'no_atendi
 export type OrderStatus = 'borrador' | 'enviado' | 'confirmado' | 'entregado' | 'cancelado';
 export type FormaPago = 'contado' | 'cheque' | 'plazos_cortos' | 'plazos_medios' | 'plazos_largos';
 export type CalidadPago = 'buena' | 'regular' | 'mala';
+export type UserRole = 'admin' | 'vendedor' | 'supervisor';
 
 // =====================================================
 // CUSTOMER
@@ -237,3 +238,44 @@ export interface ProductFilters {
   search?: string;
 }
 
+// =====================================================
+// USER PROFILE
+// =====================================================
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  username: string | null;
+  nombre_completo: string;
+  email: string;
+  telefono: string | null;
+  rol: UserRole;
+  activo: boolean;
+  password: string | null;
+  password_temp: string | null;
+  debe_cambiar_password: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface UserProfileInsert {
+  user_id: string;
+  username?: string | null;
+  nombre_completo: string;
+  email: string;
+  telefono?: string | null;
+  rol?: UserRole;
+  activo?: boolean;
+  password?: string | null;
+  password_temp?: string | null;
+  debe_cambiar_password?: boolean;
+  created_by?: string | null;
+}
+
+export interface UserProfileUpdate extends Partial<Omit<UserProfileInsert, 'user_id'>> {}
+
+export interface UserFilters {
+  rol?: UserRole;
+  activo?: boolean;
+  search?: string;
+}

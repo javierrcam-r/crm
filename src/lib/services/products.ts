@@ -1,14 +1,22 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Product, ProductInsert, ProductUpdate, ProductFilters } from '@/types/database';
+import { getCurrentUserId, isCurrentUserAdmin } from '@/lib/auth/getCurrentUserId';
 
 export async function getProducts(filters?: ProductFilters) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   let query = supabase
     .from('products')
     .select('*')
     .is('deleted_at', null)
     .order('nombre');
+
+  // Filtrar por usuario (excepto admin que ve todo)
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
 
   if (filters?.categoria) {
     query = query.eq('categoria', filters.categoria);
@@ -27,6 +35,8 @@ export async function getProducts(filters?: ProductFilters) {
 
 export async function getActiveProducts(search?: string) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+  const isAdmin = isCurrentUserAdmin();
   
   let query = supabase
     .from('products')
@@ -34,6 +44,11 @@ export async function getActiveProducts(search?: string) {
     .is('deleted_at', null)
     .eq('activo', true)
     .order('nombre');
+
+  // Filtrar por usuario (excepto admin que ve todo)
+  if (!isAdmin && userId) {
+    query = query.eq('user_id', userId);
+  }
 
   if (search) {
     query = query.or(`nombre.ilike.%${search}%,sku.ilike.%${search}%`);

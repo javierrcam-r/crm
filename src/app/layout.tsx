@@ -12,8 +12,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'CRM Camila Fernández',
-  description: 'Sistema de gestión de clientes, visitas y pedidos',
+  title: 'CRM Disfero',
+  description: 'Sistema de gestión comercial - Clientes, visitas y pedidos',
 };
 
 export default function RootLayout({

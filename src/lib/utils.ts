@@ -188,7 +188,6 @@ export function exportToCSV<T extends Record<string, unknown>>(
   URL.revokeObjectURL(url);
 }
 
-
 // =====================================================
 // GOOGLE MAPS COORDINATES EXTRACTION
 // =====================================================
@@ -198,110 +197,95 @@ export interface Coordinates {
   lng: number;
 }
 
+/**
+ * Extrae las coordenadas de un link de Google Maps
+ * Soporta varios formatos:
+ * - https://www.google.com/maps?q=-25.2867,-57.6473
+ * - https://www.google.com/maps/place/.../@-25.2867,-57.6473,17z/...
+ * - https://maps.google.com/?q=-25.2867,-57.6473
+ * - https://www.google.com/maps/@-25.2867,-57.6473,17z
+ * - Coordenadas directas: -25.2867,-57.6473
+ */
 export function extractCoordsFromGoogleMapsUrl(url: string): Coordinates | null {
   if (!url || typeof url !== 'string') return null;
+  
   const trimmedUrl = url.trim();
-  const directPattern = /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/;
+  
+  // Patrón para coordenadas directas (ej: -25.2867,-57.6473)
+  const directPattern = /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/;
   const directMatch = trimmedUrl.match(directPattern);
   if (directMatch) {
     const lat = parseFloat(directMatch[1]);
     const lng = parseFloat(directMatch[2]);
-    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+    if (isValidCoordinate(lat, lng)) {
+      return { lat, lng };
+    }
   }
+  
+  // Patrón para URLs con @lat,lng,zoom
   const atPattern = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/;
   const atMatch = trimmedUrl.match(atPattern);
   if (atMatch) {
     const lat = parseFloat(atMatch[1]);
     const lng = parseFloat(atMatch[2]);
-    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+    if (isValidCoordinate(lat, lng)) {
+      return { lat, lng };
+    }
   }
+  
+  // Patrón para URLs con ?q=lat,lng
   const qPattern = /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/;
   const qMatch = trimmedUrl.match(qPattern);
   if (qMatch) {
     const lat = parseFloat(qMatch[1]);
     const lng = parseFloat(qMatch[2]);
-    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+    if (isValidCoordinate(lat, lng)) {
+      return { lat, lng };
+    }
   }
+  
+  // Patrón para URLs con !3d (latitud) y !4d (longitud)
   const dataPattern = /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/;
   const dataMatch = trimmedUrl.match(dataPattern);
   if (dataMatch) {
     const lat = parseFloat(dataMatch[1]);
     const lng = parseFloat(dataMatch[2]);
-    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
-  }
-  return null;
-}
-
-export function generateGoogleMapsUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps?q=${lat},${lng}`;
-}
-
-export interface ReverseGeocodeResult {
-  direccion: string;
-  zona?: string;
-  ciudad?: string;
-}
-
-export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-      { headers: { 'Accept-Language': 'es', 'User-Agent': 'CRM-App' } }
-    );
-    if (!response.ok) return null;
-    const data = await response.json();
-    if (!data || !data.address) return null;
-    const addr = data.address;
-    const parts: string[] = [];
-    if (addr.road) {
-      parts.push(addr.road + (addr.house_number ? ` ${addr.house_number}` : ''));
+    if (isValidCoordinate(lat, lng)) {
+      return { lat, lng };
     }
-    if (addr.neighbourhood || addr.suburb) parts.push(addr.neighbourhood || addr.suburb);
-    const ciudad = addr.city || addr.town || addr.municipality || '';
-    const zona = addr.neighbourhood || addr.suburb || addr.quarter || '';
-    return {
-      direccion: parts.join(', ') || data.display_name?.split(',').slice(0, 3).join(',') || '',
-      zona,
-      ciudad,
-    };
-  } catch (error) {
-    console.error('Error geocoding:', error);
-    return null;
   }
+  
+  // Patrón para place con coordenadas
+  const placePattern = /place\/[^/]+\/(-?\d+\.?\d*),(-?\d+\.?\d*)/;
+  const placeMatch = trimmedUrl.match(placePattern);
+  if (placeMatch) {
+    const lat = parseFloat(placeMatch[1]);
+    const lng = parseFloat(placeMatch[2]);
+    if (isValidCoordinate(lat, lng)) {
+      return { lat, lng };
+    }
+  }
+  
+  return null;
 }
 
 /**
- * Resuelve un enlace de Google Maps (corto o largo) y obtiene las coordenadas
- * Para enlaces cortos (goo.gl, maps.app.goo.gl) usa la API del servidor
+ * Valida que las coordenadas estén dentro de rangos válidos
  */
-export async function resolveGoogleMapsUrl(url: string): Promise<Coordinates | null> {
-  if (!url || typeof url !== 'string') return null;
-  
-  const trimmedUrl = url.trim();
-  
-  // Primero intentar extraer coordenadas directamente
-  const directCoords = extractCoordsFromGoogleMapsUrl(trimmedUrl);
-  if (directCoords) return directCoords;
-  
-  // Si es un enlace corto, usar la API del servidor
-  if (trimmedUrl.includes('goo.gl') || trimmedUrl.includes('maps.app.goo.gl')) {
-    try {
-      const response = await fetch('/api/resolve-maps-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmedUrl }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.lat && data.lng) {
-          return { lat: data.lat, lng: data.lng };
-        }
-      }
-    } catch (error) {
-      console.error('Error resolviendo enlace corto:', error);
-    }
-  }
-  
-  return null;
+function isValidCoordinate(lat: number, lng: number): boolean {
+  return (
+    !isNaN(lat) && 
+    !isNaN(lng) && 
+    lat >= -90 && 
+    lat <= 90 && 
+    lng >= -180 && 
+    lng <= 180
+  );
+}
+
+/**
+ * Genera un link de Google Maps a partir de coordenadas
+ */
+export function generateGoogleMapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps?q=${lat},${lng}`;
 }

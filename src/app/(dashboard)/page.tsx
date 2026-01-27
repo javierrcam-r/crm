@@ -29,6 +29,7 @@ import { format, addDays, subDays, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Visit } from '@/lib/services/visits';
 import type { Order } from '@/lib/services/orders';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Stats {
   visits: {
@@ -52,6 +53,7 @@ interface Stats {
 }
 
 export default function DashboardPage() {
+  const { isUserAdmin, userProfile } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
   const [pendingVisits, setPendingVisits] = useState<Visit[]>([]);
@@ -132,8 +134,18 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm md:text-base mt-1">Resumen de tu actividad</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Dashboard</h1>
+            {isUserAdmin && (
+              <Badge variant="red">Vista Administrador</Badge>
+            )}
+          </div>
+          <p className="text-gray-500 text-sm md:text-base mt-1">
+            {isUserAdmin 
+              ? 'Resumen general del sistema - Datos de todos los usuarios'
+              : `Resumen de tu actividad${userProfile ? ` - ${userProfile.nombre_completo}` : ''}`
+            }
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3">
           <Link href="/calendario/nueva" className="flex-1 md:flex-none">
@@ -157,7 +169,9 @@ export default function DashboardPage() {
               <Calendar className="h-5 w-5 md:h-6 md:w-6 text-indigo-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">Visitas Hoy</p>
+              <p className="text-xs md:text-sm text-gray-500 truncate">
+                {isUserAdmin ? 'Visitas Hoy (Todos)' : 'Visitas Hoy'}
+              </p>
               <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.visits.today || 0}</p>
               <p className="text-[10px] md:text-xs text-emerald-600">
                 {stats?.visits.todayCompleted || 0} completadas
@@ -172,7 +186,9 @@ export default function DashboardPage() {
               <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">Pendientes</p>
+              <p className="text-xs md:text-sm text-gray-500 truncate">
+                {isUserAdmin ? 'Pendientes (Todos)' : 'Pendientes'}
+              </p>
               <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.visits.pending || 0}</p>
               <p className="text-[10px] md:text-xs text-amber-600">Requieren atención</p>
             </div>
@@ -185,7 +201,9 @@ export default function DashboardPage() {
               <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">Pedidos Hoy</p>
+              <p className="text-xs md:text-sm text-gray-500 truncate">
+                {isUserAdmin ? 'Pedidos Hoy (Todos)' : 'Pedidos Hoy'}
+              </p>
               <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.orders.todayCount || 0}</p>
               <p className="text-[10px] md:text-xs text-emerald-600 truncate">
                 {formatCurrency(stats?.orders.todayTotal || 0)}
@@ -200,7 +218,9 @@ export default function DashboardPage() {
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">Semana</p>
+              <p className="text-xs md:text-sm text-gray-500 truncate">
+                {isUserAdmin ? 'Semana (Todos)' : 'Semana'}
+              </p>
               <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.orders.weekCount || 0}</p>
               <p className="text-[10px] md:text-xs text-purple-600 truncate">
                 {formatCurrency(stats?.orders.weekTotal || 0)}
@@ -259,13 +279,20 @@ export default function DashboardPage() {
                       className="block p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-bold text-indigo-600 shrink-0">
-                            {formatTime(visit.scheduled_at)}
-                          </span>
-                          <span className="font-medium text-gray-900 truncate">
-                            {visit.customer?.nombre || 'Cliente'}
-                          </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 mb-1">
+                            <span className="text-sm font-bold text-indigo-600 shrink-0">
+                              {formatTime(visit.scheduled_at)}
+                            </span>
+                            <span className="font-medium text-gray-900 truncate">
+                              {visit.customer?.nombre || 'Cliente'}
+                            </span>
+                          </div>
+                          {isUserAdmin && visit.user_id && (
+                            <p className="text-xs text-gray-500">
+                              Usuario ID: {visit.user_id.substring(0, 8)}...
+                            </p>
+                          )}
                         </div>
                         <Badge
                           variant={
@@ -344,7 +371,7 @@ export default function DashboardPage() {
                       className="block p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="font-medium text-gray-900 truncate">
                             {order.customer?.nombre || 'Cliente'}
                           </p>
@@ -353,6 +380,11 @@ export default function DashboardPage() {
                               <Phone className="h-3 w-3" />
                               {order.customer.telefono}
                             </div>
+                          )}
+                          {isUserAdmin && order.user_id && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Usuario ID: {order.user_id.substring(0, 8)}...
+                            </p>
                           )}
                         </div>
                         <Badge
