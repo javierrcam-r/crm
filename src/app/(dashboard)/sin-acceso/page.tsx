@@ -4,15 +4,12 @@ import { AlertCircle, Mail } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
-import Link from 'next/link';
 
 export default function SinAccesoPage() {
-  const { user, supabase } = useAuth();
+  const { userProfile, logout } = useAuth();
 
-  const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+  const handleLogout = () => {
+    logout();
     localStorage.clear();
     sessionStorage.clear();
     window.location.href = '/login';
@@ -33,9 +30,9 @@ export default function SinAccesoPage() {
           Tu cuenta ha sido creada pero aún no tienes un perfil activo en el sistema.
         </p>
         
-        {user?.email && (
+        {userProfile?.email && (
           <p className="text-sm text-gray-700 mb-4">
-            Usuario: <strong>{user.email}</strong>
+            Usuario: <strong>{userProfile.email}</strong>
           </p>
         )}
 
