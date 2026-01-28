@@ -662,9 +662,9 @@ export default function SupervisoresPage() {
                         axisLine={false}
                       />
                       <Tooltip 
-                        formatter={(value: number, name: string) => {
+                        formatter={(value, name) => {
                           if (name === 'totalProductos') return [`${value} unidades`, 'Productos comprados'];
-                          return [value, name];
+                          return [String(value), name];
                         }}
                         labelFormatter={(label) => `👤 ${label}`}
                         contentStyle={{ 
@@ -717,9 +717,9 @@ export default function SupervisoresPage() {
                         axisLine={false}
                       />
                       <Tooltip 
-                        formatter={(value: number, name: string) => {
+                        formatter={(value, name) => {
                           if (name === 'cantidad') return [`${value} unidades`, 'Vendidas'];
-                          return [value, name];
+                          return [String(value), name];
                         }}
                         labelFormatter={(label) => `📦 ${label}`}
                         contentStyle={{ 
@@ -739,7 +739,7 @@ export default function SupervisoresPage() {
                           position="right" 
                           fontSize={11}
                           fontWeight={600}
-                          formatter={(value: number) => `${value}`}
+                          formatter={(value) => `${value}`}
                         />
                       </Bar>
                     </BarChart>
