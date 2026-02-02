@@ -17,6 +17,9 @@ import {
   Settings,
   LogOut,
   TrendingUp,
+  ClipboardList,
+  UserCheck,
+  Database,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -37,11 +40,17 @@ const navigation = [
 
 const adminNavigation = [
   { name: 'Usuarios', href: '/usuarios', icon: Shield },
+  { name: 'API Simulación', href: '/api-simulacion', icon: Database },
 ];
 
 const supervisorNavigation = [
   { name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
+];
+
+const supervisorNivel1Navigation = [
+  { name: 'Mis Actividades', href: '/actividades', icon: ClipboardList },
+  { name: 'Calendario Equipo', href: '/actividades', icon: Calendar },
 ];
 
 const quickActions = [
@@ -151,6 +160,40 @@ export default function Sidebar() {
             </>
           )}
           
+          {/* Supervisor Nivel 1 Navigation */}
+          {(isUserAdmin || userProfile?.rol === 'supervisor_nivel1') && (
+            <>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
+                {userProfile?.rol === 'supervisor_nivel1' ? 'Menú Principal' : 'Gestión de Equipo'}
+              </p>
+              {supervisorNivel1Navigation.map((item, index) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
+                      'animate-slide-in opacity-0 text-sm',
+                      active
+                        ? 'bg-indigo-50 text-indigo-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    )}
+                    style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
+                  >
+                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+              {!isUserAdmin && userProfile?.rol === 'supervisor_nivel1' && (
+                <div className="my-3 sm:my-4 border-t border-gray-100"></div>
+              )}
+            </>
+          )}
+          
           {/* Supervisor Navigation - para supervisores y admins */}
           {(isUserAdmin || userProfile?.rol === 'supervisor') && (
             <>
@@ -250,6 +293,11 @@ export default function Sidebar() {
             {userProfile?.rol === 'supervisor' && (
               <Badge variant="blue" className="mt-1 text-[10px]">
                 Supervisor
+              </Badge>
+            )}
+            {userProfile?.rol === 'supervisor_nivel1' && (
+              <Badge variant="purple" className="mt-1 text-[10px]">
+                Supervisor N1
               </Badge>
             )}
           </div>

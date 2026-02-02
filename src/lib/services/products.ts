@@ -75,10 +75,18 @@ export async function getProduct(id: string) {
 
 export async function createProduct(product: ProductInsert) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+
+  if (!userId) {
+    throw new Error('No se encontró el usuario actual');
+  }
 
   const { data, error } = await supabase
     .from('products')
-    .insert(product)
+    .insert({
+      ...product,
+      user_id: userId
+    })
     .select()
     .single();
 

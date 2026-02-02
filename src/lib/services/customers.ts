@@ -55,10 +55,18 @@ export async function getCustomer(id: string) {
 
 export async function createCustomer(customer: CustomerInsert) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+
+  if (!userId) {
+    throw new Error('No se encontró el usuario actual');
+  }
 
   const { data, error } = await supabase
     .from('customers')
-    .insert(customer)
+    .insert({
+      ...customer,
+      user_id: userId
+    })
     .select()
     .single();
 

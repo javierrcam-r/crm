@@ -137,10 +137,18 @@ export async function getUpcomingVisits(days: number = 7) {
 
 export async function createVisit(visit: VisitInsert) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+
+  if (!userId) {
+    throw new Error('No se encontró el usuario actual');
+  }
 
   const { data, error } = await supabase
     .from('visits')
-    .insert(visit)
+    .insert({
+      ...visit,
+      user_id: userId
+    })
     .select(`
       *,
       customer:customers(id, nombre, telefono, direccion)

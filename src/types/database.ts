@@ -8,7 +8,11 @@ export type VisitStatus = 'programada' | 'completada' | 'cancelada' | 'no_atendi
 export type OrderStatus = 'borrador' | 'enviado' | 'confirmado' | 'entregado' | 'cancelado';
 export type FormaPago = 'contado' | 'cheque' | 'plazos_cortos' | 'plazos_medios' | 'plazos_largos';
 export type CalidadPago = 'buena' | 'regular' | 'mala';
-export type UserRole = 'admin' | 'vendedor' | 'supervisor';
+export type UserRole = 'admin' | 'vendedor' | 'supervisor' | 'supervisor_nivel1';
+export type ActivityType = 'reunion' | 'tarea' | 'seguimiento' | 'capacitacion' | 'otro';
+export type ActivityStatus = 'planificacion' | 'haciendo' | 'realizado' | 'cancelado';
+export type ActivityPriority = 'baja' | 'media' | 'alta' | 'urgente';
+export type ParticipantConfirmation = 'pendiente' | 'confirmado' | 'rechazado' | 'tentativo';
 
 // =====================================================
 // CUSTOMER
@@ -278,4 +282,95 @@ export interface UserFilters {
   rol?: UserRole;
   activo?: boolean;
   search?: string;
+}
+
+// =====================================================
+// ACTIVITY (Actividades y Reuniones - Supervisor Nivel 1)
+// =====================================================
+export interface Activity {
+  id: string;
+  created_by_user_id: string;
+  titulo: string;
+  descripcion: string | null;
+  tipo: ActivityType;
+  estado: ActivityStatus;
+  prioridad: ActivityPriority;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  fecha_limite: string | null;
+  ubicacion: string | null;
+  es_virtual: boolean;
+  enlace_reunion: string | null;
+  notas: string | null;
+  resultado: string | null;
+  created_at: string;
+  updated_at: string;
+  // Relaciones
+  participants?: ActivityParticipant[];
+  comments?: ActivityComment[];
+  creator?: UserProfile;
+}
+
+export interface ActivityInsert {
+  titulo: string;
+  descripcion?: string | null;
+  tipo?: ActivityType;
+  estado?: ActivityStatus;
+  prioridad?: ActivityPriority;
+  fecha_inicio: string;
+  fecha_fin?: string | null;
+  fecha_limite?: string | null;
+  ubicacion?: string | null;
+  es_virtual?: boolean;
+  enlace_reunion?: string | null;
+  notas?: string | null;
+}
+
+export interface ActivityUpdate extends Partial<ActivityInsert> {
+  resultado?: string | null;
+}
+
+export interface ActivityParticipant {
+  id: string;
+  activity_id: string;
+  user_profile_id: string;
+  estado_confirmacion: ParticipantConfirmation;
+  notas: string | null;
+  asistio: boolean | null;
+  created_at: string;
+  updated_at: string;
+  // Relación
+  user_profile?: UserProfile;
+}
+
+export interface ActivityParticipantInsert {
+  activity_id: string;
+  user_profile_id: string;
+  estado_confirmacion?: ParticipantConfirmation;
+  notas?: string | null;
+}
+
+export interface ActivityComment {
+  id: string;
+  activity_id: string;
+  user_profile_id: string;
+  comentario: string;
+  created_at: string;
+  updated_at: string;
+  // Relación
+  user_profile?: UserProfile;
+}
+
+export interface ActivityCommentInsert {
+  activity_id: string;
+  comentario: string;
+}
+
+export interface ActivityFilters {
+  tipo?: ActivityType;
+  estado?: ActivityStatus;
+  prioridad?: ActivityPriority;
+  date_from?: string;
+  date_to?: string;
+  participant_id?: string;
 }

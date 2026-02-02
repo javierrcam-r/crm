@@ -42,6 +42,7 @@ const getRoleBadge = (rol: UserRole) => {
     admin: { label: 'Administrador', variant: 'red' as const, icon: Shield },
     vendedor: { label: 'Vendedor', variant: 'blue' as const, icon: Users },
     supervisor: { label: 'Supervisor', variant: 'green' as const, icon: UserCheck },
+    supervisor_nivel1: { label: 'Supervisor N1', variant: 'purple' as const, icon: UserCheck },
   };
   return roles[rol];
 };
@@ -350,6 +351,7 @@ export default function UsuariosPage() {
               <option value="admin">Administrador</option>
               <option value="vendedor">Vendedor</option>
               <option value="supervisor">Supervisor</option>
+              <option value="supervisor_nivel1">Supervisor N1</option>
             </Select>
             <Select
               value={filterActivo}
@@ -562,6 +564,7 @@ export default function UsuariosPage() {
             >
               <option value="vendedor">Vendedor</option>
               <option value="supervisor">Supervisor</option>
+              <option value="supervisor_nivel1">Supervisor Nivel 1</option>
               <option value="admin">Administrador</option>
             </Select>
           </div>

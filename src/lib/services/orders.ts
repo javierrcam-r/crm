@@ -108,10 +108,18 @@ export async function getWeekOrders() {
 
 export async function createOrder(order: OrderInsert) {
   const supabase = getSupabaseClient();
+  const userId = getCurrentUserId();
+
+  if (!userId) {
+    throw new Error('No se encontró el usuario actual');
+  }
 
   const { data, error } = await supabase
     .from('orders')
-    .insert(order)
+    .insert({
+      ...order,
+      user_id: userId
+    })
     .select(`
       *,
       customer:customers(id, nombre, telefono, direccion)
