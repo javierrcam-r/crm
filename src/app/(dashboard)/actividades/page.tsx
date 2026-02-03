@@ -100,7 +100,10 @@ export default function ActividadesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<ActivityType | ''>('');
   const [filterPrioridad, setFilterPrioridad] = useState<ActivityPriority | ''>('');
+  const [filterPersona, setFilterPersona] = useState<string>('');
   const [tableNotExists, setTableNotExists] = useState(false);
+
+  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
   
   // Form state
   const [formData, setFormData] = useState<ActivityInsert & { participantes: string[] }>({
@@ -164,15 +167,38 @@ export default function ActividadesPage() {
                          activity.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTipo = !filterTipo || activity.tipo === filterTipo;
     const matchesPrioridad = !filterPrioridad || activity.prioridad === filterPrioridad;
-    return matchesSearch && matchesTipo && matchesPrioridad;
+
+    // Filtro de visibilidad por rol
+    let matchesVisibility = true;
+    if (userProfile?.rol === 'vendedor') {
+      // Vendedores solo ven sus propias actividades o donde son participantes
+      matchesVisibility = activity.created_by_user_id === userProfile.id ||
+                         activity.participants?.some(p => p.user_profile_id === userProfile.id) ||
+                         false;
+    }
+    // Supervisores N1 y admins ven todas las actividades
+
+    // Filtro por persona (solo para Supervisor N1)
+    const matchesPersona = !filterPersona ||
+                          activity.created_by_user_id === filterPersona ||
+                          activity.participants?.some(p => p.user_profile_id === filterPersona);
+
+    return matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility;
   });
   
   // Group by status for Kanban
-  const kanbanColumns: { status: ActivityStatus; activities: Activity[] }[] = [
-    { status: 'planificacion', activities: filteredActivities.filter(a => a.estado === 'planificacion') },
-    { status: 'haciendo', activities: filteredActivities.filter(a => a.estado === 'haciendo') },
-    { status: 'realizado', activities: filteredActivities.filter(a => a.estado === 'realizado') }
-  ];
+  // Vendedores no ven la columna "Realizado", solo Supervisor N1 y otros roles
+  const kanbanColumns: { status: ActivityStatus; activities: Activity[] }[] =
+    userProfile?.rol === 'vendedor'
+      ? [
+          { status: 'planificacion', activities: filteredActivities.filter(a => a.estado === 'planificacion') },
+          { status: 'haciendo', activities: filteredActivities.filter(a => a.estado === 'haciendo') }
+        ]
+      : [
+          { status: 'planificacion', activities: filteredActivities.filter(a => a.estado === 'planificacion') },
+          { status: 'haciendo', activities: filteredActivities.filter(a => a.estado === 'haciendo') },
+          { status: 'realizado', activities: filteredActivities.filter(a => a.estado === 'realizado') }
+        ];
   
   async function handleCreateActivity() {
     if (!formData.titulo || !formData.fecha_inicio) {
@@ -223,9 +249,15 @@ export default function ActividadesPage() {
   }
   
   async function handleStatusChange(activityId: string, newStatus: ActivityStatus) {
+    // Solo Supervisor N1 puede marcar como "Realizado"
+    if (newStatus === 'realizado' && !isSupervisorN1) {
+      toast.error('Solo Supervisores Nivel 1 pueden marcar actividades como Realizado');
+      return;
+    }
+
     try {
       await updateActivityStatus(activityId, newStatus);
-      setActivities(prev => prev.map(a => 
+      setActivities(prev => prev.map(a =>
         a.id === activityId ? { ...a, estado: newStatus } : a
       ));
       toast.success('Estado actualizado');
@@ -362,10 +394,14 @@ export default function ActividadesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Actividades y Reuniones</h1>
-          <p className="text-gray-500 mt-1">Gestiona reuniones, tareas y seguimientos con tu equipo</p>
+          <h1 className="text-2xl font-bold text-gray-900">Actividades Estratégicas</h1>
+          <p className="text-gray-500 mt-1">
+            {isSupervisorN1
+              ? 'Gestiona y supervisa todas las actividades del equipo'
+              : 'Gestiona reuniones, tareas y seguimientos con tu equipo'}
+          </p>
         </div>
-        
+
         <Button onClick={() => setShowCreateModal(true)} disabled={tableNotExists}>
           <Plus className="h-4 w-4 mr-2" />
           Nueva Actividad
@@ -373,7 +409,7 @@ export default function ActividadesPage() {
       </div>
       
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${userProfile?.rol === 'vendedor' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
         {kanbanColumns.map(col => (
           <Card key={col.status} className={`${estadoColors[col.status].bg} border ${estadoColors[col.status].border}`}>
             <div className="p-4">
@@ -421,7 +457,7 @@ export default function ActividadesPage() {
           </Button>
         </div>
         
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
           <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -432,7 +468,7 @@ export default function ActividadesPage() {
               className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full sm:w-48"
             />
           </div>
-          
+
           <select
             value={filterTipo}
             onChange={e => setFilterTipo(e.target.value as ActivityType | '')}
@@ -443,7 +479,7 @@ export default function ActividadesPage() {
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
-          
+
           <select
             value={filterPrioridad}
             onChange={e => setFilterPrioridad(e.target.value as ActivityPriority | '')}
@@ -454,12 +490,28 @@ export default function ActividadesPage() {
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
+
+          {/* Filtro por persona - Solo para Supervisor N1 */}
+          {isSupervisorN1 && (
+            <select
+              value={filterPersona}
+              onChange={e => setFilterPersona(e.target.value)}
+              className="px-3 py-2 border rounded-lg text-sm bg-purple-50 border-purple-200"
+            >
+              <option value="">Todas las personas</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.nombre_completo}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
       
       {/* Kanban View */}
       {viewMode === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${userProfile?.rol === 'vendedor' ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
           {kanbanColumns.map(column => (
             <div 
               key={column.status} 
@@ -503,11 +555,11 @@ export default function ActividadesPage() {
                               <AlertCircle className="h-4 w-4 text-blue-500" />
                             </button>
                           )}
-                          {column.status !== 'realizado' && (
+                          {column.status !== 'realizado' && isSupervisorN1 && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleStatusChange(activity.id, 'realizado'); }}
                               className="p-1 hover:bg-gray-100 rounded"
-                              title="Marcar como Realizado"
+                              title="Marcar como Realizado (Solo Supervisor N1)"
                             >
                               <CheckCircle className="h-4 w-4 text-green-500" />
                             </button>
@@ -947,22 +999,31 @@ export default function ActividadesPage() {
             {/* Change status */}
             <div>
               <h4 className="text-sm font-medium text-gray-500 mb-2">Cambiar estado</h4>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {(['planificacion', 'haciendo', 'realizado'] as ActivityStatus[]).map(status => (
                   <button
                     key={status}
                     onClick={() => handleStatusChange(selectedActivity.id, status)}
-                    disabled={selectedActivity.estado === status}
+                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1)}
                     className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      selectedActivity.estado === status 
-                        ? `${estadoColors[status].bg} ${estadoColors[status].text} border ${estadoColors[status].border}` 
+                      selectedActivity.estado === status
+                        ? `${estadoColors[status].bg} ${estadoColors[status].text} border ${estadoColors[status].border}`
+                        : (status === 'realizado' && !isSupervisorN1)
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
+                    title={status === 'realizado' && !isSupervisorN1 ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
                   >
                     {estadoLabels[status]}
+                    {status === 'realizado' && !isSupervisorN1 && ' 🔒'}
                   </button>
                 ))}
               </div>
+              {!isSupervisorN1 && (
+                <p className="text-xs text-amber-600 mt-2">
+                  ℹ️ Solo Supervisores Nivel 1 pueden marcar actividades como Realizado
+                </p>
+              )}
             </div>
             
             <div className="flex justify-between pt-4 border-t">

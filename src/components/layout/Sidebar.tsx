@@ -46,9 +46,9 @@ const supervisorNavigation = [
   { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
 ];
 
-const supervisorNivel1Navigation = [
-  { name: 'Mis Actividades', href: '/actividades', icon: ClipboardList },
-  { name: 'Calendario Equipo', href: '/actividades', icon: Calendar },
+// Actividades estratégicas - disponible para todos
+const actividadesEstrategicas = [
+  { name: 'Actividades Estratégicas', href: '/actividades', icon: ClipboardList },
 ];
 
 const quickActions = [
@@ -157,14 +157,15 @@ export default function Sidebar() {
               })}
             </>
           )}
-          
-          {/* Supervisor Nivel 1 Navigation */}
-          {(isUserAdmin || userProfile?.rol === 'supervisor_nivel1') && (
+
+          {/* Actividades Estratégicas - Disponible para todos */}
+          {userProfile && (
             <>
+              {userProfile.rol === 'vendedor' && <div className="my-3 sm:my-4 border-t border-gray-100"></div>}
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
-                {userProfile?.rol === 'supervisor_nivel1' ? 'Menú Principal' : 'Gestión de Equipo'}
+                {userProfile.rol === 'supervisor_nivel1' || userProfile.rol === 'supervisor' ? 'Menú Principal' : 'Gestión'}
               </p>
-              {supervisorNivel1Navigation.map((item, index) => {
+              {actividadesEstrategicas.map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
@@ -186,7 +187,7 @@ export default function Sidebar() {
                   </Link>
                 );
               })}
-              {!isUserAdmin && userProfile?.rol === 'supervisor_nivel1' && (
+              {(userProfile.rol === 'vendedor' || userProfile.rol === 'supervisor_nivel1') && (
                 <div className="my-3 sm:my-4 border-t border-gray-100"></div>
               )}
             </>
