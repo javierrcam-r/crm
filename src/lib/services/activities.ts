@@ -237,6 +237,20 @@ export async function removeParticipant(activityId: string, userProfileId: strin
   }
 }
 
+export async function removeAllParticipants(activityId: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  
+  const { error } = await supabase
+    .from('activity_participants')
+    .delete()
+    .eq('activity_id', activityId);
+  
+  if (error) {
+    console.error('Error removing all participants:', error);
+    throw error;
+  }
+}
+
 export async function updateParticipantConfirmation(
   activityId: string, 
   userProfileId: string, 

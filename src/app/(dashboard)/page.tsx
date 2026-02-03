@@ -15,9 +15,12 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   MessageSquare,
   MapPin,
   Phone,
+  Star,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -25,11 +28,13 @@ import Badge from '@/components/ui/Badge';
 import { getVisitStats, getTodayVisits, getPendingVisits, getVisitsByDate } from '@/lib/services/visits';
 import { getOrderStats, getTodayOrders, getOrdersByDate } from '@/lib/services/orders';
 import { getCustomerStats } from '@/lib/services/customers';
+import { getActivities } from '@/lib/services/activities';
 import { formatTime, formatDate, formatCurrency, visitStatusLabels, orderStatusLabels } from '@/lib/utils';
-import { format, addDays, subDays, isToday } from 'date-fns';
+import { format, addDays, subDays, isToday, startOfWeek, endOfWeek, isBefore, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Visit } from '@/lib/services/visits';
 import type { Order } from '@/lib/services/orders';
+import type { Activity } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Stats {
@@ -60,6 +65,8 @@ export default function DashboardPage() {
   const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
   const [pendingVisits, setPendingVisits] = useState<Visit[]>([]);
   const [todayOrders, setTodayOrders] = useState<Order[]>([]);
+  const [weekActivities, setWeekActivities] = useState<Activity[]>([]);
+  const [showActivities, setShowActivities] = useState(true);
   const [loading, setLoading] = useState(true);
 
   // Resumen del día
@@ -72,7 +79,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (userProfile) {
       const rol = userProfile.rol;
-      // Solo VENDEDOR tiene acceso al dashboard
+      // VENDEDOR y SUPERVISOR_VENDEDOR tienen acceso al dashboard
       if (rol === 'admin' || rol === 'supervisor' || rol === 'supervisor_nivel1') {
         router.replace('/supervisores');
       } else if (rol === 'marketing' || rol === 'tecnico') {
@@ -82,27 +89,28 @@ export default function DashboardPage() {
   }, [userProfile, router]);
 
   useEffect(() => {
-    // Solo cargar datos si es vendedor
-    if (userProfile?.rol === 'vendedor') {
+    // Cargar datos si es vendedor o supervisor_vendedor
+    if (userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor') {
       loadData();
     }
   }, [userProfile]);
 
   useEffect(() => {
-    if (userProfile?.rol === 'vendedor') {
+    if (userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor') {
       loadDayData(selectedDate);
     }
   }, [selectedDate, userProfile]);
 
   const loadData = async () => {
     try {
-      const [visitStats, orderStats, customerStats, visits, pending, orders] = await Promise.all([
+      const [visitStats, orderStats, customerStats, visits, pending, orders, activitiesData] = await Promise.all([
         getVisitStats(),
         getOrderStats(),
         getCustomerStats(),
         getTodayVisits(),
         getPendingVisits(),
         getTodayOrders(),
+        getActivities().catch(() => [] as Activity[]),
       ]);
 
       setStats({
@@ -113,6 +121,34 @@ export default function DashboardPage() {
       setTodayVisits(visits);
       setPendingVisits(pending);
       setTodayOrders(orders);
+      
+      // Filtrar actividades: propias o donde participa, de esta semana y no completadas
+      const now = new Date();
+      const weekStart = startOfWeek(now, { locale: es });
+      const weekEnd = endOfWeek(now, { locale: es });
+      
+      const myWeekActivities = activitiesData.filter(activity => {
+        // Solo las del usuario o donde participa
+        const isMyActivity = activity.created_by_user_id === userProfile?.id ||
+                            activity.participants?.some(p => p.user_profile_id === userProfile?.id);
+        
+        // Actividades que NO estén completadas
+        const notCompleted = activity.estado !== 'realizado';
+        
+        // Actividades de esta semana o vencidas
+        const activityDate = new Date(activity.fecha_inicio);
+        const isThisWeek = !isBefore(activityDate, weekStart) && !isAfter(activityDate, weekEnd);
+        const isOverdue = isBefore(activityDate, now) && activity.estado !== 'realizado';
+        
+        return isMyActivity && notCompleted && (isThisWeek || isOverdue);
+      });
+      
+      // Ordenar por fecha más cercana primero
+      myWeekActivities.sort((a, b) => 
+        new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
+      );
+      
+      setWeekActivities(myWeekActivities);
     } catch (error) {
       console.error('Error cargando dashboard:', error);
     } finally {
@@ -180,6 +216,96 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Recordatorio de Actividades Estratégicas */}
+      {weekActivities.length > 0 && (
+        <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50 animate-fade-in">
+          <div 
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => setShowActivities(!showActivities)}
+          >
+            <div className="p-2 rounded-lg bg-purple-100">
+              <Star className="h-5 w-5 text-purple-600 fill-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-purple-900">Actividades Estratégicas</h3>
+              <p className="text-xs text-purple-600">Esta semana y pendientes</p>
+            </div>
+            <Badge variant="purple">{weekActivities.length}</Badge>
+            <button className="p-1 hover:bg-purple-100 rounded-lg transition-colors">
+              {showActivities ? (
+                <ChevronUp className="h-5 w-5 text-purple-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-purple-600" />
+              )}
+            </button>
+          </div>
+          
+          {showActivities && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
+                {weekActivities.slice(0, 6).map((activity) => {
+                  const activityDate = new Date(activity.fecha_inicio);
+                  const isOverdue = isBefore(activityDate, new Date()) && activity.estado !== 'realizado';
+                  const participants = activity.participants || [];
+                  
+                  return (
+                    <Link
+                      key={activity.id}
+                      href="/actividades"
+                      className={`flex flex-col gap-2 p-3 rounded-lg transition-colors ${
+                        isOverdue 
+                          ? 'bg-red-100/70 hover:bg-red-100 border border-red-200' 
+                          : 'bg-white/70 hover:bg-white border border-purple-100'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${
+                          activity.prioridad === 'alta' ? 'bg-red-500' :
+                          activity.prioridad === 'media' ? 'bg-amber-500' : 'bg-green-500'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium truncate text-sm ${isOverdue ? 'text-red-800' : 'text-gray-900'}`}>
+                            {activity.titulo}
+                          </p>
+                          <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                            {isOverdue && '⚠️ '}
+                            {format(activityDate, "EEE dd MMM 'a las' HH:mm", { locale: es })}
+                          </p>
+                        </div>
+                        <Badge 
+                          variant={activity.estado === 'planificacion' ? 'blue' : 'yellow'} 
+                          className="text-[10px] shrink-0"
+                        >
+                          {activity.estado === 'planificacion' ? 'Plan' : 'En prog'}
+                        </Badge>
+                      </div>
+                      {/* Participantes */}
+                      {participants.length > 0 && (
+                        <div className="flex items-center gap-1 ml-4">
+                          <Users className="h-3 w-3 text-gray-400" />
+                          <p className="text-[10px] text-gray-500 truncate">
+                            {participants.slice(0, 3).map(p => p.user_profile?.nombre_completo?.split(' ')[0] || 'Usuario').join(', ')}
+                            {participants.length > 3 && ` +${participants.length - 3}`}
+                          </p>
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+              {weekActivities.length > 6 && (
+                <Link 
+                  href="/actividades" 
+                  className="mt-3 text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                >
+                  Ver todas ({weekActivities.length}) <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+            </>
+          )}
+        </Card>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">

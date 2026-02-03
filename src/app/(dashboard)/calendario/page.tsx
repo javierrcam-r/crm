@@ -12,12 +12,16 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
+  Star,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { getVisits, getPendingVisits, type Visit } from '@/lib/services/visits';
+import { getActivities } from '@/lib/services/activities';
+import type { Activity } from '@/types/database';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   format,
   startOfMonth,
@@ -44,7 +48,9 @@ import {
 type ViewType = 'month' | 'week' | 'list';
 
 export default function CalendarioPage() {
+  const { userProfile } = useAuth();
   const [visits, setVisits] = useState<Visit[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [pendingVisits, setPendingVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -79,15 +85,29 @@ export default function CalendarioPage() {
         dateTo = end.toISOString();
       }
 
-      const [visitsData, pendingData] = await Promise.all([
+      // Cargar visitas y actividades estratégicas
+      const [visitsData, pendingData, activitiesData] = await Promise.all([
         getVisits({ date_from: dateFrom, date_to: dateTo }),
         getPendingVisits(),
+        getActivities().catch(() => [] as Activity[]), // Si falla, devolver array vacío
       ]);
 
       setVisits(visitsData);
       setPendingVisits(pendingData);
+      
+      // Filtrar actividades: solo las del usuario actual o donde es participante
+      const myActivities = activitiesData.filter(activity => {
+        // Si es admin o supervisor_nivel1, ve todas
+        if (userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor_nivel1') {
+          return true;
+        }
+        // Los demás solo ven sus propias actividades o donde son participantes
+        return activity.created_by_user_id === userProfile?.id ||
+               activity.participants?.some(p => p.user_profile_id === userProfile?.id);
+      });
+      setActivities(myActivities);
     } catch (error) {
-      console.error('Error cargando visitas:', error);
+      console.error('Error cargando datos:', error);
     } finally {
       setLoading(false);
     }
@@ -117,6 +137,12 @@ export default function CalendarioPage() {
   const getVisitsForDay = (date: Date) => {
     return visits.filter((visit) =>
       isSameDay(new Date(visit.scheduled_at), date)
+    );
+  };
+
+  const getActivitiesForDay = (date: Date) => {
+    return activities.filter((activity) =>
+      isSameDay(new Date(activity.fecha_inicio), date)
     );
   };
 
@@ -263,9 +289,11 @@ export default function CalendarioPage() {
           <div className="grid grid-cols-7">
             {calendarDays.map((day, index) => {
               const dayVisits = getVisitsForDay(day);
+              const dayActivities = getActivitiesForDay(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isSelected = selectedDate && isSameDay(day, selectedDate);
               const today = isToday(day);
+              const totalItems = dayVisits.length + dayActivities.length;
 
               return (
                 <div
@@ -287,9 +315,25 @@ export default function CalendarioPage() {
                     >
                       {format(day, 'd')}
                     </span>
+                    {dayActivities.length > 0 && (
+                      <Star className="h-3 w-3 text-purple-500 fill-purple-500" />
+                    )}
                   </div>
                   <div className="space-y-1">
-                    {dayVisits.slice(0, 3).map((visit) => (
+                    {/* Actividades Estratégicas (color púrpura) */}
+                    {dayActivities.slice(0, 2).map((activity) => (
+                      <Link
+                        key={`act-${activity.id}`}
+                        href="/actividades"
+                        onClick={(e) => e.stopPropagation()}
+                        className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500"
+                      >
+                        <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                        <span className="ml-1 truncate">⭐ {activity.titulo}</span>
+                      </Link>
+                    ))}
+                    {/* Visitas */}
+                    {dayVisits.slice(0, dayActivities.length > 0 ? 1 : 3).map((visit) => (
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
@@ -303,9 +347,9 @@ export default function CalendarioPage() {
                         <span className="ml-1 truncate">{visit.customer?.nombre}</span>
                       </Link>
                     ))}
-                    {dayVisits.length > 3 && (
+                    {totalItems > 3 && (
                       <p className="text-xs text-gray-400 pl-1">
-                        +{dayVisits.length - 3} más
+                        +{totalItems - 3} más
                       </p>
                     )}
                   </div>
@@ -321,6 +365,7 @@ export default function CalendarioPage() {
           <div className="grid grid-cols-7 divide-x divide-gray-200">
             {weekDays.map((day, index) => {
               const dayVisits = getVisitsForDay(day);
+              const dayActivities = getActivitiesForDay(day);
               const today = isToday(day);
 
               return (
@@ -331,8 +376,11 @@ export default function CalendarioPage() {
                       today && 'bg-indigo-50'
                     )}
                   >
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
                       {format(day, 'EEEE', { locale: es })}
+                      {dayActivities.length > 0 && (
+                        <Star className="h-3 w-3 text-purple-500 fill-purple-500" />
+                      )}
                     </p>
                     <p
                       className={cn(
@@ -344,6 +392,26 @@ export default function CalendarioPage() {
                     </p>
                   </div>
                   <div className="p-2 space-y-2">
+                    {/* Actividades Estratégicas */}
+                    {dayActivities.map((activity) => (
+                      <Link
+                        key={`act-${activity.id}`}
+                        href="/actividades"
+                        className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500"
+                      >
+                        <p className="font-semibold flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-purple-500" />
+                          {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                        </p>
+                        <p className="truncate font-medium">{activity.titulo}</p>
+                        {activity.descripcion && (
+                          <p className="text-xs opacity-80 truncate mt-1">
+                            {activity.descripcion}
+                          </p>
+                        )}
+                      </Link>
+                    ))}
+                    {/* Visitas */}
                     {dayVisits.map((visit) => (
                       <Link
                         key={visit.id}

@@ -23,7 +23,7 @@ export default function VendedoresListPage() {
   const [vendedores, setVendedores] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor';
+  const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
 
   useEffect(() => {
     if (canView) {

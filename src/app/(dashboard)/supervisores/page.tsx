@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Users,
   ShoppingCart,
@@ -17,6 +18,10 @@ import {
   Zap,
   Filter,
   CalendarDays,
+  Star,
+  ArrowRight,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import {
   BarChart,
@@ -36,7 +41,10 @@ import Input from '@/components/ui/Input';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils';
-import type { UserProfile } from '@/types/database';
+import { getActivities } from '@/lib/services/activities';
+import { format, startOfWeek, endOfWeek, isBefore, isAfter } from 'date-fns';
+import { es } from 'date-fns/locale';
+import type { UserProfile, Activity } from '@/types/database';
 
 interface VendedorStats {
   id: string;
@@ -87,13 +95,15 @@ export default function SupervisoresPage() {
   const [selectedVendedor, setSelectedVendedor] = useState<string>('');
   const [topClientes, setTopClientes] = useState<TopCliente[]>([]);
   const [topProductos, setTopProductos] = useState<TopProducto[]>([]);
+  const [weekActivities, setWeekActivities] = useState<Activity[]>([]);
+  const [showActivities, setShowActivities] = useState(true);
   
   // Filtros de período
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('mes');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
 
-  const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor';
+  const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
 
   // Calcular fechas según el período
   const getDateRange = () => {
@@ -129,8 +139,47 @@ export default function SupervisoresPage() {
   useEffect(() => {
     if (canView) {
       loadVendedoresStats();
+      loadWeekActivities();
     }
   }, [canView, periodFilter, customStartDate, customEndDate]);
+
+  const loadWeekActivities = async () => {
+    try {
+      const activitiesData = await getActivities();
+      
+      const now = new Date();
+      const weekStart = startOfWeek(now, { locale: es });
+      const weekEnd = endOfWeek(now, { locale: es });
+      
+      const myWeekActivities = activitiesData.filter(activity => {
+        // Solo las del usuario o donde participa
+        const isMyActivity = activity.created_by_user_id === userProfile?.id ||
+                            activity.participants?.some(p => p.user_profile_id === userProfile?.id);
+        
+        // Si es admin o supervisor_nivel1, ve todas
+        const canSeeAll = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor_nivel1';
+        
+        // Actividades que NO estén completadas
+        const notCompleted = activity.estado !== 'realizado';
+        
+        // Actividades de esta semana o vencidas
+        const activityDate = new Date(activity.fecha_inicio);
+        const isThisWeek = !isBefore(activityDate, weekStart) && !isAfter(activityDate, weekEnd);
+        const isOverdue = isBefore(activityDate, now) && activity.estado !== 'realizado';
+        
+        return (isMyActivity || canSeeAll) && notCompleted && (isThisWeek || isOverdue);
+      });
+      
+      // Ordenar por fecha más cercana primero
+      myWeekActivities.sort((a, b) => 
+        new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
+      );
+      
+      setWeekActivities(myWeekActivities);
+    } catch (error) {
+      console.error('Error cargando actividades:', error);
+    }
+  };
 
   const loadVendedoresStats = async () => {
     setLoading(true);
@@ -261,36 +310,60 @@ export default function SupervisoresPage() {
     }
   };
 
-  const loadTopData = async (supabase: ReturnType<typeof getSupabaseClient>, startDate: string) => {
+  const loadTopData = async (supabase: ReturnType<typeof getSupabaseClient>, startDate: string, userId?: string) => {
     try {
-      // Obtener orders del período con sus items
-      const { data: ordersData, error: ordersError } = await supabase
+      // Obtener el user_id real del vendedor seleccionado
+      let userIds: string[] = [];
+      if (userId) {
+        const selectedVendedorData = vendedores.find(v => v.id === userId);
+        if (selectedVendedorData) {
+          userIds = [selectedVendedorData.id];
+        }
+      }
+
+      // Construir query de orders
+      let ordersQuery = supabase
         .from('orders')
         .select(`
           id,
           total,
           order_date,
+          user_id,
           customer:customers(nombre)
         `)
         .gte('order_date', startDate)
         .is('deleted_at', null);
 
+      // Si hay un vendedor seleccionado, filtrar por su user_id
+      if (userIds.length > 0) {
+        ordersQuery = ordersQuery.in('user_id', userIds);
+      }
+
+      const { data: ordersData, error: ordersError } = await ordersQuery;
+
       if (ordersError) {
         console.error('Error obteniendo orders:', ordersError);
       }
 
-      // Obtener todos los order_items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('order_items')
-        .select(`
-          qty,
-          line_total,
-          order_id,
-          product:products(nombre)
-        `);
+      // Obtener order_items de los pedidos filtrados
+      const orderIdsFromOrders = (ordersData || []).map((o: any) => o.id);
+      
+      let itemsData: any[] = [];
+      if (orderIdsFromOrders.length > 0) {
+        const { data, error: itemsError } = await supabase
+          .from('order_items')
+          .select(`
+            qty,
+            line_total,
+            order_id,
+            product:products(nombre)
+          `)
+          .in('order_id', orderIdsFromOrders);
 
-      if (itemsError) {
-        console.error('Error obteniendo order_items:', itemsError);
+        if (itemsError) {
+          console.error('Error obteniendo order_items:', itemsError);
+        }
+        itemsData = data || [];
       }
 
       // Crear mapa de orders del período
@@ -301,7 +374,7 @@ export default function SupervisoresPage() {
       });
 
       // Filtrar items por orders del período
-      const filteredItems = (itemsData || []).filter((item: any) => orderIds.has(item.order_id));
+      const filteredItems = itemsData.filter((item: any) => orderIds.has(item.order_id));
 
       // Top clientes por cantidad de productos pedidos
       const clienteMap = new Map<string, { nombre: string; totalProductos: number; totalPedidos: Set<string>; totalVentas: number }>();
@@ -347,6 +420,15 @@ export default function SupervisoresPage() {
     }
   };
 
+  // Recargar top data cuando cambie el vendedor seleccionado
+  useEffect(() => {
+    if (canView && vendedores.length > 0) {
+      const supabase = getSupabaseClient();
+      const { startDate } = getDateRange();
+      loadTopData(supabase, startDate, selectedVendedor || undefined);
+    }
+  }, [selectedVendedor, vendedores]);
+
   if (!canView) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -367,20 +449,24 @@ export default function SupervisoresPage() {
     ? vendedores.filter(v => v.id === selectedVendedor)
     : vendedores;
 
+  // Calcular totales basados en los vendedores filtrados
   const totals = {
-    vendedores: vendedores.length,
-    clientes: vendedores.reduce((sum, v) => sum + v.clientes, 0),
-    prospectos: vendedores.reduce((sum, v) => sum + v.prospectos, 0),
-    clientesNuevosPeriodo: vendedores.reduce((sum, v) => sum + v.clientesNuevosPeriodo, 0),
-    prospectosNuevosPeriodo: vendedores.reduce((sum, v) => sum + v.prospectosNuevosPeriodo, 0),
-    pedidosPeriodo: vendedores.reduce((sum, v) => sum + v.pedidosPeriodo, 0),
-    ventasPeriodo: vendedores.reduce((sum, v) => sum + v.ventasTotalPeriodo, 0),
-    visitasPeriodo: vendedores.reduce((sum, v) => sum + v.visitasPeriodo, 0),
-    visitasCompletadas: vendedores.reduce((sum, v) => sum + v.visitasCompletadas, 0),
-    visitasPendientes: vendedores.reduce((sum, v) => sum + v.visitasPendientes, 0),
+    vendedores: filteredVendedores.length,
+    clientes: filteredVendedores.reduce((sum, v) => sum + v.clientes, 0),
+    prospectos: filteredVendedores.reduce((sum, v) => sum + v.prospectos, 0),
+    clientesNuevosPeriodo: filteredVendedores.reduce((sum, v) => sum + v.clientesNuevosPeriodo, 0),
+    prospectosNuevosPeriodo: filteredVendedores.reduce((sum, v) => sum + v.prospectosNuevosPeriodo, 0),
+    pedidosPeriodo: filteredVendedores.reduce((sum, v) => sum + v.pedidosPeriodo, 0),
+    ventasPeriodo: filteredVendedores.reduce((sum, v) => sum + v.ventasTotalPeriodo, 0),
+    visitasPeriodo: filteredVendedores.reduce((sum, v) => sum + v.visitasPeriodo, 0),
+    visitasCompletadas: filteredVendedores.reduce((sum, v) => sum + v.visitasCompletadas, 0),
+    visitasPendientes: filteredVendedores.reduce((sum, v) => sum + v.visitasPendientes, 0),
   };
 
-  const mejorVendedor = vendedores.length > 0 ? vendedores[0] : null;
+  // Mejor vendedor: si hay uno seleccionado, mostrarlo; si no, el primero del ranking
+  const mejorVendedor = selectedVendedor 
+    ? filteredVendedores[0] 
+    : (vendedores.length > 0 ? vendedores[0] : null);
 
   const getPeriodLabel = () => {
     switch (periodFilter) {
@@ -491,6 +577,96 @@ export default function SupervisoresPage() {
             )}
           </div>
         </Card>
+
+        {/* Recordatorio de Actividades Estratégicas */}
+        {weekActivities.length > 0 && (
+          <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+            <div 
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => setShowActivities(!showActivities)}
+            >
+              <div className="p-2 rounded-lg bg-purple-100">
+                <Star className="h-5 w-5 text-purple-600 fill-purple-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-purple-900">Actividades Estratégicas</h3>
+                <p className="text-xs text-purple-600">Esta semana y pendientes</p>
+              </div>
+              <Badge variant="purple">{weekActivities.length}</Badge>
+              <button className="p-1 hover:bg-purple-100 rounded-lg transition-colors">
+                {showActivities ? (
+                  <ChevronUp className="h-5 w-5 text-purple-600" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-purple-600" />
+                )}
+              </button>
+            </div>
+            
+            {showActivities && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
+                  {weekActivities.slice(0, 6).map((activity) => {
+                    const activityDate = new Date(activity.fecha_inicio);
+                    const isOverdue = isBefore(activityDate, new Date()) && activity.estado !== 'realizado';
+                    const participants = activity.participants || [];
+                    
+                    return (
+                      <Link
+                        key={activity.id}
+                        href="/actividades"
+                        className={`flex flex-col gap-2 p-3 rounded-lg transition-colors ${
+                          isOverdue 
+                            ? 'bg-red-100/70 hover:bg-red-100 border border-red-200' 
+                            : 'bg-white/70 hover:bg-white border border-purple-100'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${
+                            activity.prioridad === 'alta' ? 'bg-red-500' :
+                            activity.prioridad === 'media' ? 'bg-amber-500' : 'bg-green-500'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-medium truncate text-sm ${isOverdue ? 'text-red-800' : 'text-gray-900'}`}>
+                              {activity.titulo}
+                            </p>
+                            <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                              {isOverdue && '⚠️ '}
+                              {format(activityDate, "EEE dd MMM 'a las' HH:mm", { locale: es })}
+                            </p>
+                          </div>
+                          <Badge 
+                            variant={activity.estado === 'planificacion' ? 'blue' : 'yellow'} 
+                            className="text-[10px] shrink-0"
+                          >
+                            {activity.estado === 'planificacion' ? 'Plan' : 'En prog'}
+                          </Badge>
+                        </div>
+                        {/* Participantes */}
+                        {participants.length > 0 && (
+                          <div className="flex items-center gap-1 ml-4">
+                            <Users className="h-3 w-3 text-gray-400" />
+                            <p className="text-[10px] text-gray-500 truncate">
+                              {participants.slice(0, 3).map(p => p.user_profile?.nombre_completo?.split(' ')[0] || 'Usuario').join(', ')}
+                              {participants.length > 3 && ` +${participants.length - 3}`}
+                            </p>
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+                {weekActivities.length > 6 && (
+                  <Link 
+                    href="/actividades" 
+                    className="mt-3 text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                  >
+                    Ver todas ({weekActivities.length}) <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
+              </>
+            )}
+          </Card>
+        )}
       </div>
 
       {loading ? (
@@ -557,18 +733,22 @@ export default function SupervisoresPage() {
             </Card>
           </div>
 
-          {/* Fila 2: Mejor Vendedor + Métricas Secundarias */}
+          {/* Fila 2: Mejor Vendedor / Vendedor Seleccionado + Métricas Secundarias */}
           <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
-            {/* Mejor Vendedor */}
+            {/* Mejor Vendedor o Vendedor Seleccionado */}
             {mejorVendedor && (
-              <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 border-amber-200" padding="sm">
+              <Card className={`bg-gradient-to-br ${selectedVendedor ? 'from-indigo-50 to-blue-50 border-indigo-200' : 'from-yellow-50 to-amber-50 border-amber-200'}`} padding="sm">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                  <div className="p-2 bg-amber-100 rounded-full">
-                    <Award className="h-6 w-6 text-amber-600" />
+                  <div className={`p-2 ${selectedVendedor ? 'bg-indigo-100' : 'bg-amber-100'} rounded-full`}>
+                    {selectedVendedor ? (
+                      <UserCheck className="h-6 w-6 text-indigo-600" />
+                    ) : (
+                      <Award className="h-6 w-6 text-amber-600" />
+                    )}
                   </div>
                   <div>
-                    <p className="text-[10px] sm:text-xs text-amber-600 font-semibold uppercase">
-                      🏆 Mejor Vendedor
+                    <p className={`text-[10px] sm:text-xs ${selectedVendedor ? 'text-indigo-600' : 'text-amber-600'} font-semibold uppercase`}>
+                      {selectedVendedor ? '👤 Vendedor Seleccionado' : '🏆 Mejor Vendedor'}
                     </p>
                     <p className="text-base sm:text-lg font-bold text-gray-900">{mejorVendedor.nombre_completo}</p>
                   </div>
@@ -596,8 +776,8 @@ export default function SupervisoresPage() {
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
                 <div className="text-center p-2 bg-indigo-50 rounded-lg">
                   <Users className="h-4 w-4 text-indigo-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-900">{totals.vendedores}</p>
-                  <p className="text-[10px] text-gray-500">Vendedores</p>
+                  <p className="text-lg font-bold text-gray-900">{selectedVendedor ? 1 : vendedores.length}</p>
+                  <p className="text-[10px] text-gray-500">{selectedVendedor ? 'Seleccionado' : 'Vendedores'}</p>
                 </div>
                 <div className="text-center p-2 bg-blue-50 rounded-lg">
                   <Calendar className="h-4 w-4 text-blue-600 mx-auto mb-1" />

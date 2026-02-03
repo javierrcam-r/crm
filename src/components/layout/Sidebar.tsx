@@ -129,8 +129,8 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="p-3 sm:p-4 space-y-1">
-          {/* Menú Principal - Solo para VENDEDORES */}
-          {userProfile?.rol === 'vendedor' && (
+          {/* Menú Principal - Para VENDEDORES y SUPERVISOR+VENDEDOR */}
+          {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor') && (
             <>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
                 Menú Principal
@@ -161,8 +161,8 @@ export default function Sidebar() {
             </>
           )}
 
-          {/* Panel Supervisor - para supervisor, supervisor_nivel1 y admin */}
-          {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1') && (
+          {/* Panel Supervisor - para supervisor, supervisor_nivel1, supervisor_vendedor y admin */}
+          {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor') && (
             <>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
                 Supervisión
@@ -297,6 +297,11 @@ export default function Sidebar() {
             {userProfile?.rol === 'supervisor_nivel1' && (
               <Badge variant="purple" className="mt-1 text-[10px]">
                 Supervisor N1
+              </Badge>
+            )}
+            {userProfile?.rol === 'supervisor_vendedor' && (
+              <Badge variant="blue" className="mt-1 text-[10px]">
+                Sup. + Vendedor
               </Badge>
             )}
             {userProfile?.rol === 'marketing' && (

@@ -8,7 +8,7 @@ export type VisitStatus = 'programada' | 'completada' | 'cancelada' | 'no_atendi
 export type OrderStatus = 'borrador' | 'enviado' | 'confirmado' | 'entregado' | 'cancelado';
 export type FormaPago = 'contado' | 'cheque' | 'plazos_cortos' | 'plazos_medios' | 'plazos_largos';
 export type CalidadPago = 'buena' | 'regular' | 'mala';
-export type UserRole = 'admin' | 'vendedor' | 'supervisor' | 'supervisor_nivel1' | 'marketing' | 'tecnico';
+export type UserRole = 'admin' | 'vendedor' | 'supervisor' | 'supervisor_nivel1' | 'supervisor_vendedor' | 'marketing' | 'tecnico';
 export type ActivityType = 'reunion' | 'tarea' | 'seguimiento' | 'capacitacion' | 'otro';
 export type ActivityStatus = 'planificacion' | 'haciendo' | 'realizado' | 'cancelado';
 export type ActivityPriority = 'baja' | 'media' | 'alta' | 'urgente';
@@ -303,6 +303,9 @@ export interface Activity {
   enlace_reunion: string | null;
   notas: string | null;
   resultado: string | null;
+  recordatorio_minutos: number | null;
+  recordatorio_enviado: boolean;
+  correo_enviado: boolean;
   created_at: string;
   updated_at: string;
   // Relaciones
@@ -324,6 +327,7 @@ export interface ActivityInsert {
   es_virtual?: boolean;
   enlace_reunion?: string | null;
   notas?: string | null;
+  recordatorio_minutos?: number | null;
 }
 
 export interface ActivityUpdate extends Partial<ActivityInsert> {

@@ -12,6 +12,8 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   MoreVertical,
   Edit,
   Trash2,
@@ -19,13 +21,17 @@ import {
   Circle,
   AlertCircle,
   Filter,
-  Search
+  Search,
+  Minus,
+  Bell,
+  Mail
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
+import ActivityReminder, { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   getActivities, 
@@ -34,6 +40,7 @@ import {
   updateActivityStatus,
   deleteActivity,
   addMultipleParticipants,
+  removeAllParticipants,
   getAllUsersForSelection
 } from '@/lib/services/activities';
 import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile } from '@/types/database';
@@ -102,11 +109,14 @@ export default function ActividadesPage() {
   const [filterPrioridad, setFilterPrioridad] = useState<ActivityPriority | ''>('');
   const [filterPersona, setFilterPersona] = useState<string>('');
   const [tableNotExists, setTableNotExists] = useState(false);
+  const [showRealizados, setShowRealizados] = useState(false); // Colapsado por defecto
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
 
   const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
   
   // Form state
-  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[] }>({
+  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null }>({
     titulo: '',
     descripcion: '',
     tipo: 'reunion',
@@ -118,7 +128,8 @@ export default function ActividadesPage() {
     es_virtual: false,
     enlace_reunion: '',
     notas: '',
-    participantes: []
+    participantes: [],
+    recordatorio_minutos: null
   });
   
   useEffect(() => {
@@ -170,13 +181,15 @@ export default function ActividadesPage() {
 
     // Filtro de visibilidad por rol
     let matchesVisibility = true;
-    if (userProfile?.rol === 'vendedor') {
-      // Vendedores solo ven sus propias actividades o donde son participantes
-      matchesVisibility = activity.created_by_user_id === userProfile.id ||
-                         activity.participants?.some(p => p.user_profile_id === userProfile.id) ||
+    const rol = userProfile?.rol;
+    
+    // Solo supervisor_nivel1 y admin ven TODAS las actividades
+    // Los demás roles solo ven las suyas o donde están involucrados
+    if (rol !== 'supervisor_nivel1' && rol !== 'admin') {
+      matchesVisibility = activity.created_by_user_id === userProfile?.id ||
+                         activity.participants?.some(p => p.user_profile_id === userProfile?.id) ||
                          false;
     }
-    // Supervisores N1 y admins ven todas las actividades
 
     // Filtro por persona (solo para Supervisor N1)
     const matchesPersona = !filterPersona ||
@@ -294,8 +307,86 @@ export default function ActividadesPage() {
       es_virtual: false,
       enlace_reunion: '',
       notas: '',
-      participantes: []
+      participantes: [],
+      recordatorio_minutos: null
     });
+    setIsEditing(false);
+    setEditingActivityId(null);
+  }
+
+  function openEditModal(activity: Activity) {
+    setIsEditing(true);
+    setEditingActivityId(activity.id);
+    setFormData({
+      titulo: activity.titulo,
+      descripcion: activity.descripcion || '',
+      tipo: activity.tipo,
+      prioridad: activity.prioridad,
+      fecha_inicio: activity.fecha_inicio ? format(parseISO(activity.fecha_inicio), "yyyy-MM-dd'T'HH:mm") : '',
+      fecha_fin: activity.fecha_fin ? format(parseISO(activity.fecha_fin), "yyyy-MM-dd'T'HH:mm") : '',
+      fecha_limite: activity.fecha_limite ? format(parseISO(activity.fecha_limite), "yyyy-MM-dd'T'HH:mm") : '',
+      ubicacion: activity.ubicacion || '',
+      es_virtual: activity.es_virtual,
+      enlace_reunion: activity.enlace_reunion || '',
+      notas: activity.notas || '',
+      participantes: activity.participants?.map(p => p.user_profile_id) || [],
+      recordatorio_minutos: activity.recordatorio_minutos
+    });
+    setShowCreateModal(true);
+  }
+
+  async function handleSaveActivity() {
+    if (!formData.titulo || !formData.fecha_inicio) {
+      toast.error('Título y fecha de inicio son requeridos');
+      return;
+    }
+    
+    try {
+      const activityData = {
+        titulo: formData.titulo,
+        descripcion: formData.descripcion || null,
+        tipo: formData.tipo,
+        prioridad: formData.prioridad,
+        fecha_inicio: new Date(formData.fecha_inicio).toISOString(),
+        fecha_fin: formData.fecha_fin ? new Date(formData.fecha_fin).toISOString() : null,
+        fecha_limite: formData.fecha_limite ? new Date(formData.fecha_limite).toISOString() : null,
+        ubicacion: formData.ubicacion || null,
+        es_virtual: formData.es_virtual,
+        enlace_reunion: formData.enlace_reunion || null,
+        notas: formData.notas || null,
+        recordatorio_minutos: formData.recordatorio_minutos
+      };
+
+      if (isEditing && editingActivityId) {
+        // Actualizar actividad existente
+        await updateActivity(editingActivityId, activityData);
+        
+        // Actualizar participantes: primero eliminar todos, luego agregar los nuevos
+        await removeAllParticipants(editingActivityId);
+        if (formData.participantes.length > 0) {
+          await addMultipleParticipants(editingActivityId, formData.participantes);
+        }
+        
+        toast.success('Actividad actualizada exitosamente');
+      } else {
+        // Crear nueva actividad
+        const newActivity = await createActivity(activityData);
+        
+        if (formData.participantes.length > 0 && newActivity?.id) {
+          await addMultipleParticipants(newActivity.id, formData.participantes);
+        }
+        
+        toast.success('Actividad creada exitosamente');
+      }
+      
+      setShowCreateModal(false);
+      resetForm();
+      setTableNotExists(false);
+      loadData();
+    } catch (error: any) {
+      console.error('Error saving activity:', error);
+      toast.error(error?.message || 'Error al guardar la actividad');
+    }
   }
   
   function openActivityDetail(activity: Activity) {
@@ -372,6 +463,15 @@ export default function ActividadesPage() {
   
   return (
     <div className="p-4 sm:p-6 space-y-6">
+      {/* Sistema de notificaciones de recordatorio */}
+      <ActivityReminder 
+        activities={activities} 
+        onView={(activityId) => {
+          const activity = activities.find(a => a.id === activityId);
+          if (activity) openActivityDetail(activity);
+        }}
+      />
+
       {/* Alerta si las tablas no existen */}
       {tableNotExists && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -410,7 +510,7 @@ export default function ActividadesPage() {
       
       {/* Stats */}
       <div className={`grid gap-4 ${userProfile?.rol === 'vendedor' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
-        {kanbanColumns.map(col => (
+        {kanbanColumns.filter(col => col.status !== 'realizado').map(col => (
           <Card key={col.status} className={`${estadoColors[col.status].bg} border ${estadoColors[col.status].border}`}>
             <div className="p-4">
               <p className={`text-sm font-medium ${estadoColors[col.status].text}`}>
@@ -420,6 +520,34 @@ export default function ActividadesPage() {
             </div>
           </Card>
         ))}
+        {/* Realizado - Colapsable */}
+        {userProfile?.rol !== 'vendedor' && (
+          <div 
+            className={`${estadoColors.realizado.bg} border ${estadoColors.realizado.border} cursor-pointer hover:shadow-md transition-shadow rounded-xl`}
+            onClick={() => setShowRealizados(!showRealizados)}
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <p className={`text-sm font-medium ${estadoColors.realizado.text}`}>
+                  {estadoLabels.realizado}
+                </p>
+                <button className="p-1 hover:bg-green-100 rounded-lg transition-colors">
+                  {showRealizados ? (
+                    <Minus className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Plus className="h-4 w-4 text-green-600" />
+                  )}
+                </button>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {filteredActivities.filter(a => a.estado === 'realizado').length}
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                {showRealizados ? 'Clic para ocultar' : 'Clic para ver'}
+              </p>
+            </div>
+          </div>
+        )}
         <Card className="bg-gray-50 border border-gray-200">
           <div className="p-4">
             <p className="text-sm font-medium text-gray-600">Total</p>
@@ -511,8 +639,16 @@ export default function ActividadesPage() {
       
       {/* Kanban View */}
       {viewMode === 'kanban' && (
-        <div className={`grid grid-cols-1 gap-4 ${userProfile?.rol === 'vendedor' ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-          {kanbanColumns.map(column => (
+        <div className={`grid grid-cols-1 gap-4 ${
+          userProfile?.rol === 'vendedor' 
+            ? 'md:grid-cols-2' 
+            : showRealizados 
+              ? 'md:grid-cols-3' 
+              : 'md:grid-cols-2'
+        }`}>
+          {kanbanColumns
+            .filter(column => column.status !== 'realizado' || showRealizados)
+            .map(column => (
             <div 
               key={column.status} 
               className={`rounded-xl p-4 ${estadoColors[column.status].bg} border ${estadoColors[column.status].border}`}
@@ -521,7 +657,18 @@ export default function ActividadesPage() {
                 <h3 className={`font-semibold ${estadoColors[column.status].text}`}>
                   {estadoLabels[column.status]}
                 </h3>
-                <span className="text-sm text-gray-500">{column.activities.length}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">{column.activities.length}</span>
+                  {column.status === 'realizado' && (
+                    <button
+                      onClick={() => setShowRealizados(false)}
+                      className="p-1 hover:bg-green-100 rounded-lg transition-colors"
+                      title="Ocultar Realizados"
+                    >
+                      <Minus className="h-4 w-4 text-green-600" />
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-3">
@@ -701,11 +848,11 @@ export default function ActividadesPage() {
         </Card>
       )}
       
-      {/* Create Activity Modal */}
+      {/* Create/Edit Activity Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => { setShowCreateModal(false); resetForm(); }}
-        title="Nueva Actividad"
+        title={isEditing ? "Editar Actividad" : "Nueva Actividad"}
         size="lg"
       >
         <div className="space-y-5">
@@ -841,6 +988,7 @@ export default function ActividadesPage() {
                     vendedor: 'bg-blue-100 text-blue-700',
                     supervisor: 'bg-green-100 text-green-700',
                     supervisor_nivel1: 'bg-purple-100 text-purple-700',
+                    supervisor_vendedor: 'bg-indigo-100 text-indigo-700',
                     marketing: 'bg-emerald-100 text-emerald-700',
                     tecnico: 'bg-amber-100 text-amber-700'
                   };
@@ -873,6 +1021,7 @@ export default function ActividadesPage() {
                           <p className="text-sm font-medium text-gray-900">{user.nombre_completo}</p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700'}`}>
                             {user.rol === 'supervisor_nivel1' ? 'Sup. N1' : 
+                            user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' :
                             user.rol === 'marketing' ? 'Marketing' :
                             user.rol === 'tecnico' ? 'Técnico' : user.rol}
                           </span>
@@ -897,6 +1046,35 @@ export default function ActividadesPage() {
             )}
           </div>
           
+          {/* Recordatorio */}
+          <div className="bg-amber-50 rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex items-center gap-1.5">
+              <Bell className="h-3.5 w-3.5" />
+              Recuérdamelo
+            </h4>
+            <select
+              value={formData.recordatorio_minutos ?? ''}
+              onChange={e => setFormData(prev => ({ 
+                ...prev, 
+                recordatorio_minutos: e.target.value ? parseInt(e.target.value) : null 
+              }))}
+              className="w-full px-4 py-2.5 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white"
+            >
+              <option value="">Sin recordatorio</option>
+              {REMINDER_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {formData.recordatorio_minutos !== null && formData.participantes.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-100 p-2 rounded-lg">
+                <Mail className="h-3.5 w-3.5" />
+                <span>Se enviará un correo a los {formData.participantes.length} involucrado(s)</span>
+              </div>
+            )}
+          </div>
+
           {/* Notas */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Notas adicionales</label>
@@ -914,8 +1092,8 @@ export default function ActividadesPage() {
             <Button variant="secondary" onClick={() => { setShowCreateModal(false); resetForm(); }}>
               Cancelar
             </Button>
-            <Button onClick={handleCreateActivity}>
-              Crear Actividad
+            <Button onClick={handleSaveActivity}>
+              {isEditing ? 'Guardar Cambios' : 'Crear Actividad'}
             </Button>
           </div>
         </div>
@@ -1054,6 +1232,20 @@ export default function ActividadesPage() {
                 <p className="text-gray-700 leading-relaxed">{selectedActivity.notas}</p>
               </div>
             )}
+
+            {/* Recordatorio */}
+            {selectedActivity.recordatorio_minutos !== null && (
+              <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
+                <h4 className="text-xs font-semibold text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5" />
+                  Recordatorio configurado
+                </h4>
+                <p className="text-yellow-800 font-medium">
+                  {REMINDER_OPTIONS.find(o => o.value === selectedActivity.recordatorio_minutos)?.label || 
+                   `${selectedActivity.recordatorio_minutos} minutos antes`}
+                </p>
+              </div>
+            )}
             
             {/* Cambiar estado */}
             <div className="bg-gray-50 rounded-xl p-4">
@@ -1098,9 +1290,22 @@ export default function ActividadesPage() {
                 Eliminar
               </Button>
               
-              <Button variant="secondary" onClick={() => setShowDetailModal(false)}>
-                Cerrar
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    openEditModal(selectedActivity);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar
+                </Button>
+                <Button variant="secondary" onClick={() => setShowDetailModal(false)}>
+                  Cerrar
+                </Button>
+              </div>
             </div>
           </div>
         )}
