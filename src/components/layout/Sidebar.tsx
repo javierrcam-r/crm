@@ -27,7 +27,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Badge from '@/components/ui/Badge';
 import toast from 'react-hot-toast';
 
-const navigation = [
+// Menú principal para VENDEDORES (único rol con dashboard)
+const vendedorNavigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clientes', href: '/clientes', icon: Users },
   { name: 'Calendario', href: '/calendario', icon: Calendar },
@@ -41,12 +42,13 @@ const adminNavigation = [
   { name: 'Usuarios', href: '/usuarios', icon: Shield },
 ];
 
+// Panel de supervisión - para supervisor y supervisor_nivel1
 const supervisorNavigation = [
   { name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
 ];
 
-// Actividades estratégicas - disponible para todos
+// Actividades estratégicas - disponible para todos los roles
 const actividadesEstrategicas = [
   { name: 'Actividades Estratégicas', href: '/actividades', icon: ClipboardList },
 ];
@@ -127,13 +129,13 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="p-3 sm:p-4 space-y-1">
-          {/* Menú Principal - Solo para vendedores */}
+          {/* Menú Principal - Solo para VENDEDORES */}
           {userProfile?.rol === 'vendedor' && (
             <>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
                 Menú Principal
               </p>
-              {navigation.map((item, index) => {
+              {vendedorNavigation.map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
@@ -155,15 +157,47 @@ export default function Sidebar() {
                   </Link>
                 );
               })}
+              <div className="my-3 sm:my-4 border-t border-gray-100"></div>
             </>
           )}
 
-          {/* Actividades Estratégicas - Disponible para todos */}
+          {/* Panel Supervisor - para supervisor, supervisor_nivel1 y admin */}
+          {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1') && (
+            <>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
+                Supervisión
+              </p>
+              {supervisorNavigation.map((item, index) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
+                      'animate-slide-in opacity-0 text-sm',
+                      active
+                        ? 'bg-indigo-50 text-indigo-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    )}
+                    style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
+                  >
+                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+              <div className="my-3 sm:my-4 border-t border-gray-100"></div>
+            </>
+          )}
+
+          {/* Actividades Estratégicas - Disponible para TODOS los roles */}
           {userProfile && (
             <>
-              {userProfile.rol === 'vendedor' && <div className="my-3 sm:my-4 border-t border-gray-100"></div>}
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
-                {userProfile.rol === 'supervisor_nivel1' || userProfile.rol === 'supervisor' ? 'Menú Principal' : 'Gestión'}
+                {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
               </p>
               {actividadesEstrategicas.map((item, index) => {
                 const Icon = item.icon;
@@ -181,40 +215,6 @@ export default function Sidebar() {
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     )}
                     style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
-                  >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-              {(userProfile.rol === 'vendedor' || userProfile.rol === 'supervisor_nivel1') && (
-                <div className="my-3 sm:my-4 border-t border-gray-100"></div>
-              )}
-            </>
-          )}
-          
-          {/* Supervisor Navigation - para supervisores y admins */}
-          {(isUserAdmin || userProfile?.rol === 'supervisor') && (
-            <>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
-                {userProfile?.rol === 'vendedor' ? 'Supervisión' : 'Menú Principal'}
-              </p>
-              {supervisorNavigation.map((item, index) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
-                      'animate-slide-in opacity-0 text-sm',
-                      active
-                        ? 'bg-indigo-50 text-indigo-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    )}
-                    style={{ animationDelay: `${(navigation.length + index) * 0.05}s`, animationFillMode: 'forwards' }}
                   >
                     <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
                     <span>{item.name}</span>
@@ -246,7 +246,7 @@ export default function Sidebar() {
                         ? 'bg-indigo-50 text-indigo-700 font-medium'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     )}
-                    style={{ animationDelay: `${(navigation.length + supervisorNavigation.length + index) * 0.05}s`, animationFillMode: 'forwards' }}
+                    style={{ animationDelay: `${(supervisorNavigation.length + index) * 0.05}s`, animationFillMode: 'forwards' }}
                   >
                     <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
                     <span>{item.name}</span>
@@ -297,6 +297,16 @@ export default function Sidebar() {
             {userProfile?.rol === 'supervisor_nivel1' && (
               <Badge variant="purple" className="mt-1 text-[10px]">
                 Supervisor N1
+              </Badge>
+            )}
+            {userProfile?.rol === 'marketing' && (
+              <Badge variant="green" className="mt-1 text-[10px]">
+                Marketing
+              </Badge>
+            )}
+            {userProfile?.rol === 'tecnico' && (
+              <Badge variant="yellow" className="mt-1 text-[10px]">
+                Técnico
               </Badge>
             )}
           </div>

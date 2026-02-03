@@ -16,6 +16,8 @@ import {
   X,
   Key,
   User,
+  Megaphone,
+  Wrench,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -38,11 +40,13 @@ import type { UserRole } from '@/types/database';
 import toast from 'react-hot-toast';
 
 const getRoleBadge = (rol: UserRole) => {
-  const roles = {
-    admin: { label: 'Administrador', variant: 'red' as const, icon: Shield },
-    vendedor: { label: 'Vendedor', variant: 'blue' as const, icon: Users },
-    supervisor: { label: 'Supervisor', variant: 'green' as const, icon: UserCheck },
-    supervisor_nivel1: { label: 'Supervisor N1', variant: 'purple' as const, icon: UserCheck },
+  const roles: Record<UserRole, { label: string; variant: 'red' | 'blue' | 'green' | 'purple' | 'yellow'; icon: typeof Shield }> = {
+    admin: { label: 'Administrador', variant: 'red', icon: Shield },
+    vendedor: { label: 'Vendedor', variant: 'blue', icon: Users },
+    supervisor: { label: 'Supervisor', variant: 'green', icon: UserCheck },
+    supervisor_nivel1: { label: 'Supervisor N1', variant: 'purple', icon: UserCheck },
+    marketing: { label: 'Marketing', variant: 'green', icon: Megaphone },
+    tecnico: { label: 'Técnico', variant: 'yellow', icon: Wrench },
   };
   return roles[rol];
 };
@@ -352,6 +356,8 @@ export default function UsuariosPage() {
               <option value="vendedor">Vendedor</option>
               <option value="supervisor">Supervisor</option>
               <option value="supervisor_nivel1">Supervisor N1</option>
+              <option value="marketing">Marketing</option>
+              <option value="tecnico">Técnico</option>
             </Select>
             <Select
               value={filterActivo}
@@ -565,6 +571,8 @@ export default function UsuariosPage() {
               <option value="vendedor">Vendedor</option>
               <option value="supervisor">Supervisor</option>
               <option value="supervisor_nivel1">Supervisor Nivel 1</option>
+              <option value="marketing">Marketing</option>
+              <option value="tecnico">Técnico</option>
               <option value="admin">Administrador</option>
             </Select>
           </div>

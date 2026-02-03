@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Calendar,
   Users,
@@ -53,6 +54,7 @@ interface Stats {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { isUserAdmin, userProfile } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
@@ -66,13 +68,31 @@ export default function DashboardPage() {
   const [dayOrders, setDayOrders] = useState<Order[]>([]);
   const [loadingDay, setLoadingDay] = useState(false);
 
+  // Redirigir roles sin acceso al dashboard
   useEffect(() => {
-    loadData();
-  }, []);
+    if (userProfile) {
+      const rol = userProfile.rol;
+      // Solo VENDEDOR tiene acceso al dashboard
+      if (rol === 'admin' || rol === 'supervisor' || rol === 'supervisor_nivel1') {
+        router.replace('/supervisores');
+      } else if (rol === 'marketing' || rol === 'tecnico') {
+        router.replace('/actividades');
+      }
+    }
+  }, [userProfile, router]);
 
   useEffect(() => {
-    loadDayData(selectedDate);
-  }, [selectedDate]);
+    // Solo cargar datos si es vendedor
+    if (userProfile?.rol === 'vendedor') {
+      loadData();
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (userProfile?.rol === 'vendedor') {
+      loadDayData(selectedDate);
+    }
+  }, [selectedDate, userProfile]);
 
   const loadData = async () => {
     try {

@@ -708,32 +708,36 @@ export default function ActividadesPage() {
         title="Nueva Actividad"
         size="lg"
       >
-        <div className="space-y-4">
-          <Input
-            label="Título *"
-            value={formData.titulo}
-            onChange={e => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-            placeholder="Ej: Reunión de equipo semanal"
-          />
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-            <textarea
-              value={formData.descripcion || ''}
-              onChange={e => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
-              rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              placeholder="Describe el objetivo de la actividad..."
+        <div className="space-y-5">
+          {/* Información básica */}
+          <div className="space-y-4">
+            <Input
+              label="Título *"
+              value={formData.titulo}
+              onChange={e => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
+              placeholder="Ej: Reunión de equipo semanal"
             />
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+              <textarea
+                value={formData.descripcion || ''}
+                onChange={e => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+                rows={3}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+                placeholder="Describe el objetivo de la actividad..."
+              />
+            </div>
           </div>
           
+          {/* Tipo y Prioridad */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label>
               <select
                 value={formData.tipo}
                 onChange={e => setFormData(prev => ({ ...prev, tipo: e.target.value as ActivityType }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
               >
                 {Object.entries(tipoLabels).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -742,11 +746,11 @@ export default function ActividadesPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Prioridad</label>
               <select
                 value={formData.prioridad}
                 onChange={e => setFormData(prev => ({ ...prev, prioridad: e.target.value as ActivityPriority }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
               >
                 {Object.entries(prioridadLabels).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -755,64 +759,78 @@ export default function ActividadesPage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Fecha y hora de inicio *"
-              type="datetime-local"
-              value={formData.fecha_inicio}
-              onChange={e => setFormData(prev => ({ ...prev, fecha_inicio: e.target.value }))}
-            />
+          {/* Fechas */}
+          <div className="bg-blue-50 rounded-xl p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1.5">
+              <CalendarIcon className="h-3.5 w-3.5" />
+              Fechas y horarios
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Inicio *"
+                type="datetime-local"
+                value={formData.fecha_inicio}
+                onChange={e => setFormData(prev => ({ ...prev, fecha_inicio: e.target.value }))}
+              />
+              
+              <Input
+                label="Fin"
+                type="datetime-local"
+                value={formData.fecha_fin || ''}
+                onChange={e => setFormData(prev => ({ ...prev, fecha_fin: e.target.value }))}
+              />
+            </div>
             
             <Input
-              label="Fecha y hora de fin"
+              label="Fecha límite (opcional)"
               type="datetime-local"
-              value={formData.fecha_fin || ''}
-              onChange={e => setFormData(prev => ({ ...prev, fecha_fin: e.target.value }))}
+              value={formData.fecha_limite || ''}
+              onChange={e => setFormData(prev => ({ ...prev, fecha_limite: e.target.value }))}
             />
           </div>
           
-          <Input
-            label="Fecha límite"
-            type="datetime-local"
-            value={formData.fecha_limite || ''}
-            onChange={e => setFormData(prev => ({ ...prev, fecha_limite: e.target.value }))}
-          />
-          
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.es_virtual}
-                onChange={e => setFormData(prev => ({ ...prev, es_virtual: e.target.checked }))}
-                className="rounded"
+          {/* Ubicación */}
+          <div className="bg-purple-50 rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide flex items-center gap-1.5">
+                {formData.es_virtual ? <Video className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+                {formData.es_virtual ? 'Reunión Virtual' : 'Ubicación'}
+              </h4>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <span className="text-xs text-purple-600">Virtual</span>
+                <input
+                  type="checkbox"
+                  checked={formData.es_virtual}
+                  onChange={e => setFormData(prev => ({ ...prev, es_virtual: e.target.checked }))}
+                  className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-4 w-4"
+                />
+              </label>
+            </div>
+            
+            {formData.es_virtual ? (
+              <Input
+                label="Enlace de la reunión"
+                value={formData.enlace_reunion || ''}
+                onChange={e => setFormData(prev => ({ ...prev, enlace_reunion: e.target.value }))}
+                placeholder="https://meet.google.com/... o https://zoom.us/..."
               />
-              <span className="text-sm">Reunión virtual</span>
-            </label>
+            ) : (
+              <Input
+                label="Lugar"
+                value={formData.ubicacion || ''}
+                onChange={e => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
+                placeholder="Ej: Sala de reuniones 1"
+              />
+            )}
           </div>
-          
-          {formData.es_virtual ? (
-            <Input
-              label="Enlace de la reunión"
-              value={formData.enlace_reunion || ''}
-              onChange={e => setFormData(prev => ({ ...prev, enlace_reunion: e.target.value }))}
-              placeholder="https://meet.google.com/... o https://zoom.us/..."
-            />
-          ) : (
-            <Input
-              label="Ubicación"
-              value={formData.ubicacion || ''}
-              onChange={e => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
-              placeholder="Ej: Sala de reuniones 1"
-            />
-          )}
           
           {/* Involucrados/Participantes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Users className="h-4 w-4 inline mr-1" />
-              Involucrados ({users.length} usuarios disponibles)
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <Users className="h-3.5 w-3.5" />
+              Involucrados ({users.length} disponibles)
             </label>
-            <div className="border rounded-lg max-h-64 overflow-y-auto bg-gray-50">
+            <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto bg-gray-50">
               {users.length === 0 ? (
                 <p className="p-4 text-center text-gray-500 text-sm">No hay usuarios disponibles</p>
               ) : (
@@ -822,13 +840,15 @@ export default function ActividadesPage() {
                     admin: 'bg-red-100 text-red-700',
                     vendedor: 'bg-blue-100 text-blue-700',
                     supervisor: 'bg-green-100 text-green-700',
-                    supervisor_nivel1: 'bg-purple-100 text-purple-700'
+                    supervisor_nivel1: 'bg-purple-100 text-purple-700',
+                    marketing: 'bg-emerald-100 text-emerald-700',
+                    tecnico: 'bg-amber-100 text-amber-700'
                   };
                   return (
                     <label 
                       key={user.id} 
-                      className={`flex items-center gap-3 p-3 cursor-pointer border-b last:border-b-0 transition-colors ${
-                        isSelected ? 'bg-indigo-50' : 'hover:bg-white'
+                      className={`flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all ${
+                        isSelected ? 'bg-indigo-50 border-indigo-100' : 'hover:bg-white'
                       }`}
                     >
                       <input
@@ -841,13 +861,20 @@ export default function ActividadesPage() {
                             setFormData(prev => ({ ...prev, participantes: prev.participantes.filter(id => id !== user.id) }));
                           }
                         }}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                       />
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-sm">
+                          {user.nombre_completo?.charAt(0) || '?'}
+                        </span>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-gray-900">{user.nombre_completo}</p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700'}`}>
-                            {user.rol === 'supervisor_nivel1' ? 'Sup. N1' : user.rol}
+                            {user.rol === 'supervisor_nivel1' ? 'Sup. N1' : 
+                            user.rol === 'marketing' ? 'Marketing' :
+                            user.rol === 'tecnico' ? 'Técnico' : user.rol}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -861,26 +888,29 @@ export default function ActividadesPage() {
               )}
             </div>
             {formData.participantes.length > 0 && (
-              <div className="mt-2 p-2 bg-indigo-50 rounded-lg">
-                <p className="text-sm text-indigo-700 font-medium">
-                  ✓ {formData.participantes.length} involucrado(s) seleccionado(s)
+              <div className="mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                <p className="text-sm text-indigo-700 font-medium flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  {formData.participantes.length} involucrado(s) seleccionado(s)
                 </p>
               </div>
             )}
           </div>
           
+          {/* Notas */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notas adicionales</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Notas adicionales</label>
             <textarea
               value={formData.notas || ''}
               onChange={e => setFormData(prev => ({ ...prev, notas: e.target.value }))}
               rows={2}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
               placeholder="Notas o recordatorios..."
             />
           </div>
           
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          {/* Acciones */}
+          <div className="flex justify-end gap-3 pt-5 border-t border-gray-200">
             <Button variant="secondary" onClick={() => { setShowCreateModal(false); resetForm(); }}>
               Cancelar
             </Button>
@@ -899,82 +929,110 @@ export default function ActividadesPage() {
         size="lg"
       >
         {selectedActivity && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`px-3 py-1 rounded-full text-sm ${tipoColors[selectedActivity.tipo]}`}>
+          <div className="space-y-6">
+            {/* Header con badges */}
+            <div className="flex items-center gap-2 flex-wrap pb-4 border-b border-gray-100">
+              <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tipoColors[selectedActivity.tipo]}`}>
                 {tipoLabels[selectedActivity.tipo]}
               </span>
-              <span className={`px-3 py-1 rounded-full text-sm ${prioridadColors[selectedActivity.prioridad]}`}>
+              <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${prioridadColors[selectedActivity.prioridad]}`}>
                 {prioridadLabels[selectedActivity.prioridad]}
               </span>
-              <span className={`px-3 py-1 rounded-full text-sm ${estadoColors[selectedActivity.estado].bg} ${estadoColors[selectedActivity.estado].text}`}>
+              <span className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${estadoColors[selectedActivity.estado].bg} ${estadoColors[selectedActivity.estado].text} ${estadoColors[selectedActivity.estado].border}`}>
                 {estadoLabels[selectedActivity.estado]}
               </span>
             </div>
             
+            {/* Descripción */}
             {selectedActivity.descripcion && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-1">Descripción</h4>
-                <p className="text-gray-700">{selectedActivity.descripcion}</p>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Descripción</h4>
+                <p className="text-gray-700 leading-relaxed">{selectedActivity.descripcion}</p>
               </div>
             )}
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-1">Fecha inicio</h4>
-                <p className="text-gray-700 flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(parseISO(selectedActivity.fecha_inicio), "PPPp", { locale: es })}
+            {/* Fechas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-blue-50 rounded-xl p-4">
+                <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  Fecha inicio
+                </h4>
+                <p className="text-gray-800 font-medium">
+                  {format(parseISO(selectedActivity.fecha_inicio), "d 'de' MMMM 'de' yyyy", { locale: es })}
+                </p>
+                <p className="text-blue-600 text-sm font-medium mt-0.5">
+                  {format(parseISO(selectedActivity.fecha_inicio), "HH:mm", { locale: es })} hrs
                 </p>
               </div>
               
               {selectedActivity.fecha_fin && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Fecha fin</h4>
-                  <p className="text-gray-700">
-                    {format(parseISO(selectedActivity.fecha_fin), "PPPp", { locale: es })}
+                <div className="bg-green-50 rounded-xl p-4">
+                  <h4 className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    Fecha fin
+                  </h4>
+                  <p className="text-gray-800 font-medium">
+                    {format(parseISO(selectedActivity.fecha_fin), "d 'de' MMMM 'de' yyyy", { locale: es })}
+                  </p>
+                  <p className="text-green-600 text-sm font-medium mt-0.5">
+                    {format(parseISO(selectedActivity.fecha_fin), "HH:mm", { locale: es })} hrs
                   </p>
                 </div>
               )}
             </div>
             
-            {selectedActivity.ubicacion && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-1">Ubicación</h4>
-                <p className="text-gray-700 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  {selectedActivity.ubicacion}
-                </p>
+            {/* Ubicación o Virtual */}
+            {(selectedActivity.ubicacion || (selectedActivity.es_virtual && selectedActivity.enlace_reunion)) && (
+              <div className="bg-purple-50 rounded-xl p-4">
+                {selectedActivity.es_virtual && selectedActivity.enlace_reunion ? (
+                  <>
+                    <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                      <Video className="h-3.5 w-3.5" />
+                      Reunión Virtual
+                    </h4>
+                    <a 
+                      href={selectedActivity.enlace_reunion} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                    >
+                      <Video className="h-4 w-4" />
+                      Unirse a la reunión
+                    </a>
+                  </>
+                ) : selectedActivity.ubicacion && (
+                  <>
+                    <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Ubicación
+                    </h4>
+                    <p className="text-gray-800 font-medium">{selectedActivity.ubicacion}</p>
+                  </>
+                )}
               </div>
             )}
             
-            {selectedActivity.es_virtual && selectedActivity.enlace_reunion && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-1">Enlace de reunión</h4>
-                <a 
-                  href={selectedActivity.enlace_reunion} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-indigo-600 hover:underline flex items-center gap-2"
-                >
-                  <Video className="h-4 w-4" />
-                  Unirse a la reunión
-                </a>
-              </div>
-            )}
-            
-            {/* Participants */}
+            {/* Participantes */}
             {selectedActivity.participants && selectedActivity.participants.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-2">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5" />
                   Participantes ({selectedActivity.participants.length})
                 </h4>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {selectedActivity.participants.map(p => (
-                    <div key={p.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                      <div>
-                        <p className="font-medium text-sm">{p.user_profile?.nombre_completo}</p>
-                        <p className="text-xs text-gray-500">{p.user_profile?.email}</p>
+                    <div key={p.id} className="flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors rounded-xl p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                          <span className="text-indigo-600 font-semibold text-sm">
+                            {p.user_profile?.nombre_completo?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm text-gray-900">{p.user_profile?.nombre_completo}</p>
+                          <p className="text-xs text-gray-500">{p.user_profile?.email}</p>
+                        </div>
                       </div>
                       <Badge variant={
                         p.estado_confirmacion === 'confirmado' ? 'green' :
@@ -989,28 +1047,29 @@ export default function ActividadesPage() {
               </div>
             )}
             
+            {/* Notas */}
             {selectedActivity.notas && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-1">Notas</h4>
-                <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedActivity.notas}</p>
+              <div className="bg-amber-50 rounded-xl p-4">
+                <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-2">Notas</h4>
+                <p className="text-gray-700 leading-relaxed">{selectedActivity.notas}</p>
               </div>
             )}
             
-            {/* Change status */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Cambiar estado</h4>
+            {/* Cambiar estado */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cambiar estado</h4>
               <div className="flex gap-2 flex-wrap">
                 {(['planificacion', 'haciendo', 'realizado'] as ActivityStatus[]).map(status => (
                   <button
                     key={status}
                     onClick={() => handleStatusChange(selectedActivity.id, status)}
                     disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1)}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                       selectedActivity.estado === status
-                        ? `${estadoColors[status].bg} ${estadoColors[status].text} border ${estadoColors[status].border}`
+                        ? `${estadoColors[status].bg} ${estadoColors[status].text} border-2 ${estadoColors[status].border} ring-2 ring-offset-1 ring-current/20`
                         : (status === 'realizado' && !isSupervisorN1)
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                     }`}
                     title={status === 'realizado' && !isSupervisorN1 ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
                   >
@@ -1020,19 +1079,22 @@ export default function ActividadesPage() {
                 ))}
               </div>
               {!isSupervisorN1 && (
-                <p className="text-xs text-amber-600 mt-2">
-                  ℹ️ Solo Supervisores Nivel 1 pueden marcar actividades como Realizado
+                <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Solo Supervisores Nivel 1 pueden marcar actividades como Realizado
                 </p>
               )}
             </div>
             
-            <div className="flex justify-between pt-4 border-t">
+            {/* Acciones */}
+            <div className="flex justify-between items-center pt-4 border-t border-gray-200">
               <Button 
                 variant="danger" 
                 size="sm"
                 onClick={() => handleDeleteActivity(selectedActivity.id)}
+                className="gap-1.5"
               >
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Trash2 className="h-4 w-4" />
                 Eliminar
               </Button>
               
