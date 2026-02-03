@@ -19,7 +19,6 @@ import {
   TrendingUp,
   ClipboardList,
   UserCheck,
-  Database,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -40,7 +39,6 @@ const navigation = [
 
 const adminNavigation = [
   { name: 'Usuarios', href: '/usuarios', icon: Shield },
-  { name: 'API Simulación', href: '/api-simulacion', icon: Database },
 ];
 
 const supervisorNavigation = [

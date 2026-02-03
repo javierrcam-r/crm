@@ -7,14 +7,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 export default function SinAccesoPage() {
-  const { user, supabase } = useAuth();
+  const { userProfile, logout } = useAuth();
 
   const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    localStorage.clear();
-    sessionStorage.clear();
+    logout();
     window.location.href = '/login';
   };
 
@@ -24,18 +20,18 @@ export default function SinAccesoPage() {
         <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-amber-100 mb-4">
           <AlertCircle className="h-8 w-8 text-amber-600" />
         </div>
-        
+
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">
           Acceso Pendiente
         </h2>
-        
+
         <p className="text-sm text-gray-600 mb-4">
           Tu cuenta ha sido creada pero aún no tienes un perfil activo en el sistema.
         </p>
-        
-        {user?.email && (
+
+        {userProfile?.email && (
           <p className="text-sm text-gray-700 mb-4">
-            Usuario: <strong>{user.email}</strong>
+            Usuario: <strong>{userProfile.email}</strong>
           </p>
         )}
 
