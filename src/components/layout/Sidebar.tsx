@@ -48,6 +48,13 @@ const supervisorNavigation = [
   { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
 ];
 
+// Navegación específica para supervisor_nivel1
+const supervisorN1Navigation = [
+  { name: 'Calendario', href: '/calendario', icon: Calendar },
+  { name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
+  { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
+];
+
 // Actividades estratégicas - disponible para todos los roles
 const actividadesEstrategicas = [
   { name: 'Actividades Estratégicas', href: '/actividades', icon: ClipboardList },
@@ -167,7 +174,7 @@ export default function Sidebar() {
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
                 Supervisión
               </p>
-              {supervisorNavigation.map((item, index) => {
+              {(userProfile?.rol === 'supervisor_nivel1' ? supervisorN1Navigation : supervisorNavigation).map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (

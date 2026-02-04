@@ -60,8 +60,10 @@ export async function getActivities(filters?: ActivityFilters): Promise<Activity
     return [];
   }
   
-  // Obtener participantes para todas las actividades
+  // Obtener participantes, comentarios y creadores para todas las actividades
   const activityIds = activities.map(a => a.id);
+  const creatorIds = [...new Set(activities.map(a => a.created_by_user_id))];
+  
   const { data: participants, error: partError } = await supabase
     .from('activity_participants')
     .select(`
@@ -75,13 +77,40 @@ export async function getActivities(filters?: ActivityFilters): Promise<Activity
     // No lanzar error, solo continuar sin participantes
   }
   
-  // Combinar actividades con sus participantes
-  const activitiesWithParticipants = activities.map(activity => ({
+  const { data: comments, error: commentsError } = await supabase
+    .from('activity_comments')
+    .select(`
+      *,
+      user_profile:users_profile(id, nombre_completo)
+    `)
+    .in('activity_id', activityIds)
+    .order('created_at', { ascending: true });
+  
+  if (commentsError) {
+    console.error('Error fetching comments:', commentsError);
+    // No lanzar error, solo continuar sin comentarios
+  }
+  
+  // Obtener información de los creadores
+  const { data: creators, error: creatorsError } = await supabase
+    .from('users_profile')
+    .select('id, nombre_completo, email')
+    .in('id', creatorIds);
+  
+  if (creatorsError) {
+    console.error('Error fetching creators:', creatorsError);
+    // No lanzar error, solo continuar sin creadores
+  }
+  
+  // Combinar actividades con sus participantes, comentarios y creadores
+  const activitiesWithRelations = activities.map(activity => ({
     ...activity,
-    participants: (participants || []).filter(p => p.activity_id === activity.id)
+    participants: (participants || []).filter(p => p.activity_id === activity.id),
+    comments: (comments || []).filter(c => c.activity_id === activity.id),
+    creator: (creators || []).find(c => c.id === activity.created_by_user_id)
   }));
   
-  return activitiesWithParticipants as Activity[];
+  return activitiesWithRelations as Activity[];
 }
 
 export async function getActivityById(id: string): Promise<Activity | null> {

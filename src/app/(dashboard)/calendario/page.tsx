@@ -13,6 +13,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Star,
+  Users,
+  MapPin,
+  Video,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -20,7 +23,7 @@ import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { getVisits, getPendingVisits, type Visit } from '@/lib/services/visits';
 import { getActivities } from '@/lib/services/activities';
-import type { Activity } from '@/types/database';
+import type { Activity, ActivityType } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   format,
@@ -95,9 +98,9 @@ export default function CalendarioPage() {
       setVisits(visitsData);
       setPendingVisits(pendingData);
       
-      // Filtrar actividades: solo las del usuario actual o donde es participante
+      // Filtrar actividades según el rol
       const myActivities = activitiesData.filter(activity => {
-        // Si es admin o supervisor_nivel1, ve todas
+        // Admin y supervisor_nivel1 ven TODAS las actividades (estratégicas y diarias)
         if (userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor_nivel1') {
           return true;
         }
@@ -146,6 +149,22 @@ export default function CalendarioPage() {
     );
   };
 
+  // Separar actividades estratégicas de actividades diarias
+  const getStrategicActivitiesForDay = (date: Date) => {
+    return getActivitiesForDay(date).filter(activity => 
+      activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento'
+    );
+  };
+
+  const getDailyActivitiesForDay = (date: Date) => {
+    return getActivitiesForDay(date).filter(activity => 
+      activity.tipo === 'tarea' || activity.tipo === 'otro'
+    );
+  };
+
+  // Determinar si es supervisor_nivel1
+  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completada': return 'bg-emerald-50 text-emerald-700';
@@ -182,11 +201,21 @@ export default function CalendarioPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Calendario</h1>
-          <p className="text-gray-500 mt-1">Gestiona tu agenda de visitas</p>
+          <p className="text-gray-500 mt-1">
+            {isSupervisorN1 ? 'Gestiona tus actividades diarias y estratégicas' : 'Gestiona tu agenda de visitas'}
+          </p>
         </div>
-        <Link href="/calendario/nueva">
-          <Button icon={<Plus className="h-4 w-4" />}>Nueva Visita</Button>
-        </Link>
+        <div className="flex gap-2">
+          {isSupervisorN1 ? (
+            <Link href="/calendario/nueva-actividad">
+              <Button icon={<Plus className="h-4 w-4" />}>Nueva Actividad Diaria</Button>
+            </Link>
+          ) : (
+            <Link href="/calendario/nueva">
+              <Button icon={<Plus className="h-4 w-4" />}>Nueva Visita</Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Visitas Pendientes */}
@@ -290,10 +319,16 @@ export default function CalendarioPage() {
             {calendarDays.map((day, index) => {
               const dayVisits = getVisitsForDay(day);
               const dayActivities = getActivitiesForDay(day);
+              const strategicActivities = getStrategicActivitiesForDay(day);
+              const dailyActivities = getDailyActivitiesForDay(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isSelected = selectedDate && isSameDay(day, selectedDate);
               const today = isToday(day);
-              const totalItems = dayVisits.length + dayActivities.length;
+              
+              // Para supervisor_nivel1: priorizar actividades, para otros: priorizar visitas
+              const totalItems = isSupervisorN1 
+                ? dayActivities.length + dayVisits.length
+                : dayVisits.length + dayActivities.length;
 
               return (
                 <div
@@ -315,38 +350,83 @@ export default function CalendarioPage() {
                     >
                       {format(day, 'd')}
                     </span>
-                    {dayActivities.length > 0 && (
+                    {strategicActivities.length > 0 && (
                       <Star className="h-3 w-3 text-purple-500 fill-purple-500" />
                     )}
                   </div>
                   <div className="space-y-1">
-                    {/* Actividades Estratégicas (color púrpura) */}
-                    {dayActivities.slice(0, 2).map((activity) => (
-                      <Link
-                        key={`act-${activity.id}`}
-                        href="/actividades"
-                        onClick={(e) => e.stopPropagation()}
-                        className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500"
-                      >
-                        <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                        <span className="ml-1 truncate">⭐ {activity.titulo}</span>
-                      </Link>
-                    ))}
-                    {/* Visitas */}
-                    {dayVisits.slice(0, dayActivities.length > 0 ? 1 : 3).map((visit) => (
-                      <Link
-                        key={visit.id}
-                        href={`/calendario/${visit.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn(
-                          'calendar-event block',
-                          getStatusColor(visit.status)
-                        )}
-                      >
-                        <span className="font-medium">{formatTime(visit.scheduled_at)}</span>
-                        <span className="ml-1 truncate">{visit.customer?.nombre}</span>
-                      </Link>
-                    ))}
+                    {isSupervisorN1 ? (
+                      <>
+                        {/* Actividades Estratégicas (color púrpura) - Prioridad alta */}
+                        {strategicActivities.slice(0, 2).map((activity) => (
+                          <Link
+                            key={`act-strategic-${activity.id}`}
+                            href="/actividades"
+                            onClick={(e) => e.stopPropagation()}
+                            className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500"
+                          >
+                            <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                            <span className="ml-1 truncate">⭐ {activity.titulo}</span>
+                          </Link>
+                        ))}
+                        {/* Actividades Diarias (color azul) */}
+                        {dailyActivities.slice(0, strategicActivities.length > 0 ? 1 : 2).map((activity) => (
+                          <Link
+                            key={`act-daily-${activity.id}`}
+                            href="/actividades"
+                            onClick={(e) => e.stopPropagation()}
+                            className="calendar-event block bg-blue-100 text-blue-700 border-l-2 border-blue-500"
+                          >
+                            <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                            <span className="ml-1 truncate">{activity.titulo}</span>
+                          </Link>
+                        ))}
+                        {/* Visitas (color gris, secundario) */}
+                        {dayVisits.slice(0, (strategicActivities.length + dailyActivities.length) > 0 ? 0 : 2).map((visit) => (
+                          <Link
+                            key={visit.id}
+                            href={`/calendario/${visit.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              'calendar-event block bg-gray-100 text-gray-600 border-l-2 border-gray-400'
+                            )}
+                          >
+                            <span className="font-medium">{formatTime(visit.scheduled_at)}</span>
+                            <span className="ml-1 truncate">{visit.customer?.nombre}</span>
+                          </Link>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {/* Actividades Estratégicas (color púrpura) */}
+                        {dayActivities.slice(0, 2).map((activity) => (
+                          <Link
+                            key={`act-${activity.id}`}
+                            href="/actividades"
+                            onClick={(e) => e.stopPropagation()}
+                            className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500"
+                          >
+                            <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                            <span className="ml-1 truncate">⭐ {activity.titulo}</span>
+                          </Link>
+                        ))}
+                        {/* Visitas */}
+                        {dayVisits.slice(0, dayActivities.length > 0 ? 1 : 3).map((visit) => (
+                          <Link
+                            key={visit.id}
+                            href={`/calendario/${visit.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              'calendar-event block',
+                              getStatusColor(visit.status)
+                            )}
+                          >
+                            <span className="font-medium">{formatTime(visit.scheduled_at)}</span>
+                            <span className="ml-1 truncate">{visit.customer?.nombre}</span>
+                          </Link>
+                        ))}
+                      </>
+                    )}
                     {totalItems > 3 && (
                       <p className="text-xs text-gray-400 pl-1">
                         +{totalItems - 3} más
@@ -392,44 +472,104 @@ export default function CalendarioPage() {
                     </p>
                   </div>
                   <div className="p-2 space-y-2">
-                    {/* Actividades Estratégicas */}
-                    {dayActivities.map((activity) => (
-                      <Link
-                        key={`act-${activity.id}`}
-                        href="/actividades"
-                        className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500"
-                      >
-                        <p className="font-semibold flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-purple-500" />
-                          {format(new Date(activity.fecha_inicio), 'HH:mm')}
-                        </p>
-                        <p className="truncate font-medium">{activity.titulo}</p>
-                        {activity.descripcion && (
-                          <p className="text-xs opacity-80 truncate mt-1">
-                            {activity.descripcion}
-                          </p>
-                        )}
-                      </Link>
-                    ))}
-                    {/* Visitas */}
-                    {dayVisits.map((visit) => (
-                      <Link
-                        key={visit.id}
-                        href={`/calendario/${visit.id}`}
-                        className={cn(
-                          'block p-2 rounded-lg text-sm',
-                          getStatusColor(visit.status)
-                        )}
-                      >
-                        <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
-                        <p className="truncate">{visit.customer?.nombre}</p>
-                        {visit.objetivo && (
-                          <p className="text-xs opacity-80 truncate mt-1">
-                            {visit.objetivo}
-                          </p>
-                        )}
-                      </Link>
-                    ))}
+                    {isSupervisorN1 ? (
+                      <>
+                        {/* Actividades Estratégicas (color púrpura) */}
+                        {getStrategicActivitiesForDay(day).map((activity) => (
+                          <Link
+                            key={`act-strategic-${activity.id}`}
+                            href="/actividades"
+                            className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500"
+                          >
+                            <p className="font-semibold flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-purple-500" />
+                              {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                            </p>
+                            <p className="truncate font-medium">{activity.titulo}</p>
+                            {activity.descripcion && (
+                              <p className="text-xs opacity-80 truncate mt-1">
+                                {activity.descripcion}
+                              </p>
+                            )}
+                          </Link>
+                        ))}
+                        {/* Actividades Diarias (color azul) */}
+                        {getDailyActivitiesForDay(day).map((activity) => (
+                          <Link
+                            key={`act-daily-${activity.id}`}
+                            href="/actividades"
+                            className="block p-2 rounded-lg text-sm bg-blue-100 text-blue-700 border-l-4 border-blue-500"
+                          >
+                            <p className="font-semibold">
+                              {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                            </p>
+                            <p className="truncate font-medium">{activity.titulo}</p>
+                            {activity.descripcion && (
+                              <p className="text-xs opacity-80 truncate mt-1">
+                                {activity.descripcion}
+                              </p>
+                            )}
+                          </Link>
+                        ))}
+                        {/* Visitas (secundario) */}
+                        {dayVisits.map((visit) => (
+                          <Link
+                            key={visit.id}
+                            href={`/calendario/${visit.id}`}
+                            className="block p-2 rounded-lg text-sm bg-gray-100 text-gray-600 border-l-4 border-gray-400"
+                          >
+                            <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                            <p className="truncate">{visit.customer?.nombre}</p>
+                            {visit.objetivo && (
+                              <p className="text-xs opacity-80 truncate mt-1">
+                                {visit.objetivo}
+                              </p>
+                            )}
+                          </Link>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {/* Actividades Estratégicas */}
+                        {dayActivities.map((activity) => (
+                          <Link
+                            key={`act-${activity.id}`}
+                            href="/actividades"
+                            className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500"
+                          >
+                            <p className="font-semibold flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-purple-500" />
+                              {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                            </p>
+                            <p className="truncate font-medium">{activity.titulo}</p>
+                            {activity.descripcion && (
+                              <p className="text-xs opacity-80 truncate mt-1">
+                                {activity.descripcion}
+                              </p>
+                            )}
+                          </Link>
+                        ))}
+                        {/* Visitas */}
+                        {dayVisits.map((visit) => (
+                          <Link
+                            key={visit.id}
+                            href={`/calendario/${visit.id}`}
+                            className={cn(
+                              'block p-2 rounded-lg text-sm',
+                              getStatusColor(visit.status)
+                            )}
+                          >
+                            <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                            <p className="truncate">{visit.customer?.nombre}</p>
+                            {visit.objetivo && (
+                              <p className="text-xs opacity-80 truncate mt-1">
+                                {visit.objetivo}
+                              </p>
+                            )}
+                          </Link>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -440,62 +580,153 @@ export default function CalendarioPage() {
 
       {view === 'list' && (
         <Card>
-          {visits.length === 0 ? (
-            <EmptyState
-              icon={CalendarIcon}
-              title="No hay visitas programadas"
-              description="Programa tu primera visita"
-              action={{
-                label: 'Nueva Visita',
-                onClick: () => (window.location.href = '/calendario/nueva'),
-              }}
-            />
-          ) : (
-            <div className="space-y-3">
-              {visits.map((visit) => (
-                <Link
-                  key={visit.id}
-                  href={`/calendario/${visit.id}`}
-                  className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-center min-w-[60px]">
-                      <p className="text-xs text-gray-500">
-                        {format(new Date(visit.scheduled_at), 'EEE', { locale: es })}
-                      </p>
-                      <p className="text-lg font-bold text-gray-900">
-                        {format(new Date(visit.scheduled_at), 'd')}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {format(new Date(visit.scheduled_at), 'MMM', { locale: es })}
-                      </p>
-                    </div>
-                    <div className="border-l border-gray-200 pl-4">
-                      <p className="font-semibold text-indigo-600">
-                        {formatTime(visit.scheduled_at)}
-                      </p>
-                      <p className="font-medium text-gray-900">
-                        {visit.customer?.nombre}
-                      </p>
-                      {visit.objetivo && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          {visit.objetivo}
-                        </p>
+          {isSupervisorN1 ? (
+            activities.length === 0 ? (
+              <EmptyState
+                icon={CalendarIcon}
+                title="No hay actividades programadas"
+                description="Crea tu primera actividad diaria"
+                action={{
+                  label: 'Nueva Actividad Diaria',
+                  onClick: () => (window.location.href = '/calendario/nueva-actividad'),
+                }}
+              />
+            ) : (
+              <div className="space-y-3">
+                {activities.map((activity) => {
+                  const isStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+                  return (
+                    <Link
+                      key={activity.id}
+                      href="/actividades"
+                      className={cn(
+                        'flex items-center justify-between p-4 rounded-lg transition-colors',
+                        isStrategic 
+                          ? 'bg-purple-50 hover:bg-purple-100 border-l-4 border-purple-500' 
+                          : 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500'
                       )}
-                    </div>
-                  </div>
-                  <Badge
-                    variant={
-                      visit.status === 'completada' ? 'green' :
-                      visit.status === 'programada' ? 'blue' :
-                      visit.status === 'cancelada' ? 'gray' : 'yellow'
-                    }
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="text-center min-w-[60px]">
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(activity.fecha_inicio), 'EEE', { locale: es })}
+                          </p>
+                          <p className="text-lg font-bold text-gray-900">
+                            {format(new Date(activity.fecha_inicio), 'd')}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(activity.fecha_inicio), 'MMM', { locale: es })}
+                          </p>
+                        </div>
+                        <div className="border-l border-gray-200 pl-4 flex-1 min-w-0">
+                          <p className={cn(
+                            'font-semibold',
+                            isStrategic ? 'text-purple-600' : 'text-blue-600'
+                          )}>
+                            {format(new Date(activity.fecha_inicio), 'HH:mm', { locale: es })}
+                          </p>
+                          <p className="font-medium text-gray-900 flex items-center gap-1">
+                            {isStrategic && <Star className="h-3 w-3 text-purple-500 fill-purple-500" />}
+                            {activity.titulo}
+                          </p>
+                          {activity.descripcion && (
+                            <p className="text-sm text-gray-500 mt-1 line-clamp-1">
+                              {activity.descripcion}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                            {activity.creator && (
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">Creado por:</span>
+                                <span>{activity.creator.nombre_completo}</span>
+                              </span>
+                            )}
+                            {activity.participants && activity.participants.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                <span>{activity.participants.length} involucrado{activity.participants.length > 1 ? 's' : ''}</span>
+                                {activity.participants.length <= 3 && (
+                                  <span className="text-gray-400">
+                                    ({activity.participants.map(p => p.user_profile?.nombre_completo || 'Usuario').join(', ')})
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          activity.estado === 'realizado' ? 'green' :
+                          activity.estado === 'haciendo' ? 'blue' :
+                          activity.estado === 'cancelado' ? 'gray' : 'yellow'
+                        }
+                      >
+                        {activity.estado}
+                      </Badge>
+                    </Link>
+                  );
+                })}
+              </div>
+            )
+          ) : (
+            visits.length === 0 ? (
+              <EmptyState
+                icon={CalendarIcon}
+                title="No hay visitas programadas"
+                description="Programa tu primera visita"
+                action={{
+                  label: 'Nueva Visita',
+                  onClick: () => (window.location.href = '/calendario/nueva'),
+                }}
+              />
+            ) : (
+              <div className="space-y-3">
+                {visits.map((visit) => (
+                  <Link
+                    key={visit.id}
+                    href={`/calendario/${visit.id}`}
+                    className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    {visitStatusLabels[visit.status]}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-center min-w-[60px]">
+                        <p className="text-xs text-gray-500">
+                          {format(new Date(visit.scheduled_at), 'EEE', { locale: es })}
+                        </p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {format(new Date(visit.scheduled_at), 'd')}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {format(new Date(visit.scheduled_at), 'MMM', { locale: es })}
+                        </p>
+                      </div>
+                      <div className="border-l border-gray-200 pl-4">
+                        <p className="font-semibold text-indigo-600">
+                          {formatTime(visit.scheduled_at)}
+                        </p>
+                        <p className="font-medium text-gray-900">
+                          {visit.customer?.nombre}
+                        </p>
+                        {visit.objetivo && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            {visit.objetivo}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge
+                      variant={
+                        visit.status === 'completada' ? 'green' :
+                        visit.status === 'programada' ? 'blue' :
+                        visit.status === 'cancelada' ? 'gray' : 'yellow'
+                      }
+                    >
+                      {visitStatusLabels[visit.status]}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            )
           )}
         </Card>
       )}
@@ -507,42 +738,255 @@ export default function CalendarioPage() {
             <h3 className="font-semibold text-gray-900">
               {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
             </h3>
-            <Link href={`/calendario/nueva?date=${selectedDate.toISOString()}`}>
-              <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />}>
-                Agregar
-              </Button>
-            </Link>
+            {isSupervisorN1 ? (
+              <Link href={`/calendario/nueva-actividad?date=${selectedDate.toISOString()}`}>
+                <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />}>
+                  Nueva Actividad
+                </Button>
+              </Link>
+            ) : (
+              <Link href={`/calendario/nueva?date=${selectedDate.toISOString()}`}>
+                <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />}>
+                  Agregar
+                </Button>
+              </Link>
+            )}
           </div>
-          {getVisitsForDay(selectedDate).length === 0 ? (
-            <p className="text-center text-gray-500 py-4">
-              No hay visitas para este día
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {getVisitsForDay(selectedDate).map((visit) => (
-                <Link
-                  key={visit.id}
-                  href={`/calendario/${visit.id}`}
-                  className={cn(
-                    'flex items-center justify-between p-3 rounded-lg',
-                    getStatusColor(visit.status)
-                  )}
-                >
-                  <div>
-                    <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
-                    <p>{visit.customer?.nombre}</p>
+          {isSupervisorN1 ? (
+            <>
+              {/* Actividades Estratégicas */}
+              {getStrategicActivitiesForDay(selectedDate).length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-purple-500" />
+                    Actividades Estratégicas ({getStrategicActivitiesForDay(selectedDate).length})
+                  </h4>
+                  <div className="space-y-3">
+                    {getStrategicActivitiesForDay(selectedDate).map((activity) => (
+                      <Link
+                        key={activity.id}
+                        href="/actividades"
+                        className="block p-4 rounded-lg bg-purple-50 hover:bg-purple-100 border-l-4 border-purple-500 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-purple-700">
+                                {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                              </p>
+                              {activity.fecha_fin && (
+                                <span className="text-xs text-purple-600">
+                                  - {format(new Date(activity.fecha_fin), 'HH:mm')}
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-medium text-gray-900 mb-1">{activity.titulo}</p>
+                            {activity.descripcion && (
+                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{activity.descripcion}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-2">
+                              {activity.creator && (
+                                <span className="flex items-center gap-1">
+                                  <span className="font-medium">Creado por:</span>
+                                  <span>{activity.creator.nombre_completo}</span>
+                                </span>
+                              )}
+                              {activity.participants && activity.participants.length > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  <span>{activity.participants.length} involucrado{activity.participants.length > 1 ? 's' : ''}</span>
+                                  {activity.participants.length <= 2 && (
+                                    <span className="text-gray-400">
+                                      ({activity.participants.map(p => p.user_profile?.nombre_completo || 'Usuario').join(', ')})
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                              {activity.ubicacion && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{activity.ubicacion}</span>
+                                </span>
+                              )}
+                              {activity.es_virtual && activity.enlace_reunion && (
+                                <span className="flex items-center gap-1 text-purple-600">
+                                  <Video className="h-3 w-3" />
+                                  <span>Virtual</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge
+                              variant={
+                                activity.estado === 'realizado' ? 'green' :
+                                activity.estado === 'haciendo' ? 'blue' :
+                                activity.estado === 'cancelado' ? 'gray' : 'yellow'
+                              }
+                            >
+                              {activity.estado}
+                            </Badge>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              activity.prioridad === 'urgente' ? 'bg-red-100 text-red-700' :
+                              activity.prioridad === 'alta' ? 'bg-orange-100 text-orange-700' :
+                              activity.prioridad === 'media' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {activity.prioridad}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                  <Badge
-                    variant={
-                      visit.status === 'completada' ? 'green' :
-                      visit.status === 'programada' ? 'blue' : 'gray'
-                    }
-                  >
-                    {visitStatusLabels[visit.status]}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
+                </div>
+              )}
+              {/* Actividades Diarias */}
+              {getDailyActivitiesForDay(selectedDate).length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-blue-700 mb-3">
+                    Actividades Diarias ({getDailyActivitiesForDay(selectedDate).length})
+                  </h4>
+                  <div className="space-y-3">
+                    {getDailyActivitiesForDay(selectedDate).map((activity) => (
+                      <Link
+                        key={activity.id}
+                        href="/actividades"
+                        className="block p-4 rounded-lg bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-blue-700">
+                                {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                              </p>
+                              {activity.fecha_fin && (
+                                <span className="text-xs text-blue-600">
+                                  - {format(new Date(activity.fecha_fin), 'HH:mm')}
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-medium text-gray-900 mb-1">{activity.titulo}</p>
+                            {activity.descripcion && (
+                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{activity.descripcion}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-2">
+                              {activity.creator && (
+                                <span className="flex items-center gap-1">
+                                  <span className="font-medium">Creado por:</span>
+                                  <span>{activity.creator.nombre_completo}</span>
+                                </span>
+                              )}
+                              {activity.participants && activity.participants.length > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  <span>{activity.participants.length} involucrado{activity.participants.length > 1 ? 's' : ''}</span>
+                                  {activity.participants.length <= 2 && (
+                                    <span className="text-gray-400">
+                                      ({activity.participants.map(p => p.user_profile?.nombre_completo || 'Usuario').join(', ')})
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                              {activity.ubicacion && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{activity.ubicacion}</span>
+                                </span>
+                              )}
+                              {activity.es_virtual && activity.enlace_reunion && (
+                                <span className="flex items-center gap-1 text-blue-600">
+                                  <Video className="h-3 w-3" />
+                                  <span>Virtual</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge
+                              variant={
+                                activity.estado === 'realizado' ? 'green' :
+                                activity.estado === 'haciendo' ? 'blue' :
+                                activity.estado === 'cancelado' ? 'gray' : 'yellow'
+                              }
+                            >
+                              {activity.estado}
+                            </Badge>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              activity.prioridad === 'urgente' ? 'bg-red-100 text-red-700' :
+                              activity.prioridad === 'alta' ? 'bg-orange-100 text-orange-700' :
+                              activity.prioridad === 'media' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {activity.prioridad}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Visitas (secundario) */}
+              {getVisitsForDay(selectedDate).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-600 mb-2">Visitas</h4>
+                  <div className="space-y-2">
+                    {getVisitsForDay(selectedDate).map((visit) => (
+                      <Link
+                        key={visit.id}
+                        href={`/calendario/${visit.id}`}
+                        className="flex items-center justify-between p-3 rounded-lg bg-gray-100 text-gray-600"
+                      >
+                        <div>
+                          <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                          <p>{visit.customer?.nombre}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && (
+                <p className="text-center text-gray-500 py-4">
+                  No hay actividades para este día
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              {getVisitsForDay(selectedDate).length === 0 ? (
+                <p className="text-center text-gray-500 py-4">
+                  No hay visitas para este día
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {getVisitsForDay(selectedDate).map((visit) => (
+                    <Link
+                      key={visit.id}
+                      href={`/calendario/${visit.id}`}
+                      className={cn(
+                        'flex items-center justify-between p-3 rounded-lg',
+                        getStatusColor(visit.status)
+                      )}
+                    >
+                      <div>
+                        <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                        <p>{visit.customer?.nombre}</p>
+                      </div>
+                      <Badge
+                        variant={
+                          visit.status === 'completada' ? 'green' :
+                          visit.status === 'programada' ? 'blue' : 'gray'
+                        }
+                      >
+                        {visitStatusLabels[visit.status]}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </Card>
       )}

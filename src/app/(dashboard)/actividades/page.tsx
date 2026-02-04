@@ -24,7 +24,9 @@ import {
   Search,
   Minus,
   Bell,
-  Mail
+  Mail,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -41,9 +43,11 @@ import {
   deleteActivity,
   addMultipleParticipants,
   removeAllParticipants,
-  getAllUsersForSelection
+  getAllUsersForSelection,
+  addComment,
+  getActivityComments
 } from '@/lib/services/activities';
-import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile } from '@/types/database';
+import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile, ActivityComment } from '@/types/database';
 import toast from 'react-hot-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -109,11 +113,12 @@ export default function ActividadesPage() {
   const [filterPrioridad, setFilterPrioridad] = useState<ActivityPriority | ''>('');
   const [filterPersona, setFilterPersona] = useState<string>('');
   const [tableNotExists, setTableNotExists] = useState(false);
-  const [showRealizados, setShowRealizados] = useState(false); // Colapsado por defecto
+  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
+  const [showRealizados, setShowRealizados] = useState(isSupervisorN1); // Solo Supervisor N1 tiene abierto por defecto
   const [isEditing, setIsEditing] = useState(false);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
-
-  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
+  const [newComment, setNewComment] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null }>({
@@ -196,21 +201,26 @@ export default function ActividadesPage() {
                           activity.created_by_user_id === filterPersona ||
                           activity.participants?.some(p => p.user_profile_id === filterPersona);
 
-    return matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility;
+    // Solo mostrar actividades estratégicas (reunión, capacitación, seguimiento)
+    // Excluir actividades diarias (tarea, otro)
+    const isStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+    const matchesStrategic = isStrategic;
+
+    return matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility && matchesStrategic;
   });
   
   // Group by status for Kanban
-  // Vendedores no ven la columna "Realizado", solo Supervisor N1 y otros roles
+  // Solo Supervisor N1 ve la columna "Realizado", otros roles no la ven
   const kanbanColumns: { status: ActivityStatus; activities: Activity[] }[] =
-    userProfile?.rol === 'vendedor'
+    isSupervisorN1
       ? [
-          { status: 'planificacion', activities: filteredActivities.filter(a => a.estado === 'planificacion') },
-          { status: 'haciendo', activities: filteredActivities.filter(a => a.estado === 'haciendo') }
-        ]
-      : [
           { status: 'planificacion', activities: filteredActivities.filter(a => a.estado === 'planificacion') },
           { status: 'haciendo', activities: filteredActivities.filter(a => a.estado === 'haciendo') },
           { status: 'realizado', activities: filteredActivities.filter(a => a.estado === 'realizado') }
+        ]
+      : [
+          { status: 'planificacion', activities: filteredActivities.filter(a => a.estado === 'planificacion') },
+          { status: 'haciendo', activities: filteredActivities.filter(a => a.estado === 'haciendo') }
         ];
   
   async function handleCreateActivity() {
@@ -389,9 +399,53 @@ export default function ActividadesPage() {
     }
   }
   
-  function openActivityDetail(activity: Activity) {
+  async function openActivityDetail(activity: Activity) {
     setSelectedActivity(activity);
     setShowDetailModal(true);
+    setNewComment('');
+    
+    // Cargar comentarios actualizados si no están incluidos
+    if (!activity.comments) {
+      try {
+        const comments = await getActivityComments(activity.id);
+        setSelectedActivity(prev => prev ? { ...prev, comments } : null);
+      } catch (error) {
+        console.error('Error loading comments:', error);
+      }
+    }
+  }
+  
+  async function handleAddComment() {
+    if (!selectedActivity || !newComment.trim()) return;
+    
+    try {
+      setSubmittingComment(true);
+      const comment = await addComment({
+        activity_id: selectedActivity.id,
+        comentario: newComment.trim()
+      });
+      
+      // Actualizar la actividad con el nuevo comentario
+      setSelectedActivity(prev => prev ? {
+        ...prev,
+        comments: [...(prev.comments || []), comment]
+      } : null);
+      
+      // Actualizar también en la lista de actividades
+      setActivities(prev => prev.map(a => 
+        a.id === selectedActivity.id 
+          ? { ...a, comments: [...(a.comments || []), comment] }
+          : a
+      ));
+      
+      setNewComment('');
+      toast.success('Comentario agregado');
+    } catch (error: any) {
+      console.error('Error adding comment:', error);
+      toast.error(error?.message || 'Error al agregar el comentario');
+    } finally {
+      setSubmittingComment(false);
+    }
   }
   
   // Calendar helpers
@@ -450,6 +504,15 @@ export default function ActividadesPage() {
           <MapPin className="h-3 w-3" />
         )}
       </div>
+      
+      {/* Información del creador */}
+      {activity.creator && (
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <div className="text-xs text-gray-500">
+            <span className="text-gray-700">{activity.creator.nombre_completo}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
   
@@ -509,7 +572,7 @@ export default function ActividadesPage() {
       </div>
       
       {/* Stats */}
-      <div className={`grid gap-4 ${userProfile?.rol === 'vendedor' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+      <div className={`grid gap-4 ${isSupervisorN1 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
         {kanbanColumns.filter(col => col.status !== 'realizado').map(col => (
           <Card key={col.status} className={`${estadoColors[col.status].bg} border ${estadoColors[col.status].border}`}>
             <div className="p-4">
@@ -520,8 +583,8 @@ export default function ActividadesPage() {
             </div>
           </Card>
         ))}
-        {/* Realizado - Colapsable */}
-        {userProfile?.rol !== 'vendedor' && (
+        {/* Realizado - Colapsable - Solo para Supervisor N1 */}
+        {isSupervisorN1 && (
           <div 
             className={`${estadoColors.realizado.bg} border ${estadoColors.realizado.border} cursor-pointer hover:shadow-md transition-shadow rounded-xl`}
             onClick={() => setShowRealizados(!showRealizados)}
@@ -603,9 +666,11 @@ export default function ActividadesPage() {
             className="px-3 py-2 border rounded-lg text-sm"
           >
             <option value="">Todos los tipos</option>
-            {Object.entries(tipoLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
+            {Object.entries(tipoLabels)
+              .filter(([value]) => value === 'reunion' || value === 'capacitacion' || value === 'seguimiento')
+              .map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
           </select>
 
           <select
@@ -1232,6 +1297,78 @@ export default function ActividadesPage() {
                 <p className="text-gray-700 leading-relaxed">{selectedActivity.notas}</p>
               </div>
             )}
+
+            {/* Comentarios */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Comentarios ({selectedActivity.comments?.length || 0})
+              </h4>
+              
+              {/* Lista de comentarios */}
+              <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                {selectedActivity.comments && selectedActivity.comments.length > 0 ? (
+                  selectedActivity.comments.map(comment => (
+                    <div key={comment.id} className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-indigo-600 font-semibold text-sm">
+                            {comment.user_profile?.nombre_completo?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {comment.user_profile?.nombre_completo || 'Usuario'}
+                            </p>
+                            <span className="text-xs text-gray-500">
+                              {format(parseISO(comment.created_at), "dd/MM/yyyy HH:mm", { locale: es })}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                            {comment.comentario}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-400 text-sm">
+                    No hay comentarios aún. Sé el primero en comentar.
+                  </div>
+                )}
+              </div>
+              
+              {/* Formulario para agregar comentario */}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="flex gap-2">
+                  <textarea
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    placeholder="Escribe un comentario..."
+                    rows={2}
+                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        handleAddComment();
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || submittingComment}
+                    size="sm"
+                    className="self-end"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Presiona Ctrl+Enter para enviar
+                </p>
+              </div>
+            </div>
 
             {/* Recordatorio */}
             {selectedActivity.recordatorio_minutos !== null && (
