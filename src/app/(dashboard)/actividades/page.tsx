@@ -217,8 +217,16 @@ export default function ActividadesPage() {
                           (Array.isArray(activity.participants) &&
                            activity.participants.some(p => p.user_profile_id === filterPersona));
 
-    // Mostrar TODAS las actividades (estratégicas y diarias)
-    return matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility;
+    // Para supervisor_nivel1/admin: solo mostrar actividades de tipo estratégico (reunion, capacitacion, seguimiento)
+    // ya que las diarias (tarea, otro) las gestiona desde el Calendario.
+    // Para vendedores y otros roles: mostrar TODAS sus actividades (son todas estratégicas,
+    // ya que los vendedores no pueden crear actividades diarias).
+    let matchesStrategic = true;
+    if (rol === 'supervisor_nivel1' || rol === 'admin') {
+      matchesStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+    }
+
+    return matchesStrategic && matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility;
   });
   
   // Group by status for Kanban
@@ -576,17 +584,17 @@ export default function ActividadesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Actividades</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Actividades Estratégicas</h1>
           <p className="text-gray-500 mt-1">
             {isSupervisorN1
-              ? 'Gestiona y supervisa todas las actividades del equipo'
-              : 'Gestiona reuniones, tareas y seguimientos con tu equipo'}
+              ? 'Gestiona y supervisa reuniones, capacitaciones y seguimientos del equipo'
+              : 'Gestiona reuniones, capacitaciones y seguimientos con tu equipo'}
           </p>
         </div>
 
         <Button onClick={() => setShowCreateModal(true)} disabled={tableNotExists}>
           <Plus className="h-4 w-4 mr-2" />
-          Nueva Actividad
+          Nueva Actividad Estratégica
         </Button>
       </div>
       
@@ -685,9 +693,9 @@ export default function ActividadesPage() {
             className="px-3 py-2 border rounded-lg text-sm"
           >
             <option value="">Todos los tipos</option>
-            {Object.entries(tipoLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
+            <option value="reunion">Reunión</option>
+            <option value="capacitacion">Capacitación</option>
+            <option value="seguimiento">Seguimiento</option>
           </select>
 
           <select
@@ -934,7 +942,7 @@ export default function ActividadesPage() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => { setShowCreateModal(false); resetForm(); }}
-        title={isEditing ? "Editar Actividad" : "Nueva Actividad"}
+        title={isEditing ? "Editar Actividad Estratégica" : "Nueva Actividad Estratégica"}
         size="lg"
       >
         <div className="space-y-5">
@@ -968,9 +976,9 @@ export default function ActividadesPage() {
                 onChange={e => setFormData(prev => ({ ...prev, tipo: e.target.value as ActivityType }))}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
               >
-                {Object.entries(tipoLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
+                <option value="reunion">Reunión</option>
+                <option value="capacitacion">Capacitación</option>
+                <option value="seguimiento">Seguimiento</option>
               </select>
             </div>
             

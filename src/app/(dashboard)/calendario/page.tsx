@@ -15,15 +15,32 @@ import {
   Users,
   MapPin,
   Video,
+  Bell,
+  Repeat,
+  Edit,
+  Trash2,
+  Send,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import Input from '@/components/ui/Input';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
+import { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { getVisits, getPendingVisits, type Visit } from '@/lib/services/visits';
-import { getActivities } from '@/lib/services/activities';
-import type { Activity } from '@/types/database';
+import { 
+  getActivities, 
+  updateActivity, 
+  updateActivityStatus,
+  deleteActivity,
+  addMultipleParticipants,
+  removeAllParticipants,
+  getAllUsersForSelection,
+  addComment,
+  getActivityComments
+} from '@/lib/services/activities';
+import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile, ActivityComment, RecurrenceType } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   format,
@@ -39,6 +56,7 @@ import {
   subMonths,
   addWeeks,
   subWeeks,
+  parseISO,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -46,6 +64,24 @@ import {
   visitStatusLabels,
   cn,
 } from '@/lib/utils';
+import toast from 'react-hot-toast';
+
+const RECURRENCE_OPTIONS = [
+  { value: 'none', label: 'No se repite' },
+  { value: 'daily', label: 'Todos los días' },
+  { value: 'weekly', label: 'Cada semana' },
+  { value: 'biweekly', label: 'Cada 2 semanas' },
+  { value: 'monthly', label: 'Cada mes' },
+  { value: 'yearly', label: 'Cada año' },
+  { value: 'weekdays', label: 'Cada día de la semana (Lun-Vie)' },
+];
+
+const estadoLabels: Record<string, string> = {
+  planificacion: 'Planificación',
+  haciendo: 'En Progreso',
+  realizado: 'Realizado',
+  cancelado: 'Cancelado',
+};
 
 type ViewType = 'month' | 'week' | 'list';
 
@@ -59,9 +95,31 @@ export default function CalendarioPage() {
   const [view, setView] = useState<ViewType>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [isEditingActivity, setIsEditingActivity] = useState(false);
+  const [users, setUsers] = useState<Pick<UserProfile, 'id' | 'nombre_completo' | 'email' | 'rol'>[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [editFormData, setEditFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string }>({
+    titulo: '',
+    descripcion: '',
+    tipo: 'tarea',
+    prioridad: 'media',
+    fecha_inicio: '',
+    fecha_fin: '',
+    fecha_limite: '',
+    ubicacion: '',
+    es_virtual: false,
+    enlace_reunion: '',
+    notas: '',
+    participantes: [],
+    recordatorio_minutos: null,
+    recurrencia: 'none',
+    recurrencia_fin: ''
+  });
 
   useEffect(() => {
     loadData();
+    loadUsers();
   }, [currentDate, view]);
 
   const loadData = async () => {
@@ -116,6 +174,140 @@ export default function CalendarioPage() {
     }
   };
 
+  const loadUsers = async () => {
+    try {
+      const data = await getAllUsersForSelection();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error cargando usuarios:', error);
+    }
+  };
+
+  async function openActivityDetail(activity: Activity) {
+    setSelectedActivity(activity);
+    setIsEditingActivity(false);
+    setNewComment('');
+    
+    if (!activity.comments) {
+      try {
+        const comments = await getActivityComments(activity.id);
+        setSelectedActivity(prev => prev ? { ...prev, comments } : null);
+      } catch (error) {
+        console.error('Error loading comments:', error);
+      }
+    }
+  }
+
+  function openEditMode(activity: Activity) {
+    setEditFormData({
+      titulo: activity.titulo,
+      descripcion: activity.descripcion || '',
+      tipo: activity.tipo,
+      prioridad: activity.prioridad,
+      fecha_inicio: activity.fecha_inicio ? format(new Date(activity.fecha_inicio), "yyyy-MM-dd'T'HH:mm") : '',
+      fecha_fin: activity.fecha_fin ? format(new Date(activity.fecha_fin), "yyyy-MM-dd'T'HH:mm") : '',
+      fecha_limite: activity.fecha_limite ? format(new Date(activity.fecha_limite), "yyyy-MM-dd'T'HH:mm") : '',
+      ubicacion: activity.ubicacion || '',
+      es_virtual: activity.es_virtual,
+      enlace_reunion: activity.enlace_reunion || '',
+      notas: activity.notas || '',
+      participantes: activity.participants?.map(p => p.user_profile_id) || [],
+      recordatorio_minutos: activity.recordatorio_minutos,
+      recurrencia: activity.recurrencia || 'none',
+      recurrencia_fin: activity.recurrencia_fin || ''
+    });
+    setIsEditingActivity(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!selectedActivity || !editFormData.titulo || !editFormData.fecha_inicio) {
+      toast.error('Título y fecha de inicio son requeridos');
+      return;
+    }
+
+    try {
+      const activityData = {
+        titulo: editFormData.titulo,
+        descripcion: editFormData.descripcion || null,
+        tipo: editFormData.tipo,
+        prioridad: editFormData.prioridad,
+        fecha_inicio: new Date(editFormData.fecha_inicio).toISOString(),
+        fecha_fin: editFormData.fecha_fin ? new Date(editFormData.fecha_fin).toISOString() : null,
+        fecha_limite: editFormData.fecha_limite ? new Date(editFormData.fecha_limite).toISOString() : null,
+        ubicacion: editFormData.ubicacion || null,
+        es_virtual: editFormData.es_virtual,
+        enlace_reunion: editFormData.enlace_reunion || null,
+        notas: editFormData.notas || null,
+        recordatorio_minutos: editFormData.recordatorio_minutos,
+        recurrencia: editFormData.recurrencia !== 'none' ? editFormData.recurrencia : null,
+        recurrencia_fin: editFormData.recurrencia_fin ? new Date(editFormData.recurrencia_fin).toISOString() : null
+      };
+
+      await updateActivity(selectedActivity.id, activityData);
+      await removeAllParticipants(selectedActivity.id);
+      if (editFormData.participantes.length > 0) {
+        await addMultipleParticipants(selectedActivity.id, editFormData.participantes);
+      }
+
+      toast.success('Actividad actualizada exitosamente');
+      setIsEditingActivity(false);
+      setSelectedActivity(null);
+      loadData();
+    } catch (error: any) {
+      console.error('Error updating activity:', error);
+      toast.error(error?.message || 'Error al actualizar la actividad');
+    }
+  }
+
+  async function handleDeleteActivityAction(activityId: string) {
+    if (!confirm('¿Estás seguro de eliminar esta actividad?')) return;
+    
+    try {
+      await deleteActivity(activityId);
+      toast.success('Actividad eliminada');
+      setSelectedActivity(null);
+      loadData();
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al eliminar');
+    }
+  }
+
+  async function handleStatusChange(activityId: string, newStatus: ActivityStatus) {
+    try {
+      await updateActivityStatus(activityId, newStatus);
+      toast.success('Estado actualizado');
+      setSelectedActivity(prev => prev ? { ...prev, estado: newStatus } : null);
+      loadData();
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al actualizar estado');
+    }
+  }
+
+  async function handleAddComment() {
+    if (!selectedActivity || !newComment.trim()) return;
+    
+    try {
+      setSubmittingComment(true);
+      const comment = await addComment({
+        activity_id: selectedActivity.id,
+        comentario: newComment.trim()
+      });
+      
+      setSelectedActivity(prev => prev ? {
+        ...prev,
+        comments: [...(prev.comments || []), comment]
+      } : null);
+      
+      setNewComment('');
+      toast.success('Comentario agregado');
+    } catch (error: any) {
+      console.error('Error adding comment:', error);
+      toast.error(error?.message || 'Error al agregar comentario');
+    } finally {
+      setSubmittingComment(false);
+    }
+  }
+
   const navigatePrevious = () => {
     if (view === 'month') {
       setCurrentDate(subMonths(currentDate, 1));
@@ -143,6 +335,9 @@ export default function CalendarioPage() {
     );
   };
 
+  // Determinar si es supervisor_nivel1
+  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
+
   const getActivitiesForDay = (date: Date) => {
     return activities.filter((activity) =>
       isSameDay(new Date(activity.fecha_inicio), date)
@@ -150,20 +345,29 @@ export default function CalendarioPage() {
   };
 
   // Separar actividades estratégicas de actividades diarias
+  // Diaria: SOLO si tipo tarea/otro, SIN participantes, Y creada por el supervisor_nivel1 actual
+  // Todo lo demás es estratégica (incluye actividades de vendedores que son siempre estratégicas)
+  const isActivityStrategic = (activity: Activity) => {
+    const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+    if (isStrategicType) return true;
+    
+    const hasParticipants = activity.participants && activity.participants.length > 0;
+    if (hasParticipants) return true;
+    
+    // Solo es "diaria" si la creó el supervisor_nivel1 actual como tarea personal
+    const createdByCurrentSupervisor = isSupervisorN1 && activity.created_by_user_id === userProfile?.id;
+    if (!createdByCurrentSupervisor) return true; // Si la creó otro usuario (vendedor, etc.), es estratégica
+    
+    return false; // Es diaria: tarea/otro, sin participantes, creada por el supervisor actual
+  };
+
   const getStrategicActivitiesForDay = (date: Date) => {
-    return getActivitiesForDay(date).filter(activity => 
-      activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento'
-    );
+    return getActivitiesForDay(date).filter(activity => isActivityStrategic(activity));
   };
 
   const getDailyActivitiesForDay = (date: Date) => {
-    return getActivitiesForDay(date).filter(activity => 
-      activity.tipo === 'tarea' || activity.tipo === 'otro'
-    );
+    return getActivitiesForDay(date).filter(activity => !isActivityStrategic(activity));
   };
-
-  // Determinar si es supervisor_nivel1
-  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -361,22 +565,22 @@ export default function CalendarioPage() {
                         {strategicActivities.slice(0, 2).map((activity) => (
                           <div
                             key={`act-strategic-${activity.id}`}
-                            onClick={(e) => { e.stopPropagation(); setSelectedActivity(activity); }}
+                            onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
                             className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors"
                           >
                             <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                            <span className="ml-1 truncate">⭐ {activity.titulo}</span>
+                            <span className="ml-1 truncate">⭐{activity.titulo}</span>
                           </div>
                         ))}
                         {/* Actividades Diarias (color azul) */}
                         {dailyActivities.slice(0, strategicActivities.length > 0 ? 1 : 2).map((activity) => (
                           <div
                             key={`act-daily-${activity.id}`}
-                            onClick={(e) => { e.stopPropagation(); setSelectedActivity(activity); }}
+                            onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
                             className="calendar-event block bg-blue-100 text-blue-700 border-l-2 border-blue-500 cursor-pointer hover:bg-blue-200 transition-colors"
                           >
                             <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                            <span className="ml-1 truncate">{activity.titulo}</span>
+                            <span className="ml-1 truncate">📋{activity.titulo}</span>
                           </div>
                         ))}
                         {/* Visitas (color gris, secundario) */}
@@ -400,7 +604,7 @@ export default function CalendarioPage() {
                         {dayActivities.slice(0, 2).map((activity) => (
                           <div
                             key={`act-${activity.id}`}
-                            onClick={(e) => { e.stopPropagation(); setSelectedActivity(activity); }}
+                            onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
                             className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors"
                           >
                             <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
@@ -476,12 +680,15 @@ export default function CalendarioPage() {
                           <div
                             key={`act-strategic-${activity.id}`}
                             className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors"
-                            onClick={() => setSelectedActivity(activity)}
+                            onClick={() => openActivityDetail(activity)}
                           >
-                            <p className="font-semibold flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-purple-500" />
-                              {format(new Date(activity.fecha_inicio), 'HH:mm')}
-                            </p>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <p className="font-semibold flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-purple-500" />
+                                {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                              </p>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-medium">Estratégica</span>
+                            </div>
                             <p className="truncate font-medium">{activity.titulo}</p>
                             {activity.descripcion && (
                               <p className="text-xs opacity-80 truncate mt-1">
@@ -495,11 +702,14 @@ export default function CalendarioPage() {
                           <div
                             key={`act-daily-${activity.id}`}
                             className="block p-2 rounded-lg text-sm bg-blue-100 text-blue-700 border-l-4 border-blue-500 cursor-pointer hover:bg-blue-200 transition-colors"
-                            onClick={() => setSelectedActivity(activity)}
+                            onClick={() => openActivityDetail(activity)}
                           >
-                            <p className="font-semibold">
-                              {format(new Date(activity.fecha_inicio), 'HH:mm')}
-                            </p>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <p className="font-semibold">
+                                {format(new Date(activity.fecha_inicio), 'HH:mm')}
+                              </p>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-200 text-blue-800 font-medium">Diaria</span>
+                            </div>
                             <p className="truncate font-medium">{activity.titulo}</p>
                             {activity.descripcion && (
                               <p className="text-xs opacity-80 truncate mt-1">
@@ -532,7 +742,7 @@ export default function CalendarioPage() {
                           <div
                             key={`act-${activity.id}`}
                             className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors"
-                            onClick={() => setSelectedActivity(activity)}
+                            onClick={() => openActivityDetail(activity)}
                           >
                             <p className="font-semibold flex items-center gap-1">
                               <Star className="h-3 w-3 fill-purple-500" />
@@ -591,11 +801,11 @@ export default function CalendarioPage() {
             ) : (
               <div className="space-y-3">
                 {activities.map((activity) => {
-                  const isStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+                  const isStrategic = isActivityStrategic(activity);
                   return (
                     <div
                       key={activity.id}
-                      onClick={() => setSelectedActivity(activity)}
+                      onClick={() => openActivityDetail(activity)}
                       className={cn(
                         'flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer',
                         isStrategic 
@@ -687,11 +897,11 @@ export default function CalendarioPage() {
                       Actividades Estratégicas ({activities.length})
                     </h3>
                     {activities.map((activity) => {
-                      const isStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+                      const isStrategic = isActivityStrategic(activity);
                       return (
                         <div
                           key={activity.id}
-                          onClick={() => setSelectedActivity(activity)}
+                          onClick={() => openActivityDetail(activity)}
                           className={cn(
                             'flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer',
                             isStrategic
@@ -850,7 +1060,8 @@ export default function CalendarioPage() {
                     {getStrategicActivitiesForDay(selectedDate).map((activity) => (
                       <div
                         key={activity.id}
-                        className="block p-4 rounded-lg bg-purple-50 border-l-4 border-purple-500"
+                        onClick={() => openActivityDetail(activity)}
+                        className="block p-4 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-100 transition-colors"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
@@ -863,6 +1074,7 @@ export default function CalendarioPage() {
                                   - {format(new Date(activity.fecha_fin), 'HH:mm')}
                                 </span>
                               )}
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-medium">Estratégica</span>
                             </div>
                             <p className="font-medium text-gray-900 mb-1">{activity.titulo}</p>
                             {activity.descripcion && (
@@ -928,14 +1140,15 @@ export default function CalendarioPage() {
               {/* Actividades Diarias */}
               {getDailyActivitiesForDay(selectedDate).length > 0 && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-blue-700 mb-3">
-                    Actividades Diarias ({getDailyActivitiesForDay(selectedDate).length})
+                  <h4 className="text-sm font-semibold text-blue-700 mb-3 flex items-center gap-1">
+                    📋 Actividades Diarias ({getDailyActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-3">
                     {getDailyActivitiesForDay(selectedDate).map((activity) => (
                       <div
                         key={activity.id}
-                        className="block p-4 rounded-lg bg-blue-50 border-l-4 border-blue-500"
+                        onClick={() => openActivityDetail(activity)}
+                        className="block p-4 rounded-lg bg-blue-50 border-l-4 border-blue-500 cursor-pointer hover:bg-blue-100 transition-colors"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
@@ -948,6 +1161,7 @@ export default function CalendarioPage() {
                                   - {format(new Date(activity.fecha_fin), 'HH:mm')}
                                 </span>
                               )}
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-200 text-blue-800 font-medium">Diaria</span>
                             </div>
                             <p className="font-medium text-gray-900 mb-1">{activity.titulo}</p>
                             {activity.descripcion && (
@@ -1162,15 +1376,27 @@ export default function CalendarioPage() {
         </Card>
       )}
 
-      {/* Modal de detalle de actividad estratégica */}
+      {/* Modal de detalle de actividad */}
       <Modal
         isOpen={!!selectedActivity}
-        onClose={() => setSelectedActivity(null)}
-        title={selectedActivity?.titulo || 'Detalle de Actividad'}
+        onClose={() => { setSelectedActivity(null); setIsEditingActivity(false); }}
+        title={isEditingActivity ? 'Editar Actividad' : (selectedActivity?.titulo || 'Detalle de Actividad')}
+
         size="lg"
       >
-        {selectedActivity && (
+        {selectedActivity && !isEditingActivity && (() => {
+          const isStrategicActivity = isActivityStrategic(selectedActivity);
+          return (
           <div className="space-y-4">
+            {/* Tipo de actividad badge */}
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold ${
+              isStrategicActivity 
+                ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                : 'bg-blue-100 text-blue-800 border border-blue-200'
+            }`}>
+              {isStrategicActivity ? '⭐ Actividad Estratégica' : '📋 Actividad Diaria'}
+            </div>
+
             {/* Badges */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
@@ -1199,9 +1425,7 @@ export default function CalendarioPage() {
                 selectedActivity.estado === 'cancelado' ? 'bg-red-100 text-red-700' :
                 'bg-slate-100 text-slate-700'
               }`}>
-                {selectedActivity.estado === 'planificacion' ? 'Planificación' :
-                 selectedActivity.estado === 'haciendo' ? 'En Progreso' :
-                 selectedActivity.estado === 'realizado' ? 'Realizado' : 'Cancelado'}
+                {estadoLabels[selectedActivity.estado] || selectedActivity.estado}
               </span>
             </div>
 
@@ -1274,6 +1498,38 @@ export default function CalendarioPage() {
               </div>
             )}
 
+            {/* Recordatorio */}
+            {selectedActivity.recordatorio_minutos !== null && selectedActivity.recordatorio_minutos !== undefined && (
+              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                <h4 className="text-xs font-semibold text-yellow-700 uppercase mb-2 flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5" />
+                  Recordatorio configurado
+                </h4>
+                <p className="text-yellow-800 font-medium">
+                  {REMINDER_OPTIONS.find(o => o.value === selectedActivity.recordatorio_minutos)?.label || 
+                   `${selectedActivity.recordatorio_minutos} minutos antes`}
+                </p>
+              </div>
+            )}
+
+            {/* Recurrencia */}
+            {selectedActivity.recurrencia && selectedActivity.recurrencia !== 'none' && (
+              <div className="bg-teal-50 rounded-lg p-4 border border-teal-200">
+                <h4 className="text-xs font-semibold text-teal-700 uppercase mb-2 flex items-center gap-1.5">
+                  <Repeat className="h-3.5 w-3.5" />
+                  Recurrencia
+                </h4>
+                <p className="text-teal-800 font-medium">
+                  {RECURRENCE_OPTIONS.find(o => o.value === selectedActivity.recurrencia)?.label || selectedActivity.recurrencia}
+                </p>
+                {selectedActivity.recurrencia_fin && (
+                  <p className="text-teal-600 text-sm mt-1">
+                    Hasta: {format(new Date(selectedActivity.recurrencia_fin), "d 'de' MMMM 'de' yyyy", { locale: es })}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Participantes */}
             {selectedActivity.participants && selectedActivity.participants.length > 0 && (
               <div>
@@ -1315,15 +1571,371 @@ export default function CalendarioPage() {
               </div>
             )}
 
+            {/* Comentarios */}
+            <div className="border rounded-xl p-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                Comentarios ({selectedActivity.comments?.length || 0})
+              </h4>
+              <div className="max-h-48 overflow-y-auto space-y-3 mb-4">
+                {selectedActivity.comments && selectedActivity.comments.length > 0 ? (
+                  selectedActivity.comments.map((comment) => (
+                    <div key={comment.id} className="flex gap-3">
+                      <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-indigo-600 font-semibold text-xs">
+                          {comment.user_profile?.nombre_completo?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                      <div className="flex-1 bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {comment.user_profile?.nombre_completo || 'Usuario'}
+                          </p>
+                          <span className="text-xs text-gray-500">
+                            {format(parseISO(comment.created_at), "dd/MM/yyyy HH:mm", { locale: es })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                          {comment.comentario}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-400 text-sm">
+                    No hay comentarios aún.
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-gray-200 pt-3">
+                <div className="flex gap-2">
+                  <textarea
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    placeholder="Escribe un comentario..."
+                    rows={2}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        handleAddComment();
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || submittingComment}
+                    size="sm"
+                    className="self-end"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Cambiar estado */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cambiar estado</h4>
+              <div className="flex gap-2 flex-wrap">
+                {(['planificacion', 'haciendo', 'realizado'] as ActivityStatus[]).map(status => (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusChange(selectedActivity.id, status)}
+                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      selectedActivity.estado === status
+                        ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-300 ring-2 ring-offset-1 ring-indigo-200'
+                        : (status === 'realizado' && !isSupervisorN1)
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                    }`}
+                    title={status === 'realizado' && !isSupervisorN1 ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
+                  >
+                    {estadoLabels[status]}
+                    {status === 'realizado' && !isSupervisorN1 && ' 🔒'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Acciones */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Link href="/actividades">
-                <Button variant="secondary" size="sm">
-                  Ver en Actividades
+            <div className="flex justify-between items-center pt-4 border-t">
+              <Button 
+                variant="danger" 
+                size="sm"
+                onClick={() => handleDeleteActivityAction(selectedActivity.id)}
+                className="gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                Eliminar
+              </Button>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => openEditMode(selectedActivity)}
+                  className="gap-1.5"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar
                 </Button>
-              </Link>
-              <Button variant="secondary" onClick={() => setSelectedActivity(null)}>
-                Cerrar
+                {isStrategicActivity && (
+                  <Link href="/actividades">
+                    <Button variant="secondary" size="sm">
+                      Ver en Estratégicas
+                    </Button>
+                  </Link>
+                )}
+                <Button variant="secondary" onClick={() => setSelectedActivity(null)}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
+        {/* Edit Mode */}
+        {selectedActivity && isEditingActivity && (
+          <div className="space-y-5">
+            {/* Título y Descripción */}
+            <div className="space-y-4">
+              <Input
+                label="Título *"
+                value={editFormData.titulo}
+                onChange={e => setEditFormData({ ...editFormData, titulo: e.target.value })}
+                placeholder="Título de la actividad"
+                required
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+                <textarea
+                  value={editFormData.descripcion || ''}
+                  onChange={e => setEditFormData({ ...editFormData, descripcion: e.target.value })}
+                  placeholder="Describe la actividad..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Tipo y Prioridad */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label>
+                <select
+                  value={editFormData.tipo}
+                  onChange={e => setEditFormData({ ...editFormData, tipo: e.target.value as ActivityType })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                >
+                  <option value="tarea">Tarea</option>
+                  <option value="otro">Otro</option>
+                  <option value="reunion">Reunión</option>
+                  <option value="capacitacion">Capacitación</option>
+                  <option value="seguimiento">Seguimiento</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Prioridad</label>
+                <select
+                  value={editFormData.prioridad}
+                  onChange={e => setEditFormData({ ...editFormData, prioridad: e.target.value as ActivityPriority })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                >
+                  <option value="baja">Baja</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Fechas */}
+            <div className="bg-blue-50 rounded-xl p-4 space-y-4">
+              <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1.5">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                Fechas y horarios
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Fecha y Hora de Inicio *"
+                  type="datetime-local"
+                  value={editFormData.fecha_inicio}
+                  onChange={e => setEditFormData({ ...editFormData, fecha_inicio: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Fecha y Hora de Fin"
+                  type="datetime-local"
+                  value={editFormData.fecha_fin || ''}
+                  onChange={e => setEditFormData({ ...editFormData, fecha_fin: e.target.value })}
+                />
+              </div>
+              <Input
+                label="Fecha límite (opcional)"
+                type="datetime-local"
+                value={editFormData.fecha_limite || ''}
+                onChange={e => setEditFormData({ ...editFormData, fecha_limite: e.target.value })}
+              />
+            </div>
+
+            {/* Recurrencia */}
+            <div className="bg-teal-50 rounded-xl p-4 space-y-4">
+              <h4 className="text-xs font-semibold text-teal-600 uppercase tracking-wide flex items-center gap-1.5">
+                <Repeat className="h-3.5 w-3.5" />
+                Programar Recurrente
+              </h4>
+              <div className="space-y-3">
+                <select
+                  value={editFormData.recurrencia}
+                  onChange={e => setEditFormData({ ...editFormData, recurrencia: e.target.value as RecurrenceType })}
+                  className="w-full px-3 py-2.5 border border-teal-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                >
+                  {RECURRENCE_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+
+                {editFormData.recurrencia !== 'none' && (
+                  <div className="pt-2 border-t border-teal-100">
+                    <Input
+                      label="Termina el (opcional)"
+                      type="date"
+                      value={editFormData.recurrencia_fin || ''}
+                      onChange={e => setEditFormData({ ...editFormData, recurrencia_fin: e.target.value })}
+                    />
+                    <p className="text-xs text-teal-600 mt-1">
+                      Si no especificas fecha, se repetirá indefinidamente
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recordatorio */}
+            <div className="bg-amber-50 rounded-xl p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex items-center gap-1.5">
+                <Bell className="h-3.5 w-3.5" />
+                Recuérdamelo
+              </h4>
+              <select
+                value={editFormData.recordatorio_minutos ?? ''}
+                onChange={e => setEditFormData({ 
+                  ...editFormData, 
+                  recordatorio_minutos: e.target.value ? parseInt(e.target.value) : null 
+                })}
+                className="w-full px-4 py-2.5 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white"
+              >
+                <option value="">Sin recordatorio</option>
+                {REMINDER_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Ubicación */}
+            <div className="bg-purple-50 rounded-xl p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide flex items-center gap-1.5">
+                  {editFormData.es_virtual ? <Video className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+                  {editFormData.es_virtual ? 'Reunión Virtual' : 'Ubicación'}
+                </h4>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs text-purple-600">Virtual</span>
+                  <input
+                    type="checkbox"
+                    checked={editFormData.es_virtual}
+                    onChange={e => setEditFormData({ ...editFormData, es_virtual: e.target.checked })}
+                    className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-4 w-4"
+                  />
+                </label>
+              </div>
+              {editFormData.es_virtual ? (
+                <Input
+                  label="Enlace de la reunión"
+                  value={editFormData.enlace_reunion || ''}
+                  onChange={e => setEditFormData({ ...editFormData, enlace_reunion: e.target.value })}
+                  placeholder="https://meet.google.com/... o https://zoom.us/..."
+                />
+              ) : (
+                <Input
+                  label="Lugar"
+                  value={editFormData.ubicacion || ''}
+                  onChange={e => setEditFormData({ ...editFormData, ubicacion: e.target.value })}
+                  placeholder="Ej: Oficina principal, Sala de reuniones"
+                />
+              )}
+            </div>
+
+            {/* Participantes */}
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <Users className="h-3.5 w-3.5" />
+                Participantes ({users.length} disponibles)
+              </label>
+              <div className="border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-gray-50">
+                {users.length === 0 ? (
+                  <p className="p-4 text-center text-gray-500 text-sm">No hay usuarios disponibles</p>
+                ) : (
+                  users.map(user => {
+                    const isSelected = editFormData.participantes.includes(user.id);
+                    return (
+                      <label 
+                        key={user.id} 
+                        className={`flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all ${
+                          isSelected ? 'bg-indigo-50 border-indigo-100' : 'hover:bg-white'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setEditFormData({ ...editFormData, participantes: [...editFormData.participantes, user.id] });
+                            } else {
+                              setEditFormData({ ...editFormData, participantes: editFormData.participantes.filter(id => id !== user.id) });
+                            }
+                          }}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                        />
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-semibold text-xs">
+                            {user.nombre_completo?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{user.nombre_completo}</p>
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Notas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Notas adicionales</label>
+              <textarea
+                value={editFormData.notas || ''}
+                onChange={e => setEditFormData({ ...editFormData, notas: e.target.value })}
+                rows={2}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+                placeholder="Notas o recordatorios..."
+              />
+            </div>
+
+            {/* Acciones */}
+            <div className="flex justify-end gap-3 pt-5 border-t border-gray-200">
+              <Button variant="secondary" onClick={() => setIsEditingActivity(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                Guardar Cambios
               </Button>
             </div>
           </div>
