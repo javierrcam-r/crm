@@ -1,21 +1,35 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Bell, Clock, Users, MapPin, Video, Calendar, AlertTriangle, BellRing } from 'lucide-react';
-import { format, differenceInMinutes } from 'date-fns';
+import { X, Bell, Clock, Users, MapPin, Video, Calendar, AlertTriangle, BellRing, AlarmClock, ChevronDown } from 'lucide-react';
+import { format, differenceInMinutes, addMinutes, addHours, addDays, setHours, setMinutes, startOfTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Activity } from '@/types/database';
 import { notificationService } from '@/lib/notifications';
+
+// Opciones de posponer estilo Google Calendar
+export const SNOOZE_OPTIONS: Array<{ value: number | 'tomorrow'; label: string }> = [
+  { value: 5, label: '5 minutos' },
+  { value: 10, label: '10 minutos' },
+  { value: 15, label: '15 minutos' },
+  { value: 30, label: '30 minutos' },
+  { value: 60, label: '1 hora' },
+  { value: 120, label: '2 horas' },
+  { value: 240, label: '4 horas' },
+  { value: 'tomorrow', label: 'Mañana a la misma hora' },
+];
 
 interface ReminderNotification {
   id: string;
   activity: Activity;
   timestamp: Date;
   type: 'configured' | 'auto'; // configurado por usuario o automático
+  snoozedUntil?: Date; // Si fue pospuesto, cuando volver a mostrar
 }
 
 interface ActivityReminderProps {
   activities: Activity[];
+  currentUserId?: string; // ID del usuario actual para filtrar recordatorios
   onDismiss?: (activityId: string) => void;
   onView?: (activityId: string) => void;
 }
@@ -23,11 +37,13 @@ interface ActivityReminderProps {
 // Recordatorio automático: 30 minutos antes para actividades sin recordatorio configurado
 const AUTO_REMINDER_MINUTES = 30;
 
-export default function ActivityReminder({ activities, onDismiss, onView }: ActivityReminderProps) {
+export default function ActivityReminder({ activities, currentUserId, onDismiss, onView }: ActivityReminderProps) {
   const [notifications, setNotifications] = useState<ReminderNotification[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [pushSentIds, setPushSentIds] = useState<Set<string>>(new Set());
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
+  const [snoozeDropdownOpen, setSnoozeDropdownOpen] = useState<string | null>(null);
+  const [snoozedActivities, setSnoozedActivities] = useState<Map<string, Date>>(new Map());
   const hasChecked = useRef(false);
 
   // Inicializar servicio de notificaciones
@@ -53,9 +69,25 @@ export default function ActivityReminder({ activities, onDismiss, onView }: Acti
     activities.forEach(activity => {
       // Saltar si ya fue descartada
       if (dismissedIds.has(activity.id)) return;
-      
+
+      // Saltar si está pospuesta y aún no es hora de mostrarla
+      const snoozedUntil = snoozedActivities.get(activity.id);
+      if (snoozedUntil && snoozedUntil > now) return;
+
       // Saltar si ya está completada o cancelada
       if (activity.estado === 'realizado' || activity.estado === 'cancelado') return;
+
+      // IMPORTANTE: Solo mostrar recordatorios para actividades del usuario actual
+      // El usuario debe ser el creador O ser participante de la actividad
+      if (currentUserId) {
+        const isCreator = activity.created_by_user_id === currentUserId;
+        const isParticipant = Array.isArray(activity.participants) &&
+                              activity.participants.some(p => p.user_profile_id === currentUserId);
+
+        if (!isCreator && !isParticipant) {
+          return; // No mostrar recordatorio para actividades de otros usuarios
+        }
+      }
 
       const activityTime = new Date(activity.fecha_inicio);
       const minutesUntil = differenceInMinutes(activityTime, now);
@@ -119,7 +151,7 @@ export default function ActivityReminder({ activities, onDismiss, onView }: Acti
         audio.play().catch(() => {}); // Ignorar si no se puede reproducir
       } catch (e) {}
     }
-  }, [activities, dismissedIds, notifications, pushSentIds]);
+  }, [activities, dismissedIds, notifications, pushSentIds, currentUserId, snoozedActivities]);
 
   // Función para enviar notificación push
   const sendPushNotification = async (activity: Activity, minutesUntil: number) => {
@@ -173,6 +205,62 @@ export default function ActivityReminder({ activities, onDismiss, onView }: Acti
   const handleView = (activityId: string) => {
     onView?.(activityId);
   };
+
+  const handleSnooze = (notificationId: string, activityId: string, snoozeValue: number | 'tomorrow') => {
+    let snoozeUntil: Date;
+    const now = new Date();
+
+    if (snoozeValue === 'tomorrow') {
+      // Mañana a la misma hora que la actividad
+      const activity = notifications.find(n => n.id === notificationId)?.activity;
+      if (activity) {
+        const activityTime = new Date(activity.fecha_inicio);
+        const tomorrow = startOfTomorrow();
+        snoozeUntil = setMinutes(setHours(tomorrow, activityTime.getHours()), activityTime.getMinutes());
+      } else {
+        snoozeUntil = addDays(now, 1);
+      }
+    } else {
+      snoozeUntil = addMinutes(now, snoozeValue);
+    }
+
+    // Guardar cuando volver a mostrar
+    setSnoozedActivities(prev => new Map(prev).set(activityId, snoozeUntil));
+
+    // Remover de las notificaciones actuales
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    setSnoozeDropdownOpen(null);
+
+    console.log('⏰ Actividad pospuesta:', {
+      activityId,
+      snoozeUntil: snoozeUntil.toLocaleString()
+    });
+  };
+
+  // Verificar actividades pospuestas que ya deben mostrarse
+  useEffect(() => {
+    const checkSnoozed = setInterval(() => {
+      const now = new Date();
+      snoozedActivities.forEach((snoozeUntil, activityId) => {
+        if (snoozeUntil <= now) {
+          // Remover de pospuestos para que vuelva a aparecer
+          setSnoozedActivities(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(activityId);
+            return newMap;
+          });
+          // Remover de dismissed para que vuelva a verificarse
+          setDismissedIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(activityId);
+            return newSet;
+          });
+        }
+      });
+    }, 10000); // Verificar cada 10 segundos
+
+    return () => clearInterval(checkSnoozed);
+  }, [snoozedActivities]);
 
   const getTimeUntilActivity = (fechaInicio: string) => {
     const now = new Date();
@@ -340,18 +428,45 @@ export default function ActivityReminder({ activities, onDismiss, onView }: Acti
                 <button
                   onClick={() => handleView(activity.id)}
                   className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition-colors ${
-                    isUrgent 
-                      ? 'bg-red-600 hover:bg-red-700' 
+                    isUrgent
+                      ? 'bg-red-600 hover:bg-red-700'
                       : 'bg-purple-600 hover:bg-purple-700'
                   }`}
                 >
                   Ver detalles
                 </button>
+
+                {/* Botón Posponer con dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setSnoozeDropdownOpen(snoozeDropdownOpen === notification.id ? null : notification.id)}
+                    className="px-4 py-2 border border-amber-300 bg-amber-50 text-amber-700 rounded-lg font-medium hover:bg-amber-100 transition-colors flex items-center gap-1"
+                  >
+                    <AlarmClock className="h-4 w-4" />
+                    <span className="hidden sm:inline">Posponer</span>
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+
+                  {snoozeDropdownOpen === notification.id && (
+                    <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] z-50">
+                      {SNOOZE_OPTIONS.map(option => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleSnooze(notification.id, activity.id, option.value)}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={() => handleDismiss(notification.id, activity.id)}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                 >
-                  Cerrar
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>

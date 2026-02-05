@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Calendar as CalendarIcon, 
-  LayoutGrid, 
+import {
+  Plus,
+  Calendar as CalendarIcon,
+  LayoutGrid,
   List,
   Clock,
   Users,
@@ -26,7 +26,8 @@ import {
   Bell,
   Mail,
   MessageSquare,
-  Send
+  Send,
+  Repeat
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -47,7 +48,7 @@ import {
   addComment,
   getActivityComments
 } from '@/lib/services/activities';
-import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile, ActivityComment } from '@/types/database';
+import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile, ActivityComment, RecurrenceType } from '@/types/database';
 import toast from 'react-hot-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -98,6 +99,17 @@ const estadoColors: Record<ActivityStatus, { bg: string; border: string; text: s
   cancelado: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' }
 };
 
+// Opciones de recurrencia tipo Google Calendar
+const RECURRENCE_OPTIONS = [
+  { value: 'none', label: 'No se repite' },
+  { value: 'daily', label: 'Todos los días' },
+  { value: 'weekly', label: 'Cada semana' },
+  { value: 'biweekly', label: 'Cada 2 semanas' },
+  { value: 'monthly', label: 'Cada mes' },
+  { value: 'yearly', label: 'Cada año' },
+  { value: 'weekdays', label: 'Cada día de la semana (Lun-Vie)' },
+];
+
 export default function ActividadesPage() {
   const { userProfile } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -121,7 +133,7 @@ export default function ActividadesPage() {
   const [submittingComment, setSubmittingComment] = useState(false);
   
   // Form state
-  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null }>({
+  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string }>({
     titulo: '',
     descripcion: '',
     tipo: 'reunion',
@@ -134,7 +146,9 @@ export default function ActividadesPage() {
     enlace_reunion: '',
     notas: '',
     participantes: [],
-    recordatorio_minutos: null
+    recordatorio_minutos: null,
+    recurrencia: 'none',
+    recurrencia_fin: ''
   });
   
   useEffect(() => {
@@ -316,7 +330,9 @@ export default function ActividadesPage() {
       enlace_reunion: '',
       notas: '',
       participantes: [],
-      recordatorio_minutos: null
+      recordatorio_minutos: null,
+      recurrencia: 'none',
+      recurrencia_fin: ''
     });
     setIsEditing(false);
     setEditingActivityId(null);
@@ -338,7 +354,9 @@ export default function ActividadesPage() {
       enlace_reunion: activity.enlace_reunion || '',
       notas: activity.notas || '',
       participantes: activity.participants?.map(p => p.user_profile_id) || [],
-      recordatorio_minutos: activity.recordatorio_minutos
+      recordatorio_minutos: activity.recordatorio_minutos,
+      recurrencia: activity.recurrencia || 'none',
+      recurrencia_fin: activity.recurrencia_fin || ''
     });
     setShowCreateModal(true);
   }
@@ -362,7 +380,9 @@ export default function ActividadesPage() {
         es_virtual: formData.es_virtual,
         enlace_reunion: formData.enlace_reunion || null,
         notas: formData.notas || null,
-        recordatorio_minutos: formData.recordatorio_minutos
+        recordatorio_minutos: formData.recordatorio_minutos,
+        recurrencia: formData.recurrencia !== 'none' ? formData.recurrencia : null,
+        recurrencia_fin: formData.recurrencia_fin ? new Date(formData.recurrencia_fin).toISOString() : null
       };
 
       if (isEditing && editingActivityId) {
@@ -525,8 +545,9 @@ export default function ActividadesPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Sistema de notificaciones de recordatorio */}
-      <ActivityReminder 
-        activities={activities} 
+      <ActivityReminder
+        activities={activities}
+        currentUserId={userProfile?.id}
         onView={(activityId) => {
           const activity = activities.find(a => a.id === activityId);
           if (activity) openActivityDetail(activity);
@@ -996,7 +1017,40 @@ export default function ActividadesPage() {
               onChange={e => setFormData(prev => ({ ...prev, fecha_limite: e.target.value }))}
             />
           </div>
-          
+
+          {/* Recurrencia */}
+          <div className="bg-teal-50 rounded-xl p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-teal-600 uppercase tracking-wide flex items-center gap-1.5">
+              <Repeat className="h-3.5 w-3.5" />
+              Programar Recurrente
+            </h4>
+            <div className="space-y-3">
+              <select
+                value={formData.recurrencia}
+                onChange={e => setFormData(prev => ({ ...prev, recurrencia: e.target.value as RecurrenceType }))}
+                className="w-full px-3 py-2.5 border border-teal-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+              >
+                {RECURRENCE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+
+              {formData.recurrencia !== 'none' && (
+                <div className="pt-2 border-t border-teal-100">
+                  <Input
+                    label="Termina el (opcional)"
+                    type="date"
+                    value={formData.recurrencia_fin || ''}
+                    onChange={e => setFormData(prev => ({ ...prev, recurrencia_fin: e.target.value }))}
+                  />
+                  <p className="text-xs text-teal-600 mt-1">
+                    Si no especificas fecha, se repetirá indefinidamente
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Ubicación */}
           <div className="bg-purple-50 rounded-xl p-4 space-y-4">
             <div className="flex items-center justify-between">

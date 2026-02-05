@@ -13,6 +13,7 @@ export type ActivityType = 'reunion' | 'tarea' | 'seguimiento' | 'capacitacion' 
 export type ActivityStatus = 'planificacion' | 'haciendo' | 'realizado' | 'cancelado';
 export type ActivityPriority = 'baja' | 'media' | 'alta' | 'urgente';
 export type ParticipantConfirmation = 'pendiente' | 'confirmado' | 'rechazado' | 'tentativo';
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'weekdays';
 
 // =====================================================
 // CUSTOMER
@@ -306,6 +307,9 @@ export interface Activity {
   recordatorio_minutos: number | null;
   recordatorio_enviado: boolean;
   correo_enviado: boolean;
+  recurrencia: RecurrenceType | null;
+  recurrencia_fin: string | null;
+  recurrencia_parent_id: string | null;
   created_at: string;
   updated_at: string;
   // Relaciones
@@ -328,6 +332,8 @@ export interface ActivityInsert {
   enlace_reunion?: string | null;
   notas?: string | null;
   recordatorio_minutos?: number | null;
+  recurrencia?: RecurrenceType | null;
+  recurrencia_fin?: string | null;
 }
 
 export interface ActivityUpdate extends Partial<ActivityInsert> {
