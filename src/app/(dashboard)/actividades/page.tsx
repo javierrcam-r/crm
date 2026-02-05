@@ -187,26 +187,24 @@ export default function ActividadesPage() {
     // Filtro de visibilidad por rol
     let matchesVisibility = true;
     const rol = userProfile?.rol;
-    
+
     // Solo supervisor_nivel1 y admin ven TODAS las actividades
-    // Los demás roles solo ven las suyas o donde están involucrados
+    // Los vendedores solo ven las suyas o donde están involucrados
     if (rol !== 'supervisor_nivel1' && rol !== 'admin') {
-      matchesVisibility = activity.created_by_user_id === userProfile?.id ||
-                         activity.participants?.some(p => p.user_profile_id === userProfile?.id) ||
-                         false;
+      const isCreator = activity.created_by_user_id === userProfile?.id;
+      const isParticipant = Array.isArray(activity.participants) &&
+                           activity.participants.some(p => p.user_profile_id === userProfile?.id);
+      matchesVisibility = isCreator || isParticipant;
     }
 
     // Filtro por persona (solo para Supervisor N1)
     const matchesPersona = !filterPersona ||
                           activity.created_by_user_id === filterPersona ||
-                          activity.participants?.some(p => p.user_profile_id === filterPersona);
+                          (Array.isArray(activity.participants) &&
+                           activity.participants.some(p => p.user_profile_id === filterPersona));
 
-    // Solo mostrar actividades estratégicas (reunión, capacitación, seguimiento)
-    // Excluir actividades diarias (tarea, otro)
-    const isStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
-    const matchesStrategic = isStrategic;
-
-    return matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility && matchesStrategic;
+    // Mostrar TODAS las actividades (estratégicas y diarias)
+    return matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility;
   });
   
   // Group by status for Kanban
@@ -557,7 +555,7 @@ export default function ActividadesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Actividades Estratégicas</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Actividades</h1>
           <p className="text-gray-500 mt-1">
             {isSupervisorN1
               ? 'Gestiona y supervisa todas las actividades del equipo'
@@ -666,11 +664,9 @@ export default function ActividadesPage() {
             className="px-3 py-2 border rounded-lg text-sm"
           >
             <option value="">Todos los tipos</option>
-            {Object.entries(tipoLabels)
-              .filter(([value]) => value === 'reunion' || value === 'capacitacion' || value === 'seguimiento')
-              .map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
+            {Object.entries(tipoLabels).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
 
           <select
