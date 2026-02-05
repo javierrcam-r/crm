@@ -217,16 +217,9 @@ export default function ActividadesPage() {
                           (Array.isArray(activity.participants) &&
                            activity.participants.some(p => p.user_profile_id === filterPersona));
 
-    // Para supervisor_nivel1/admin: solo mostrar actividades de tipo estratégico (reunion, capacitacion, seguimiento)
-    // ya que las diarias (tarea, otro) las gestiona desde el Calendario.
-    // Para vendedores y otros roles: mostrar TODAS sus actividades (son todas estratégicas,
-    // ya que los vendedores no pueden crear actividades diarias).
-    let matchesStrategic = true;
-    if (rol === 'supervisor_nivel1' || rol === 'admin') {
-      matchesStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
-    }
-
-    return matchesStrategic && matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility;
+    // Mostrar TODAS las actividades de todos los usuarios.
+    // Supervisor N1 y admin ven todo; vendedores solo ven las suyas (filtrado arriba en matchesVisibility).
+    return matchesSearch && matchesTipo && matchesPrioridad && matchesPersona && matchesVisibility;
   });
   
   // Group by status for Kanban
