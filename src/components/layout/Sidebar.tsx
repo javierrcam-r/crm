@@ -46,6 +46,7 @@ const adminNavigation = [
 const supervisorNavigation = [
   { name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
+  { name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
 ];
 
 // Navegación específica para supervisor_nivel1
@@ -53,6 +54,7 @@ const supervisorN1Navigation = [
   { name: 'Calendario', href: '/calendario', icon: Calendar },
   { name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
+  { name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
 ];
 
 // Actividades estratégicas - disponible para todos los roles
