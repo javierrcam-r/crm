@@ -335,8 +335,9 @@ export default function CalendarioPage() {
     );
   };
 
-  // Determinar si es supervisor_nivel1
+  // Roles que pueden gestionar actividades diarias desde el calendario
   const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
+  const canManageDailyActivities = isSupervisorN1 || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico';
 
   const getActivitiesForDay = (date: Date) => {
     return activities.filter((activity) =>
@@ -355,8 +356,8 @@ export default function CalendarioPage() {
     if (hasParticipants) return true;
     
     // Solo es "diaria" si la creó el supervisor_nivel1 actual como tarea personal
-    const createdByCurrentSupervisor = isSupervisorN1 && activity.created_by_user_id === userProfile?.id;
-    if (!createdByCurrentSupervisor) return true; // Si la creó otro usuario (vendedor, etc.), es estratégica
+    const createdByCurrentUser = canManageDailyActivities && activity.created_by_user_id === userProfile?.id;
+    if (!createdByCurrentUser) return true; // Si la creó otro usuario, es estratégica
     
     return false; // Es diaria: tarea/otro, sin participantes, creada por el supervisor actual
   };
@@ -406,11 +407,11 @@ export default function CalendarioPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Calendario</h1>
           <p className="text-gray-500 mt-1">
-            {isSupervisorN1 ? 'Gestiona tus actividades diarias y estratégicas' : 'Gestiona tu agenda de visitas'}
+            {canManageDailyActivities ? 'Gestiona tus actividades diarias y estratégicas' : 'Gestiona tu agenda de visitas'}
           </p>
         </div>
         <div className="flex gap-2">
-          {isSupervisorN1 ? (
+          {canManageDailyActivities ? (
             <Link href="/calendario/nueva-actividad">
               <Button icon={<Plus className="h-4 w-4" />}>Nueva Actividad Diaria</Button>
             </Link>
@@ -530,7 +531,7 @@ export default function CalendarioPage() {
               const today = isToday(day);
               
               // Para supervisor_nivel1: priorizar actividades, para otros: priorizar visitas
-              const totalItems = isSupervisorN1 
+              const totalItems = canManageDailyActivities 
                 ? dayActivities.length + dayVisits.length
                 : dayVisits.length + dayActivities.length;
 
@@ -559,7 +560,7 @@ export default function CalendarioPage() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    {isSupervisorN1 ? (
+                    {canManageDailyActivities ? (
                       <>
                         {/* Actividades Estratégicas (color púrpura) - Prioridad alta */}
                         {strategicActivities.slice(0, 2).map((activity) => (
@@ -673,7 +674,7 @@ export default function CalendarioPage() {
                     </p>
                   </div>
                   <div className="p-2 space-y-2">
-                    {isSupervisorN1 ? (
+                    {canManageDailyActivities ? (
                       <>
                         {/* Actividades Estratégicas (color púrpura) */}
                         {getStrategicActivitiesForDay(day).map((activity) => (
@@ -787,7 +788,7 @@ export default function CalendarioPage() {
 
       {view === 'list' && (
         <Card>
-          {isSupervisorN1 ? (
+          {canManageDailyActivities ? (
             activities.length === 0 ? (
               <EmptyState
                 icon={CalendarIcon}
@@ -1033,7 +1034,7 @@ export default function CalendarioPage() {
             <h3 className="font-semibold text-gray-900">
               {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
             </h3>
-            {isSupervisorN1 ? (
+            {canManageDailyActivities ? (
               <Link href={`/calendario/nueva-actividad?date=${selectedDate.toISOString()}`}>
                 <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />}>
                   Nueva Actividad
@@ -1047,7 +1048,7 @@ export default function CalendarioPage() {
               </Link>
             )}
           </div>
-          {isSupervisorN1 ? (
+          {canManageDailyActivities ? (
             <>
               {/* Actividades Estratégicas */}
               {getStrategicActivitiesForDay(selectedDate).length > 0 && (

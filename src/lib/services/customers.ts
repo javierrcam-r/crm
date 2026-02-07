@@ -248,11 +248,33 @@ export async function bulkAssignVendorToCustomers(customerIds: string[], vendorI
     assigned_by: profile?.id || null
   }));
   
-  const { error } = await supabase
-    .from('customer_vendor_assignments')
-    .upsert(rows, { onConflict: 'customer_id,vendor_user_id' });
+  // Insert in batches of 200
+  for (let i = 0; i < rows.length; i += 200) {
+    const batch = rows.slice(i, i + 200);
+    const { error } = await supabase
+      .from('customer_vendor_assignments')
+      .upsert(batch, { onConflict: 'customer_id,vendor_user_id' });
+    if (error) throw error;
+  }
+}
+
+export async function bulkCreateAssignments(assignments: { customer_id: string; vendor_user_id: string }[]) {
+  const supabase = getSupabaseClient();
+  const profile = getCurrentUserProfile();
   
-  if (error) throw error;
+  const rows = assignments.map(a => ({
+    ...a,
+    assigned_by: profile?.id || null
+  }));
+  
+  // Insert in batches of 200
+  for (let i = 0; i < rows.length; i += 200) {
+    const batch = rows.slice(i, i + 200);
+    const { error } = await supabase
+      .from('customer_vendor_assignments')
+      .upsert(batch, { onConflict: 'customer_id,vendor_user_id' });
+    if (error) throw error;
+  }
 }
 
 export async function reassignCustomerOwner(customerId: string, newOwnerUserId: string) {
@@ -269,9 +291,23 @@ export async function reassignCustomerOwner(customerId: string, newOwnerUserId: 
   return data as Customer;
 }
 
-export async function bulkCreateCustomers(customers: CustomerInsert[]) {
+export async function getAdminUserId() {
   const supabase = getSupabaseClient();
-  const userId = getCurrentUserId();
+  
+  const { data } = await supabase
+    .from('users_profile')
+    .select('user_id')
+    .eq('rol', 'admin')
+    .eq('activo', true)
+    .limit(1)
+    .single();
+  
+  return data?.user_id || null;
+}
+
+export async function bulkCreateCustomers(customers: CustomerInsert[], ownerUserId?: string) {
+  const supabase = getSupabaseClient();
+  const userId = ownerUserId || getCurrentUserId();
   
   if (!userId) throw new Error('No se encontró el usuario actual');
   

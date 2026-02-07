@@ -26,6 +26,8 @@ import {
   reassignCustomerOwner,
   getVendors,
   bulkCreateCustomers,
+  bulkCreateAssignments,
+  getAdminUserId,
 } from '@/lib/services/customers';
 import type { Customer, CustomerInsert } from '@/types/database';
 import toast from 'react-hot-toast';
@@ -170,10 +172,20 @@ export default function SupervisorClientesPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Match vendor name from Excel to vendor profile
+  const findVendorByName = (name: string) => {
+    if (!name) return null;
+    const normalized = name.trim().toLowerCase();
+    return vendors.find(v => v.nombre_completo.toLowerCase() === normalized) || 
+           vendors.find(v => v.nombre_completo.toLowerCase().includes(normalized) || normalized.includes(v.nombre_completo.toLowerCase())) ||
+           null;
+  };
+
   const processImport = async () => {
     setImportLoading(true);
     const errors: string[] = [];
     const validCustomers: CustomerInsert[] = [];
+    const vendorAssignments: { index: number; vendorId: string }[] = [];
 
     importData.forEach((row, index) => {
       const nombre = (row['nombre'] || row['Nombre'] || row['NOMBRE'] || row['Cliente'] || row['cliente'] || '').toString().trim();
@@ -182,6 +194,14 @@ export default function SupervisorClientesPage() {
         return;
       }
 
+      // Parse vendor assignment
+      const vendorName = (row['vendedor_asignado'] || row['Vendedor_asignado'] || row['Vendedor Asignado'] || row['VENDEDOR_ASIGNADO'] || row['vendedor'] || row['Vendedor'] || row['VENDEDOR'] || '').toString().trim();
+      const matchedVendor = findVendorByName(vendorName);
+      if (vendorName && !matchedVendor) {
+        errors.push(`Fila ${index + 2}: Vendedor "${vendorName}" no encontrado, cliente se importará sin asignación`);
+      }
+
+      const customerIndex = validCustomers.length;
       validCustomers.push({
         nombre,
         telefono: (row['telefono'] || row['Teléfono'] || row['Telefono'] || row['TELEFONO'] || row['tel'] || '').toString().trim() || null,
@@ -193,6 +213,10 @@ export default function SupervisorClientesPage() {
         notas: (row['notas'] || row['Notas'] || row['NOTAS'] || row['observaciones'] || row['Observaciones'] || '').toString().trim() || null,
         etiquetas: [],
       });
+
+      if (matchedVendor) {
+        vendorAssignments.push({ index: customerIndex, vendorId: matchedVendor.id });
+      }
     });
 
     if (validCustomers.length === 0) {
@@ -203,16 +227,48 @@ export default function SupervisorClientesPage() {
     }
 
     try {
-      // Import in batches of 50
-      const batchSize = 50;
+      // Obtener el user_id del admin (DISFERO) para que sea el dueño
+      const adminUserId = await getAdminUserId();
+      if (!adminUserId) {
+        errors.push('No se encontró el usuario administrador (DISFERO). Los clientes se asignarán al usuario actual.');
+      }
+
+      // Import customers in batches of 200
+      const batchSize = 200;
       let imported = 0;
+      const allCreatedCustomers: any[] = [];
+
       for (let i = 0; i < validCustomers.length; i += batchSize) {
         const batch = validCustomers.slice(i, i + batchSize);
-        await bulkCreateCustomers(batch);
+        const created = await bulkCreateCustomers(batch, adminUserId || undefined);
+        allCreatedCustomers.push(...created);
         imported += batch.length;
       }
 
-      toast.success(`${imported} clientes importados exitosamente`);
+      // Bulk create vendor assignments in one call
+      let assignedCount = 0;
+      if (vendorAssignments.length > 0) {
+        const assignmentRows: { customer_id: string; vendor_user_id: string }[] = [];
+        for (const assignment of vendorAssignments) {
+          const customer = allCreatedCustomers[assignment.index];
+          if (customer?.id) {
+            assignmentRows.push({ customer_id: customer.id, vendor_user_id: assignment.vendorId });
+          }
+        }
+        if (assignmentRows.length > 0) {
+          try {
+            await bulkCreateAssignments(assignmentRows);
+            assignedCount = assignmentRows.length;
+          } catch (err) {
+            errors.push('Error al asignar vendedores en lote');
+          }
+        }
+      }
+
+      const msg = assignedCount > 0 
+        ? `${imported} clientes importados, ${assignedCount} con vendedor asignado`
+        : `${imported} clientes importados exitosamente`;
+      toast.success(msg);
       setImportErrors(errors);
       if (errors.length === 0) {
         setShowImportModal(false);
@@ -228,13 +284,19 @@ export default function SupervisorClientesPage() {
   };
 
   const downloadTemplate = () => {
+    const vendorNames = vendors.map(v => v.nombre_completo).join(', ');
     const template = [
-      { nombre: 'Juan Pérez', telefono: '5551234567', email: 'juan@email.com', direccion: 'Calle 1 #100', zona: 'Norte', ciudad: 'CDMX', tipo: 'cliente', notas: 'Cliente VIP' },
-      { nombre: 'María López', telefono: '5559876543', email: 'maria@email.com', direccion: 'Av. Principal #200', zona: 'Sur', ciudad: 'Guadalajara', tipo: 'prospecto', notas: '' },
+      { nombre: 'Juan Pérez', telefono: '5551234567', email: 'juan@email.com', direccion: 'Calle 1 #100', zona: 'Norte', ciudad: 'CDMX', tipo: 'cliente', vendedor_asignado: vendors[0]?.nombre_completo || 'Nombre del vendedor', notas: 'Cliente VIP' },
+      { nombre: 'María López', telefono: '5559876543', email: 'maria@email.com', direccion: 'Av. Principal #200', zona: 'Sur', ciudad: 'Guadalajara', tipo: 'prospecto', vendedor_asignado: vendors[1]?.nombre_completo || vendors[0]?.nombre_completo || '', notas: '' },
     ];
     const ws = XLSX.utils.json_to_sheet(template);
+    
+    // Add a second sheet with the list of available vendors for reference
+    const vendorSheet = XLSX.utils.json_to_sheet(vendors.map(v => ({ nombre_vendedor: v.nombre_completo, email: v.email, rol: v.rol })));
+    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+    XLSX.utils.book_append_sheet(wb, vendorSheet, 'Vendedores Disponibles');
     XLSX.writeFile(wb, 'plantilla_clientes.xlsx');
   };
 
@@ -665,7 +727,10 @@ export default function SupervisorClientesPage() {
           <div className="bg-gray-50 rounded-xl p-4">
             <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Columnas reconocidas</h4>
             <p className="text-xs text-gray-600">
-              <strong>nombre</strong> (obligatorio), telefono, email, direccion, zona, ciudad, tipo (cliente/prospecto), notas
+              <strong>nombre</strong> (obligatorio), telefono, email, direccion, zona, ciudad, tipo (cliente/prospecto), <strong>vendedor_asignado</strong> (nombre del vendedor), notas
+            </p>
+            <p className="text-xs text-indigo-600 mt-2">
+              💡 El dueño será <strong>DISFERO</strong> (administrador). El vendedor indicado en <strong>vendedor_asignado</strong> quedará como vendedor asignado al cliente.
             </p>
           </div>
 
