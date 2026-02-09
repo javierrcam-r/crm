@@ -39,6 +39,7 @@ function NuevaVisitaContent() {
   const preselectedDate = searchParams.get('date');
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<VisitInsert>({
@@ -52,7 +53,29 @@ function NuevaVisitaContent() {
   });
 
   useEffect(() => {
-    loadCustomers();
+    // Reintentar carga si el perfil no está listo aún
+    let retries = 0;
+    const tryLoad = async () => {
+      try {
+        const data = await getCustomers();
+        if (data.length > 0 || retries >= 3) {
+          setCustomers(data);
+          setLoadingCustomers(false);
+        } else {
+          retries++;
+          setTimeout(tryLoad, 500);
+        }
+      } catch (error) {
+        console.error('Error cargando clientes:', error);
+        if (retries < 3) {
+          retries++;
+          setTimeout(tryLoad, 500);
+        } else {
+          setLoadingCustomers(false);
+        }
+      }
+    };
+    tryLoad();
   }, []);
 
   useEffect(() => {
@@ -66,15 +89,6 @@ function NuevaVisitaContent() {
       }
     }
   }, [preselectedCustomerId, customers]);
-
-  const loadCustomers = async () => {
-    try {
-      const data = await getCustomers();
-      setCustomers(data);
-    } catch (error) {
-      console.error('Error cargando clientes:', error);
-    }
-  };
 
   // Búsqueda robusta de clientes (ignora tildes, busca en cualquier orden)
   const filteredCustomers = searchTerm.trim()
@@ -190,9 +204,16 @@ function NuevaVisitaContent() {
                     </button>
                   ))}
                   {filteredCustomers.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">
-                      No se encontraron clientes
-                    </p>
+                    loadingCustomers ? (
+                      <div className="flex items-center justify-center gap-2 py-4 text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Cargando clientes...</span>
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500 py-4">
+                        No se encontraron clientes
+                      </p>
+                    )
                   )}
                 </div>
               </div>

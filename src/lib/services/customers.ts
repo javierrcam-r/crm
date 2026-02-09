@@ -9,38 +9,65 @@ export async function getCustomers(filters?: CustomerFilters) {
   const isAdmin = isCurrentUserAdmin();
   const isSupervisor = profile?.rol === 'supervisor' || profile?.rol === 'supervisor_nivel1' || profile?.rol === 'supervisor_vendedor';
   
-  if (!isAdmin && !isSupervisor && userId) {
-    // Vendedores: ver clientes propios + clientes asignados
+  if (!isAdmin && !isSupervisor && userId && profile) {
+    // Usuarios normales: ver clientes propios + clientes asignados
+    // Buscar por profile.id Y por profile.user_id para máxima compatibilidad
     const { data: assignments } = await supabase
       .from('customer_vendor_assignments')
       .select('customer_id')
-      .eq('vendor_user_id', profile?.id || '');
+      .or(`vendor_user_id.eq.${profile.id},vendor_user_id.eq.${profile.user_id}`);
     
     const assignedIds = (assignments || []).map(a => a.customer_id);
     
-    let query = supabase
+    // Obtener clientes propios (por user_id)
+    let ownQuery = supabase
       .from('customers')
       .select('*')
       .is('deleted_at', null)
-      .order('nombre');
-    
-    if (assignedIds.length > 0) {
-      query = query.or(`user_id.eq.${userId},id.in.(${assignedIds.join(',')})`);
-    } else {
-      query = query.eq('user_id', userId);
-    }
+      .eq('user_id', userId);
 
-    if (filters?.tipo) query = query.eq('tipo', filters.tipo);
-    if (filters?.etapa_embudo) query = query.eq('etapa_embudo', filters.etapa_embudo);
-    if (filters?.ciudad) query = query.eq('ciudad', filters.ciudad);
-    if (filters?.zona) query = query.eq('zona', filters.zona);
+    if (filters?.tipo) ownQuery = ownQuery.eq('tipo', filters.tipo);
+    if (filters?.etapa_embudo) ownQuery = ownQuery.eq('etapa_embudo', filters.etapa_embudo);
+    if (filters?.ciudad) ownQuery = ownQuery.eq('ciudad', filters.ciudad);
+    if (filters?.zona) ownQuery = ownQuery.eq('zona', filters.zona);
     if (filters?.search) {
-      query = query.or(`nombre.ilike.%${filters.search}%,telefono.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+      ownQuery = ownQuery.or(`nombre.ilike.%${filters.search}%,telefono.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data as Customer[];
+    const { data: ownData, error: ownError } = await ownQuery;
+    if (ownError) throw ownError;
+
+    // Obtener clientes asignados (por IDs de asignación)
+    let assignedData: Customer[] = [];
+    if (assignedIds.length > 0) {
+      let assignedQuery = supabase
+        .from('customers')
+        .select('*')
+        .is('deleted_at', null)
+        .in('id', assignedIds);
+
+      if (filters?.tipo) assignedQuery = assignedQuery.eq('tipo', filters.tipo);
+      if (filters?.etapa_embudo) assignedQuery = assignedQuery.eq('etapa_embudo', filters.etapa_embudo);
+      if (filters?.ciudad) assignedQuery = assignedQuery.eq('ciudad', filters.ciudad);
+      if (filters?.zona) assignedQuery = assignedQuery.eq('zona', filters.zona);
+      if (filters?.search) {
+        assignedQuery = assignedQuery.or(`nombre.ilike.%${filters.search}%,telefono.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+      }
+
+      const { data: aData, error: aError } = await assignedQuery;
+      if (aError) throw aError;
+      assignedData = aData as Customer[];
+    }
+
+    // Combinar y deduplicar
+    const allCustomers = ownData as Customer[];
+    const ownIds = new Set(allCustomers.map(c => c.id));
+    for (const c of assignedData) {
+      if (!ownIds.has(c.id)) allCustomers.push(c);
+    }
+    
+    allCustomers.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return allCustomers;
   }
 
   // Admin y supervisores ven TODOS los clientes
@@ -328,10 +355,11 @@ export async function bulkCreateCustomers(customers: CustomerInsert[], ownerUser
 export async function getVendors() {
   const supabase = getSupabaseClient();
   
+  // Obtener todos los usuarios activos (excepto admin) para poder asignarles clientes
   const { data, error } = await supabase
     .from('users_profile')
     .select('id, user_id, nombre_completo, email, rol')
-    .in('rol', ['vendedor', 'supervisor_vendedor'])
+    .neq('rol', 'admin')
     .eq('activo', true)
     .order('nombre_completo');
   
