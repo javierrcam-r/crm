@@ -208,6 +208,14 @@ export default function EventosPage() {
                     
                     {event.objetivo && <p className="text-sm text-gray-600 line-clamp-2">{event.objetivo}</p>}
                     
+                    {(event as any).marcas && (event as any).marcas.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {(event as any).marcas.map((m: string) => (
+                          <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{m}</span>
+                        ))}
+                      </div>
+                    )}
+                    
                     <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />

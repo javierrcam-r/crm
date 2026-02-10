@@ -113,6 +113,7 @@ export default function EventDetailPage() {
       lecciones_aprendidas: event.lecciones_aprendidas || '',
       recomendaciones: event.recomendaciones || '',
       satisfaccion_promedio: String(event.satisfaccion_promedio || ''),
+      marcas: event.marcas || [],
     });
     setShowEditEvent(true);
   };
@@ -132,6 +133,7 @@ export default function EventDetailPage() {
         plataforma: editEventForm.plataforma || null,
         objetivo: editEventForm.objetivo || null,
         responsable_id: editEventForm.responsable_id,
+        marcas: editEventForm.marcas || [],
         presupuesto_total: Number(editEventForm.presupuesto_total) || 0,
         margen_objetivo: Number(editEventForm.margen_objetivo) || 0,
         costo_fijo_total: Number(editEventForm.costo_fijo_total) || 0,
@@ -336,6 +338,16 @@ export default function EventDetailPage() {
                 {event.ubicacion && <div><span className="text-gray-500">Ubicación:</span><p className="font-medium">{event.ubicacion}</p></div>}
                 {event.plataforma && <div><span className="text-gray-500">Plataforma:</span><p className="font-medium">{event.plataforma}</p></div>}
               </div>
+              {event.marcas && event.marcas.length > 0 && (
+                <div className="pt-3 border-t">
+                  <span className="text-gray-500">Marcas:</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {event.marcas.map((m: string) => (
+                      <span key={m} className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">{m}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
           <Card>
@@ -758,6 +770,21 @@ export default function EventDetailPage() {
               <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label><select value={editEventForm.tipo || 'curso'} onChange={e => setEditEventForm((p: any) => ({ ...p, tipo: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="curso">Curso</option><option value="taller">Taller</option><option value="conferencia">Conferencia</option><option value="evento_corporativo">Evento Corp.</option><option value="seminario">Seminario</option><option value="otro">Otro</option></select></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Modalidad</label><select value={editEventForm.modalidad || 'presencial'} onChange={e => setEditEventForm((p: any) => ({ ...p, modalidad: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="presencial">Presencial</option><option value="virtual">Virtual</option><option value="hibrido">Híbrido</option></select></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Responsable</label><select value={editEventForm.responsable_id || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, responsable_id: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">{users.map(u => <option key={u.id} value={u.id}>{u.nombre_completo}</option>)}</select></div>
+            </div>
+          </div>
+
+          {/* Marcas */}
+          <div className="bg-amber-50 rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-semibold text-amber-600 uppercase">🏷️ Marcas del Evento</h4>
+            <div className="flex flex-wrap gap-2">
+              {['Schwarzkopf', 'Hipertín', 'Keyra', 'Sutra', 'Sin Marca'].map(brand => {
+                const selected = (editEventForm.marcas || []).includes(brand);
+                return (
+                  <button key={brand} type="button" onClick={() => setEditEventForm((p: any) => ({ ...p, marcas: selected ? (p.marcas || []).filter((b: string) => b !== brand) : [...(p.marcas || []), brand] }))} className={`text-sm px-3 py-1.5 rounded-full border transition-all ${selected ? 'bg-amber-200 text-amber-800 border-amber-400 font-semibold' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300'}`}>
+                    {selected && <CheckCircle className="h-3.5 w-3.5 inline mr-1" />}{brand}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

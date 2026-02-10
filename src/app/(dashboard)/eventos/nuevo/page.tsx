@@ -10,6 +10,9 @@ import Input from '@/components/ui/Input';
 import { createEvent, getActiveUsers, type EventType, type EventModality } from '@/lib/services/events';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { CheckCircle } from 'lucide-react';
+
+const BRAND_OPTIONS = ['Schwarzkopf', 'Hipertín', 'Keyra', 'Sutra', 'Sin Marca'];
 
 export default function NuevoEventoPage() {
   const router = useRouter();
@@ -20,6 +23,7 @@ export default function NuevoEventoPage() {
     fecha_inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), fecha_fin: '', ubicacion: '', plataforma: '', objetivo: '',
     responsable_id: '', presupuesto_total: '', margen_objetivo: '', costo_fijo_total: '',
     costo_variable_por_persona: '', cupo_minimo: '', cupo_maximo: '', precio_por_persona: '',
+    marcas: [] as string[],
   });
 
   useEffect(() => { getActiveUsers().then(setUsers).catch(console.error); }, []);
@@ -38,6 +42,7 @@ export default function NuevoEventoPage() {
         fecha_fin: form.fecha_fin ? new Date(form.fecha_fin).toISOString() : null,
         ubicacion: form.ubicacion || null, plataforma: form.plataforma || null, objetivo: form.objetivo || null,
         responsable_id: form.responsable_id,
+        marcas: form.marcas,
         presupuesto_total: Number(form.presupuesto_total) || 0,
         margen_objetivo: Number(form.margen_objetivo) || 0,
         costo_fijo_total: Number(form.costo_fijo_total) || 0,
@@ -101,6 +106,34 @@ export default function NuevoEventoPage() {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Marcas */}
+          <div className="bg-amber-50 rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide">🏷️ Marcas del Evento</h4>
+            <div className="flex flex-wrap gap-2">
+              {BRAND_OPTIONS.map(brand => {
+                const selected = form.marcas.includes(brand);
+                return (
+                  <button
+                    key={brand}
+                    type="button"
+                    onClick={() => set('marcas', selected ? form.marcas.filter((b: string) => b !== brand) : [...form.marcas, brand])}
+                    className={`text-sm px-3 py-1.5 rounded-full border transition-all ${
+                      selected
+                        ? 'bg-amber-200 text-amber-800 border-amber-400 font-semibold'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                    }`}
+                  >
+                    {selected && <CheckCircle className="h-3.5 w-3.5 inline mr-1" />}
+                    {brand}
+                  </button>
+                );
+              })}
+            </div>
+            {form.marcas.length > 0 && (
+              <p className="text-xs text-amber-700 font-medium">{form.marcas.length} marca(s) seleccionada(s)</p>
+            )}
           </div>
 
           {/* Fechas y Ubicación */}

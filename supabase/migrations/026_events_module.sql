@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS events (
   plataforma VARCHAR(500),
   objetivo TEXT,
   
+  -- Marcas del evento
+  marcas TEXT[] DEFAULT '{}',
+  
   -- Responsable general
   responsable_id UUID NOT NULL,
   

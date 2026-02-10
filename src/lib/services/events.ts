@@ -25,6 +25,7 @@ export interface Event {
   ubicacion: string | null;
   plataforma: string | null;
   objetivo: string | null;
+  marcas: string[];
   responsable_id: string;
   presupuesto_total: number;
   margen_objetivo: number;
