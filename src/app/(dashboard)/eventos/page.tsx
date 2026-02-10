@@ -11,7 +11,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { getEvents, type Event, type EventStatus, type EventType } from '@/lib/services/events';
+import { getEvents, getVendorEvents, type Event, type EventStatus, type EventType } from '@/lib/services/events';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -39,16 +39,23 @@ export default function EventosPage() {
   const [filterStatus, setFilterStatus] = useState<EventStatus | ''>('');
   const [filterType, setFilterType] = useState<EventType | ''>('');
 
-  const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
+  const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
+  const isVendor = userProfile?.rol === 'vendedor';
+  const canView = isSupervisor || isVendor;
 
   useEffect(() => {
-    if (canView) loadEvents();
-  }, [canView]);
+    if (canView && userProfile) loadEvents();
+  }, [canView, userProfile]);
 
   const loadEvents = async () => {
     try {
-      const data = await getEvents();
-      setEvents(data);
+      if (isSupervisor) {
+        const data = await getEvents();
+        setEvents(data);
+      } else if (isVendor && userProfile) {
+        const data = await getVendorEvents(userProfile.id);
+        setEvents(data);
+      }
     } catch (e) {
       console.error('Error loading events:', e);
     } finally {
@@ -92,30 +99,34 @@ export default function EventosPage() {
             <Calendar className="h-7 w-7 text-indigo-600" />
             Gestión de Eventos
           </h1>
-          <p className="text-gray-500 mt-1">Planifica, ejecuta y monitorea eventos con control financiero</p>
+          <p className="text-gray-500 mt-1">{isSupervisor ? 'Planifica, ejecuta y monitorea eventos con control financiero' : 'Eventos en los que participas'}</p>
         </div>
-        <Link href="/eventos/nuevo">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Evento
-          </Button>
-        </Link>
+        {isSupervisor && (
+          <Link href="/eventos/nuevo">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Evento
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className={`grid gap-4 ${isSupervisor ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3'}`}>
         <Card className="bg-indigo-50 border border-indigo-200">
           <div className="p-4">
             <p className="text-xs font-medium text-indigo-600 uppercase">Total</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
           </div>
         </Card>
-        <Card className="bg-blue-50 border border-blue-200">
-          <div className="p-4">
-            <p className="text-xs font-medium text-blue-600 uppercase">Planeados</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.planeados}</p>
-          </div>
-        </Card>
+        {isSupervisor && (
+          <Card className="bg-blue-50 border border-blue-200">
+            <div className="p-4">
+              <p className="text-xs font-medium text-blue-600 uppercase">Planeados</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.planeados}</p>
+            </div>
+          </Card>
+        )}
         <Card className="bg-amber-50 border border-amber-200">
           <div className="p-4">
             <p className="text-xs font-medium text-amber-600 uppercase">En Ejecución</p>
@@ -128,12 +139,14 @@ export default function EventosPage() {
             <p className="text-2xl font-bold text-gray-900 mt-1">{stats.finalizados}</p>
           </div>
         </Card>
-        <Card className="bg-purple-50 border border-purple-200">
-          <div className="p-4">
-            <p className="text-xs font-medium text-purple-600 uppercase">Presupuesto</p>
-            <p className="text-lg font-bold text-gray-900 mt-1">${stats.presupuestoTotal.toLocaleString()}</p>
-          </div>
-        </Card>
+        {isSupervisor && (
+          <Card className="bg-purple-50 border border-purple-200">
+            <div className="p-4">
+              <p className="text-xs font-medium text-purple-600 uppercase">Presupuesto</p>
+              <p className="text-lg font-bold text-gray-900 mt-1">${stats.presupuestoTotal.toLocaleString()}</p>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Filters */}
@@ -170,8 +183,8 @@ export default function EventosPage() {
         <Card className="text-center py-16">
           <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay eventos</h3>
-          <p className="text-gray-500 mb-4">Crea tu primer evento para empezar</p>
-          <Link href="/eventos/nuevo"><Button><Plus className="h-4 w-4 mr-2" />Crear Evento</Button></Link>
+          <p className="text-gray-500 mb-4">{isSupervisor ? 'Crea tu primer evento para empezar' : 'No tienes eventos asignados'}</p>
+          {isSupervisor && <Link href="/eventos/nuevo"><Button><Plus className="h-4 w-4 mr-2" />Crear Evento</Button></Link>}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -179,7 +192,7 @@ export default function EventosPage() {
             const ModalIcon = modalityIcons[event.modalidad] || Globe;
             const sc = statusConfig[event.estado];
             return (
-              <Link key={event.id} href={`/eventos/${event.id}`}>
+              <Link key={event.id} href={isSupervisor ? `/eventos/${event.id}` : `/eventos/${event.id}/vendedor`}>
                 <Card className={`hover:shadow-lg transition-shadow cursor-pointer h-full border-l-4 ${event.estado === 'en_ejecucion' ? 'border-l-amber-500' : event.estado === 'finalizado' ? 'border-l-green-500' : event.estado === 'cancelado' ? 'border-l-red-500' : 'border-l-indigo-500'}`}>
                   <div className="p-5 space-y-3">
                     <div className="flex items-start justify-between gap-2">
@@ -206,7 +219,7 @@ export default function EventosPage() {
                           Cupo: {event.cupo_maximo}
                         </span>
                       )}
-                      {Number(event.presupuesto_total) > 0 && (
+                      {isSupervisor && Number(event.presupuesto_total) > 0 && (
                         <span className="flex items-center gap-1">
                           <DollarSign className="h-3.5 w-3.5" />
                           ${Number(event.presupuesto_total).toLocaleString()}

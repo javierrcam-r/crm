@@ -18,7 +18,7 @@ import {
   getEvent, updateEvent, getEventExpenses, createExpense, updateExpense, deleteExpense,
   getEventActivities, createEventActivity, updateEventActivity, deleteEventActivity,
   getEventParticipants, createParticipant, updateParticipant, deleteParticipant,
-  getActiveUsers, computeEventKPIs,
+  getActiveUsers, computeEventKPIs, getEventVendors, setEventVendors,
   type Event, type EventExpense, type EventActivity, type EventParticipant,
   type EventStatus, type ExpenseStatus, type EventActivityStatus, type EventActivityType,
 } from '@/lib/services/events';
@@ -46,6 +46,8 @@ export default function EventDetailPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('general');
+  const [eventVendorIds, setEventVendorIds] = useState<string[]>([]);
+  const [savingVendors, setSavingVendors] = useState(false);
 
   // Modal states
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -64,11 +66,11 @@ export default function EventDetailPage() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [ev, exp, act, part, usr] = await Promise.all([
+      const [ev, exp, act, part, usr, vids] = await Promise.all([
         getEvent(eventId), getEventExpenses(eventId), getEventActivities(eventId),
-        getEventParticipants(eventId), getActiveUsers()
+        getEventParticipants(eventId), getActiveUsers(), getEventVendors(eventId)
       ]);
-      setEvent(ev); setExpenses(exp); setActivities(act); setParticipants(part); setUsers(usr);
+      setEvent(ev); setExpenses(exp); setActivities(act); setParticipants(part); setUsers(usr); setEventVendorIds(vids);
     } catch (e) { console.error(e); toast.error('Error cargando evento'); }
     finally { setLoading(false); }
   };
@@ -255,6 +257,7 @@ export default function EventDetailPage() {
 
       {/* ============= TAB: GENERAL ============= */}
       {tab === 'general' && (
+        <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <h3 className="font-semibold text-gray-900 mb-4">Información del Evento</h3>
@@ -281,7 +284,49 @@ export default function EventDetailPage() {
             </div>
           </Card>
         </div>
-      )}
+
+          {/* Vendor Assignment */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Users className="h-5 w-5 text-indigo-600" />
+                Vendedores Asignados al Evento
+              </h3>
+              {savingVendors && <span className="text-xs text-indigo-600 animate-pulse">Guardando...</span>}
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Selecciona qué vendedores pueden ver e interactuar con este evento.</p>
+            <div className="flex flex-wrap gap-2">
+              {users.filter(u => u.rol !== 'admin').map(u => {
+                const isAssigned = eventVendorIds.includes(u.id);
+                return (
+                  <button
+                    key={u.id}
+                    onClick={async () => {
+                      const newIds = isAssigned ? eventVendorIds.filter(id => id !== u.id) : [...eventVendorIds, u.id];
+                      setEventVendorIds(newIds);
+                      setSavingVendors(true);
+                      try { await setEventVendors(eventId, newIds); } catch { toast.error('Error guardando'); }
+                      finally { setSavingVendors(false); }
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      isAssigned
+                        ? 'bg-indigo-100 text-indigo-700 border-indigo-300 font-semibold'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                    }`}
+                  >
+                    {isAssigned && <CheckCircle className="h-3 w-3 inline mr-1" />}
+                    {u.nombre_completo}
+                    <span className="ml-1 text-[10px] opacity-60">({u.rol === 'vendedor' ? 'Vend.' : u.rol === 'supervisor_vendedor' ? 'Sup+V' : u.rol})</span>
+                  </button>
+                );
+              })}
+            </div>
+            {eventVendorIds.length > 0 && (
+              <p className="text-xs text-indigo-600 mt-3 font-medium">{eventVendorIds.length} vendedor(es) asignado(s)</p>
+            )}
+          </Card>
+        </div>
+        )}
 
       {/* ============= TAB: PRESUPUESTO ============= */}
       {tab === 'presupuesto' && (

@@ -155,9 +155,22 @@ CREATE TABLE IF NOT EXISTS event_participants (
   monto_pagado DECIMAL(12,2) DEFAULT 0,
   asistencia BOOLEAN DEFAULT FALSE,
   certificado_emitido BOOLEAN DEFAULT FALSE,
+  cupos_adicionales INTEGER DEFAULT 0,
+  registered_by UUID, -- users_profile.id del vendedor que lo registró
   notas TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 6. TABLA: event_vendor_assignments (Vendedores asignados al evento)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS event_vendor_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  vendor_id UUID NOT NULL, -- users_profile.id del vendedor
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(event_id, vendor_id)
 );
 
 -- =====================================================
@@ -171,6 +184,8 @@ CREATE INDEX IF NOT EXISTS idx_event_activities_event ON event_activities(event_
 CREATE INDEX IF NOT EXISTS idx_event_activities_responsable ON event_activities(responsable_id);
 CREATE INDEX IF NOT EXISTS idx_event_activities_estado ON event_activities(estado);
 CREATE INDEX IF NOT EXISTS idx_event_participants_event ON event_participants(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_vendor_assignments_event ON event_vendor_assignments(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_vendor_assignments_vendor ON event_vendor_assignments(vendor_id);
 
 -- =====================================================
 -- DESHABILITAR RLS (consistente con el proyecto)
@@ -180,6 +195,7 @@ ALTER TABLE event_expenses DISABLE ROW LEVEL SECURITY;
 ALTER TABLE event_providers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE event_activities DISABLE ROW LEVEL SECURITY;
 ALTER TABLE event_participants DISABLE ROW LEVEL SECURITY;
+ALTER TABLE event_vendor_assignments DISABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- COMENTARIOS

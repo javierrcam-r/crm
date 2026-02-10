@@ -86,6 +86,8 @@ export interface EventParticipant {
   monto_pagado: number;
   asistencia: boolean;
   certificado_emitido: boolean;
+  cupos_adicionales: number;
+  registered_by: string | null;
   notas: string | null;
   created_at: string;
 }
@@ -417,6 +419,48 @@ export function computeEventKPIs(event: Event, expenses: EventExpense[], activit
 
     satisfaccion: Number(event.satisfaccion_promedio) || 0,
   };
+}
+
+// =====================================================
+// VENDOR-EVENT ASSIGNMENTS
+// =====================================================
+export async function getEventVendors(eventId: string) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_vendor_assignments')
+    .select('vendor_id')
+    .eq('event_id', eventId);
+  if (error) throw error;
+  return (data || []).map((d: any) => d.vendor_id as string);
+}
+
+export async function setEventVendors(eventId: string, vendorIds: string[]) {
+  const supabase = getSupabaseClient();
+  await supabase.from('event_vendor_assignments').delete().eq('event_id', eventId);
+  if (vendorIds.length > 0) {
+    const rows = vendorIds.map(vid => ({ event_id: eventId, vendor_id: vid }));
+    const { error } = await supabase.from('event_vendor_assignments').insert(rows);
+    if (error) throw error;
+  }
+}
+
+export async function getVendorEvents(vendorId: string) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_vendor_assignments')
+    .select('event_id')
+    .eq('vendor_id', vendorId);
+  if (error) throw error;
+  const eventIds = (data || []).map((d: any) => d.event_id);
+  if (eventIds.length === 0) return [];
+  const { data: events, error: evErr } = await supabase
+    .from('events')
+    .select('*')
+    .in('id', eventIds)
+    .neq('estado', 'cancelado')
+    .order('fecha_inicio', { ascending: false });
+  if (evErr) throw evErr;
+  return events as Event[];
 }
 
 // =====================================================

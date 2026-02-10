@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Fingerprint, Trash2, Smartphone, Shield } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Fingerprint, Trash2, Smartphone, Shield, Settings, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -221,6 +222,26 @@ export default function ConfiguracionPage() {
           Gestiona tu cuenta y preferencias
         </p>
       </div>
+
+      {/* Panel Admin - Configurar Menú */}
+      {userProfile?.rol === 'admin' && (
+        <Link href="/configuracion/sidebar">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-indigo-200 bg-indigo-50/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                  <Settings className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Configurar Menú del Sidebar</p>
+                  <p className="text-xs text-gray-500">Controla qué ítems del menú ve cada rol</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </Card>
+        </Link>
+      )}
 
       {/* Información del Usuario */}
       <Card>

@@ -20,48 +20,50 @@ import {
   ClipboardList,
   UserCheck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import Badge from '@/components/ui/Badge';
 import toast from 'react-hot-toast';
+import { getSidebarConfig, isMenuVisible, type SidebarConfigItem } from '@/lib/services/sidebarConfig';
 
 // Menú principal para VENDEDORES (único rol con dashboard)
 const vendedorNavigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Clientes', href: '/clientes', icon: Users },
-  { name: 'Calendario', href: '/calendario', icon: Calendar },
-  { name: 'Mapa Visitas', href: '/mapa', icon: Map },
-  { name: 'Productos', href: '/productos', icon: Package },
-  { name: 'Pedidos', href: '/pedidos', icon: ShoppingCart },
-  { name: 'Reportes', href: '/reportes', icon: BarChart3 },
+  { key: 'dashboard', name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { key: 'clientes', name: 'Clientes', href: '/clientes', icon: Users },
+  { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
+  { key: 'mapa', name: 'Mapa Visitas', href: '/mapa', icon: Map },
+  { key: 'productos', name: 'Productos', href: '/productos', icon: Package },
+  { key: 'pedidos', name: 'Pedidos', href: '/pedidos', icon: ShoppingCart },
+  { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
+  { key: 'reportes', name: 'Reportes', href: '/reportes', icon: BarChart3 },
 ];
 
 const adminNavigation = [
-  { name: 'Usuarios', href: '/usuarios', icon: Shield },
+  { key: 'usuarios', name: 'Usuarios', href: '/usuarios', icon: Shield },
 ];
 
 // Panel de supervisión - para supervisor y supervisor_nivel1
 const supervisorNavigation = [
-  { name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
-  { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
-  { name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
-  { name: 'Eventos', href: '/eventos', icon: Calendar },
+  { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
+  { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
+  { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
+  { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
 ];
 
 // Navegación específica para supervisor_nivel1
 const supervisorN1Navigation = [
-  { name: 'Calendario', href: '/calendario', icon: Calendar },
-  { name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
-  { name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
-  { name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
-  { name: 'Eventos', href: '/eventos', icon: Calendar },
+  { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
+  { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
+  { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
+  { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
+  { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
 ];
 
 // Actividades estratégicas - disponible para todos los roles
 const actividadesEstrategicas = [
-  { name: 'Actividades Estratégicas', href: '/actividades', icon: ClipboardList },
+  { key: 'actividades', name: 'Actividades Estratégicas', href: '/actividades', icon: ClipboardList },
 ];
 
 const quickActions = [
@@ -74,7 +76,17 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarConfig, setSidebarConfig] = useState<SidebarConfigItem[]>([]);
   const { isUserAdmin, userProfile, logout } = useAuth();
+
+  useEffect(() => {
+    getSidebarConfig().then(setSidebarConfig).catch(() => {});
+  }, []);
+
+  const filterByConfig = (items: { key: string; name: string; href: string; icon: any }[]) => {
+    if (!userProfile || sidebarConfig.length === 0) return items;
+    return items.filter(item => isMenuVisible(sidebarConfig, item.key, userProfile.rol));
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('crm_user_profile');
@@ -146,7 +158,7 @@ export default function Sidebar() {
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
                 Menú Principal
               </p>
-              {vendedorNavigation.map((item, index) => {
+              {filterByConfig(vendedorNavigation).map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
@@ -178,7 +190,7 @@ export default function Sidebar() {
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
                 Supervisión
               </p>
-              {(userProfile?.rol === 'supervisor_nivel1' ? supervisorN1Navigation : supervisorNavigation).map((item, index) => {
+              {filterByConfig(userProfile?.rol === 'supervisor_nivel1' ? supervisorN1Navigation : supervisorNavigation).map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
@@ -205,7 +217,7 @@ export default function Sidebar() {
           )}
 
           {/* Calendario para Marketing y Técnico */}
-          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico') && (
+          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico') && isMenuVisible(sidebarConfig, 'calendario', userProfile?.rol || '') && (
             <Link
               href="/calendario"
               onClick={() => setMobileOpen(false)}
@@ -227,7 +239,7 @@ export default function Sidebar() {
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
                 {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
               </p>
-              {actividadesEstrategicas.map((item, index) => {
+              {filterByConfig(actividadesEstrategicas).map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
