@@ -317,12 +317,12 @@ export default function SupervisorClientesPage() {
         c.ciudad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.zona?.toLowerCase().includes(searchTerm.toLowerCase());
 
+      // Buscar el vendedor seleccionado para comparar tanto por id como por user_id
+      const selectedVendor = filterVendor ? vendors.find(v => v.id === filterVendor) : null;
       const matchesVendor = !filterVendor || 
         c.user_id === filterVendor ||
-        (assignments[c.id] || []).some(vid => {
-          const v = getVendorById(vid);
-          return v?.user_id === filterVendor || v?.id === filterVendor;
-        });
+        (selectedVendor && c.user_id === selectedVendor.user_id) ||
+        (assignments[c.id] || []).includes(filterVendor);
 
       const matchesCity = !filterCity || c.ciudad === filterCity;
 
