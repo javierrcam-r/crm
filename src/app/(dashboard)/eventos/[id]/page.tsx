@@ -316,7 +316,7 @@ export default function EventDetailPage() {
                     <td className="px-4 py-3 text-right font-semibold">${Number(e.monto).toLocaleString()}</td>
                     <td className="px-4 py-3 text-center hidden lg:table-cell"><span className={`text-xs px-2 py-0.5 rounded-full ${comp ? 'bg-indigo-100 text-indigo-700' : 'text-gray-400'}`}>{compLabel}</span></td>
                     <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${e.estado === 'pagado' ? 'bg-green-100 text-green-700' : e.estado === 'aprobado' ? 'bg-blue-100 text-blue-700' : e.estado === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{e.estado}</span></td>
-                    <td className="px-4 py-3 text-center"><div className="flex gap-1 justify-center"><button onClick={() => openExpenseModal(e)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button><button onClick={() => removeExpense(e.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button></div></td>
+                    <td className="px-4 py-3 text-center"><div className="flex gap-1 justify-center"><button onClick={() => setShowExpenseDetail(e)} className="p-1 hover:bg-blue-50 rounded" title="Ver detalle"><Eye className="h-3.5 w-3.5 text-blue-500" /></button><button onClick={() => openExpenseModal(e)} className="p-1 hover:bg-gray-100 rounded" title="Editar"><Edit className="h-3.5 w-3.5 text-gray-500" /></button><button onClick={() => removeExpense(e.id)} className="p-1 hover:bg-red-50 rounded" title="Eliminar"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button></div></td>
                   </tr>
                   );
                 })}
@@ -487,6 +487,82 @@ export default function EventDetailPage() {
       )}
 
       {/* ============= MODALS ============= */}
+      {/* Expense Detail Modal */}
+      <Modal isOpen={!!showExpenseDetail} onClose={() => setShowExpenseDetail(null)} title="Detalle del Gasto" size="lg">
+        {showExpenseDetail && (() => {
+          const d = showExpenseDetail as any;
+          const compLabel = d.comprobante === 'transferencia' ? 'Transferencia' : d.comprobante === 'tarjeta_credito' ? 'Tarjeta de crédito' : d.comprobante === 'efectivo' ? 'Efectivo' : null;
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Categoría</p>
+                  <p className="text-gray-900 font-medium">{d.categoria}</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-green-600 uppercase mb-1">Monto</p>
+                  <p className="text-gray-900 font-bold text-lg">${Number(d.monto).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {d.descripcion && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Descripción</p>
+                  <p className="text-gray-700">{d.descripcion}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Proveedor</p>
+                  <p className="text-gray-900 font-medium">{d.proveedor || '—'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Fecha</p>
+                  <p className="text-gray-900 font-medium">{d.fecha || '—'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className={`rounded-xl p-4 ${d.estado === 'pagado' ? 'bg-green-50' : d.estado === 'aprobado' ? 'bg-blue-50' : d.estado === 'cancelado' ? 'bg-red-50' : 'bg-gray-50'}`}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Estado</p>
+                  <span className={`text-sm px-3 py-1 rounded-full font-medium ${d.estado === 'pagado' ? 'bg-green-100 text-green-700' : d.estado === 'aprobado' ? 'bg-blue-100 text-blue-700' : d.estado === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{d.estado.charAt(0).toUpperCase() + d.estado.slice(1)}</span>
+                </div>
+                <div className="bg-indigo-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-indigo-600 uppercase mb-1">Comprobante de pago</p>
+                  <p className="text-gray-900 font-medium">{compLabel || 'Sin comprobante'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">N° de comprobante</p>
+                  <p className="text-gray-900 font-medium">{d.num_comprobante || '—'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">N° de factura</p>
+                  <p className="text-gray-900 font-medium">{d.num_factura || '—'}</p>
+                </div>
+              </div>
+
+              {d.notas && (
+                <div className="bg-amber-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-amber-600 uppercase mb-1">Notas</p>
+                  <p className="text-gray-700">{d.notas}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="secondary" onClick={() => { setShowExpenseDetail(null); openExpenseModal(showExpenseDetail); }}>
+                  <Edit className="h-4 w-4 mr-1" /> Editar
+                </Button>
+                <Button variant="secondary" onClick={() => setShowExpenseDetail(null)}>Cerrar</Button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
       {/* Expense Modal */}
       <Modal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} title={editingItem ? 'Editar Gasto' : 'Nuevo Gasto'}>
         <div className="space-y-4">
