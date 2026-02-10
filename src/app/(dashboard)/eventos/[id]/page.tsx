@@ -48,6 +48,9 @@ export default function EventDetailPage() {
   const [tab, setTab] = useState<Tab>('general');
   const [eventVendorIds, setEventVendorIds] = useState<string[]>([]);
   const [savingVendors, setSavingVendors] = useState(false);
+  const [showEditEvent, setShowEditEvent] = useState(false);
+  const [editEventForm, setEditEventForm] = useState<any>({});
+  const [savingEvent, setSavingEvent] = useState(false);
 
   // Modal states
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -84,6 +87,68 @@ export default function EventDetailPage() {
       setEvent({ ...event, estado: newStatus });
       toast.success('Estado actualizado');
     } catch { toast.error('Error actualizando estado'); }
+  };
+
+  const openEditEvent = () => {
+    if (!event) return;
+    setEditEventForm({
+      nombre: event.nombre,
+      descripcion: event.descripcion || '',
+      tipo: event.tipo,
+      modalidad: event.modalidad,
+      fecha_inicio: event.fecha_inicio ? format(new Date(event.fecha_inicio), "yyyy-MM-dd'T'HH:mm") : '',
+      fecha_fin: event.fecha_fin ? format(new Date(event.fecha_fin), "yyyy-MM-dd'T'HH:mm") : '',
+      ubicacion: event.ubicacion || '',
+      plataforma: event.plataforma || '',
+      objetivo: event.objetivo || '',
+      responsable_id: event.responsable_id,
+      presupuesto_total: String(event.presupuesto_total || 0),
+      margen_objetivo: String(event.margen_objetivo || 0),
+      costo_fijo_total: String(event.costo_fijo_total || 0),
+      costo_variable_por_persona: String(event.costo_variable_por_persona || 0),
+      cupo_minimo: String(event.cupo_minimo || 0),
+      cupo_maximo: String(event.cupo_maximo || 0),
+      precio_por_persona: String(event.precio_por_persona || 0),
+      informe_final: event.informe_final || '',
+      lecciones_aprendidas: event.lecciones_aprendidas || '',
+      recomendaciones: event.recomendaciones || '',
+      satisfaccion_promedio: String(event.satisfaccion_promedio || ''),
+    });
+    setShowEditEvent(true);
+  };
+
+  const saveEditEvent = async () => {
+    if (!editEventForm.nombre || !editEventForm.fecha_inicio) { toast.error('Nombre y fecha de inicio requeridos'); return; }
+    setSavingEvent(true);
+    try {
+      await updateEvent(eventId, {
+        nombre: editEventForm.nombre,
+        descripcion: editEventForm.descripcion || null,
+        tipo: editEventForm.tipo,
+        modalidad: editEventForm.modalidad,
+        fecha_inicio: new Date(editEventForm.fecha_inicio).toISOString(),
+        fecha_fin: editEventForm.fecha_fin ? new Date(editEventForm.fecha_fin).toISOString() : null,
+        ubicacion: editEventForm.ubicacion || null,
+        plataforma: editEventForm.plataforma || null,
+        objetivo: editEventForm.objetivo || null,
+        responsable_id: editEventForm.responsable_id,
+        presupuesto_total: Number(editEventForm.presupuesto_total) || 0,
+        margen_objetivo: Number(editEventForm.margen_objetivo) || 0,
+        costo_fijo_total: Number(editEventForm.costo_fijo_total) || 0,
+        costo_variable_por_persona: Number(editEventForm.costo_variable_por_persona) || 0,
+        cupo_minimo: Number(editEventForm.cupo_minimo) || 0,
+        cupo_maximo: Number(editEventForm.cupo_maximo) || 0,
+        precio_por_persona: Number(editEventForm.precio_por_persona) || 0,
+        informe_final: editEventForm.informe_final || null,
+        lecciones_aprendidas: editEventForm.lecciones_aprendidas || null,
+        recomendaciones: editEventForm.recomendaciones || null,
+        satisfaccion_promedio: editEventForm.satisfaccion_promedio ? Number(editEventForm.satisfaccion_promedio) : null,
+      });
+      toast.success('Evento actualizado');
+      setShowEditEvent(false);
+      loadAll();
+    } catch (e: any) { toast.error(e?.message || 'Error al guardar'); }
+    finally { setSavingEvent(false); }
   };
 
   // ============= EXPENSE HANDLERS =============
@@ -212,6 +277,7 @@ export default function EventDetailPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="secondary" onClick={openEditEvent}><Edit className="h-4 w-4 mr-1" />Editar</Button>
           {event.estado === 'planeado' && <Button size="sm" onClick={() => handleStatusChange('en_ejecucion')}>▶ Iniciar</Button>}
           {event.estado === 'en_ejecucion' && <Button size="sm" onClick={() => handleStatusChange('finalizado')}>✅ Finalizar</Button>}
           {event.estado !== 'cancelado' && event.estado !== 'finalizado' && <Button size="sm" variant="danger" onClick={() => handleStatusChange('cancelado')}>Cancelar</Button>}
@@ -676,6 +742,73 @@ export default function EventDetailPage() {
           </div>
           <Input label="Monto pagado ($)" type="number" step="0.01" value={participantForm.monto_pagado} onChange={e => setParticipantForm(p => ({ ...p, monto_pagado: e.target.value }))} />
           <div className="flex justify-end gap-3 pt-4 border-t"><Button variant="secondary" onClick={() => setShowParticipantModal(false)}>Cancelar</Button><Button onClick={saveParticipant}>Guardar</Button></div>
+        </div>
+      </Modal>
+
+      {/* Edit Event Modal */}
+      <Modal isOpen={showEditEvent} onClose={() => setShowEditEvent(false)} title="Editar Evento" size="lg">
+        <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+          {/* Info básica */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-gray-600 border-b pb-2">Información General</h4>
+            <Input label="Nombre *" value={editEventForm.nombre || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, nombre: e.target.value }))} />
+            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label><textarea value={editEventForm.descripcion || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, descripcion: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Objetivo</label><textarea value={editEventForm.objetivo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, objetivo: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
+            <div className="grid grid-cols-3 gap-4">
+              <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label><select value={editEventForm.tipo || 'curso'} onChange={e => setEditEventForm((p: any) => ({ ...p, tipo: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="curso">Curso</option><option value="taller">Taller</option><option value="conferencia">Conferencia</option><option value="evento_corporativo">Evento Corp.</option><option value="seminario">Seminario</option><option value="otro">Otro</option></select></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Modalidad</label><select value={editEventForm.modalidad || 'presencial'} onChange={e => setEditEventForm((p: any) => ({ ...p, modalidad: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="presencial">Presencial</option><option value="virtual">Virtual</option><option value="hibrido">Híbrido</option></select></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Responsable</label><select value={editEventForm.responsable_id || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, responsable_id: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">{users.map(u => <option key={u.id} value={u.id}>{u.nombre_completo}</option>)}</select></div>
+            </div>
+          </div>
+
+          {/* Fechas */}
+          <div className="bg-blue-50 rounded-xl p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-blue-600 uppercase">Fechas y Ubicación</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Fecha inicio *" type="datetime-local" value={editEventForm.fecha_inicio || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, fecha_inicio: e.target.value }))} />
+              <Input label="Fecha fin" type="datetime-local" value={editEventForm.fecha_fin || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, fecha_fin: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Ubicación" value={editEventForm.ubicacion || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, ubicacion: e.target.value }))} />
+              <Input label="Plataforma" value={editEventForm.plataforma || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, plataforma: e.target.value }))} />
+            </div>
+          </div>
+
+          {/* Presupuesto */}
+          <div className="bg-green-50 rounded-xl p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-green-600 uppercase">Presupuesto y Costeo</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <Input label="Presupuesto total ($)" type="number" step="0.01" value={editEventForm.presupuesto_total || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, presupuesto_total: e.target.value }))} />
+              <Input label="Margen objetivo (%)" type="number" step="0.01" value={editEventForm.margen_objetivo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, margen_objetivo: e.target.value }))} />
+              <Input label="Costo fijo total ($)" type="number" step="0.01" value={editEventForm.costo_fijo_total || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, costo_fijo_total: e.target.value }))} />
+              <Input label="Costo var./persona ($)" type="number" step="0.01" value={editEventForm.costo_variable_por_persona || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, costo_variable_por_persona: e.target.value }))} />
+              <Input label="Precio por persona ($)" type="number" step="0.01" value={editEventForm.precio_por_persona || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, precio_por_persona: e.target.value }))} />
+            </div>
+          </div>
+
+          {/* Cupos */}
+          <div className="bg-purple-50 rounded-xl p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-purple-600 uppercase">Cupos</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Cupo mínimo" type="number" value={editEventForm.cupo_minimo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, cupo_minimo: e.target.value }))} />
+              <Input label="Cupo máximo" type="number" value={editEventForm.cupo_maximo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, cupo_maximo: e.target.value }))} />
+            </div>
+          </div>
+
+          {/* Cierre (si finalizado) */}
+          {event?.estado === 'finalizado' && (
+            <div className="bg-amber-50 rounded-xl p-4 space-y-4">
+              <h4 className="text-xs font-semibold text-amber-600 uppercase">Cierre del Evento</h4>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Informe final</label><textarea value={editEventForm.informe_final || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, informe_final: e.target.value }))} rows={3} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Lecciones aprendidas</label><textarea value={editEventForm.lecciones_aprendidas || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, lecciones_aprendidas: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Recomendaciones</label><textarea value={editEventForm.recomendaciones || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, recomendaciones: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
+              <Input label="Satisfacción promedio (0-5)" type="number" step="0.1" min="0" max="5" value={editEventForm.satisfaccion_promedio || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, satisfaccion_promedio: e.target.value }))} />
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 pt-5 border-t mt-4">
+          <Button variant="secondary" onClick={() => setShowEditEvent(false)}>Cancelar</Button>
+          <Button onClick={saveEditEvent} loading={savingEvent}><Save className="h-4 w-4 mr-1" />Guardar Cambios</Button>
         </div>
       </Modal>
     </div>
