@@ -199,15 +199,25 @@ export default function ActividadesPage() {
     const matchesPrioridad = !filterPrioridad || activity.prioridad === filterPrioridad;
 
     // Filtro de visibilidad por rol
-    let matchesVisibility = true;
     const rol = userProfile?.rol;
+    const currentId = userProfile?.id;
+    const isCreator = activity.created_by_user_id === currentId;
+    const isParticipant = Array.isArray(activity.participants) &&
+                         activity.participants.some(p => p.user_profile_id === currentId);
+    const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+    const hasParticipants = Array.isArray(activity.participants) && activity.participants.length > 0;
+    const isDailyPersonal = !isStrategicType && !hasParticipants;
 
-    // Solo supervisor_nivel1 y admin ven TODAS las actividades
-    // Los vendedores solo ven las suyas o donde están involucrados
-    if (rol !== 'supervisor_nivel1' && rol !== 'admin') {
-      const isCreator = activity.created_by_user_id === userProfile?.id;
-      const isParticipant = Array.isArray(activity.participants) &&
-                           activity.participants.some(p => p.user_profile_id === userProfile?.id);
+    // Las actividades diarias (tarea/otro sin participantes) NUNCA se muestran aquí.
+    // Se gestionan exclusivamente desde el Calendario.
+    if (isDailyPersonal) return false;
+
+    // Filtro de visibilidad por rol (solo actividades estratégicas o con participantes)
+    let matchesVisibility = true;
+    if (rol === 'admin' || rol === 'supervisor_nivel1' || rol === 'supervisor' || rol === 'supervisor_vendedor') {
+      matchesVisibility = true; // Supervisores ven todas las estratégicas
+    } else {
+      // Vendedores y otros: solo las suyas o donde participan
       matchesVisibility = isCreator || isParticipant;
     }
 

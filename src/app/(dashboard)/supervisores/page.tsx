@@ -156,8 +156,19 @@ export default function SupervisoresPage() {
         const isMyActivity = activity.created_by_user_id === userProfile?.id ||
                             activity.participants?.some(p => p.user_profile_id === userProfile?.id);
         
-        // Si es admin o supervisor_nivel1, ve todas
+        // Si es admin o supervisor_nivel1, ve todas las ESTRATÉGICAS (no las personales de otros)
         const canSeeAll = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor_nivel1';
+        
+        // Excluir actividades diarias personales (tarea/otro sin participantes)
+        // Estas solo se ven en el calendario, no en el dashboard
+        // Las actividades estratégicas son: reunion, capacitacion, seguimiento
+        // O cualquier actividad que tenga participantes asignados
+        const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+        const hasParticipants = Array.isArray(activity.participants) && activity.participants.length > 0;
+        const isDailyPersonal = !isStrategicType && !hasParticipants;
+        
+        // Las actividades diarias personales NO deben aparecer aquí
+        if (isDailyPersonal) return false;
         
         // Actividades que NO estén completadas
         const notCompleted = activity.estado !== 'realizado';

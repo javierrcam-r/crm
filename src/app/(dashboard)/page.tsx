@@ -132,6 +132,13 @@ export default function DashboardPage() {
         const isMyActivity = activity.created_by_user_id === userProfile?.id ||
                             activity.participants?.some(p => p.user_profile_id === userProfile?.id);
         
+        // Excluir actividades diarias personales (tarea/otro sin participantes)
+        // Estas solo se ven en el calendario, no en el dashboard
+        const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+        const hasParticipants = Array.isArray(activity.participants) && activity.participants.length > 0;
+        const isDailyPersonal = !isStrategicType && !hasParticipants;
+        if (isDailyPersonal) return false;
+        
         // Actividades que NO estén completadas
         const notCompleted = activity.estado !== 'realizado';
         

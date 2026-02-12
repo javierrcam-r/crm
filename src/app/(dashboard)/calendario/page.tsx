@@ -157,21 +157,26 @@ export default function CalendarioPage() {
       setPendingVisits(pendingData);
       
       // Filtrar actividades según el rol
+      const currentId = userProfile?.id;
+      const currentRol = userProfile?.rol;
       const myActivities = activitiesData.filter(activity => {
-        const isCreator = activity.created_by_user_id === userProfile?.id;
-        const isParticipant = activity.participants?.some(p => p.user_profile_id === userProfile?.id);
-        const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
-        const hasParticipants = activity.participants && activity.participants.length > 0;
-        const isDailyPersonal = !isStrategicType && !hasParticipants;
+        const isCreator = activity.created_by_user_id === currentId;
+        const isParticipant = Array.isArray(activity.participants) && 
+          activity.participants.some(p => p.user_profile_id === currentId);
         
-        if (userProfile?.rol === 'admin') return true;
+        if (currentRol === 'admin') return true;
         
-        // Supervisores: ven sus propias actividades + estratégicas de todos
-        // NO ven actividades diarias personales de otros
-        if (userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_vendedor') {
-          if (isCreator || isParticipant) return true; // Siempre ver las propias
-          if (isDailyPersonal) return false; // No ver diarias de otros
-          return true; // Ver estratégicas de todos
+        // Supervisores: ven sus propias + las que tienen participantes + las estratégicas
+        // NO ven tareas/otro personales de OTROS usuarios
+        if (currentRol === 'supervisor_nivel1' || currentRol === 'supervisor' || currentRol === 'supervisor_vendedor') {
+          // Siempre ver las propias y donde participa
+          if (isCreator || isParticipant) return true;
+          // Si es tipo estratégico, siempre ver
+          if (activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento') return true;
+          // Si tiene participantes, es colaborativa → ver
+          if (Array.isArray(activity.participants) && activity.participants.length > 0) return true;
+          // Es tarea/otro sin participantes de OTRO usuario → NO ver
+          return false;
         }
         
         // Otros roles: solo sus propias o donde participan
