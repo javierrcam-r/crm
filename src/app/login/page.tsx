@@ -23,22 +23,32 @@ export default function LoginPage() {
   const [biometricType, setBiometricType] = useState('');
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   
-  // Estados para la animación de éxito (minimalista)
+  // Estados para la animación de éxito
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<'closed' | 'opening' | 'done'>('closed');
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   useEffect(() => {
-    if (!loading && userProfile && !showSuccessAnimation) {
+    // Solo redirigir si ya tenía sesión al cargar (no después de login)
+    if (!loading && userProfile && !loginSuccess) {
       router.push('/');
     }
     checkBiometricAvailability();
-  }, [userProfile, loading, router, showSuccessAnimation]);
+  }, [userProfile, loading, router, loginSuccess]);
   
-  // Animación minimalista: fade + logo + redirect
+  // Animación de cortinas que se abren
   const startSuccessAnimation = (callback: () => void) => {
+    setLoginSuccess(true);
     setShowSuccessAnimation(true);
+    setAnimationPhase('closed');
+    
+    // Después de mostrar el logo, abrir cortinas
+    setTimeout(() => setAnimationPhase('opening'), 800);
+    // Redirigir cuando las cortinas terminen de abrirse
     setTimeout(() => {
+      setAnimationPhase('done');
       callback();
-    }, 1200);
+    }, 1600);
   };
 
   const checkBiometricAvailability = async () => {
@@ -152,30 +162,47 @@ export default function LoginPage() {
     );
   }
 
-  if (userProfile) return null;
+  // Si ya hay usuario y NO estamos en animación de éxito, no mostrar nada
+  if (userProfile && !showSuccessAnimation) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6 overflow-hidden relative">
       
-      {/* Animación de éxito - Minimalista */}
+      {/* Animación de éxito - Cortinas que se abren */}
       {showSuccessAnimation && (
-        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center animate-fade-in">
-          <div className="text-center animate-scale-in">
-            <Image
-              src="/logo-disfero.png"
-              alt="Disfero"
-              width={120}
-              height={120}
-              className="w-24 h-24 object-contain mx-auto mb-4"
-              priority
-            />
-            <div className="flex items-center justify-center gap-2 text-white">
-              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-lg font-medium">Bienvenido</span>
+        <div className="fixed inset-0 z-50">
+          {/* Logo central - desaparece cuando se abren las cortinas */}
+          <div 
+            className={`absolute inset-0 flex items-center justify-center z-20 bg-slate-900 transition-opacity duration-500 ${
+              animationPhase === 'opening' || animationPhase === 'done' ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
+            <div className="text-center">
+              <Image
+                src="/logo-disfero.png"
+                alt="Disfero"
+                width={160}
+                height={160}
+                className="w-32 h-32 object-contain mx-auto mb-4"
+                priority
+              />
+              <p className="text-white text-xl font-medium">Bienvenido</p>
             </div>
           </div>
+          
+          {/* Cortina Izquierda */}
+          <div 
+            className={`absolute top-0 bottom-0 left-0 w-1/2 bg-slate-900 z-10 transition-transform duration-700 ease-in-out ${
+              animationPhase === 'opening' || animationPhase === 'done' ? '-translate-x-full' : 'translate-x-0'
+            }`}
+          />
+          
+          {/* Cortina Derecha */}
+          <div 
+            className={`absolute top-0 bottom-0 right-0 w-1/2 bg-slate-900 z-10 transition-transform duration-700 ease-in-out ${
+              animationPhase === 'opening' || animationPhase === 'done' ? 'translate-x-full' : 'translate-x-0'
+            }`}
+          />
         </div>
       )}
 
