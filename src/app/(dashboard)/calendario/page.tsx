@@ -158,13 +158,24 @@ export default function CalendarioPage() {
       
       // Filtrar actividades según el rol
       const myActivities = activitiesData.filter(activity => {
-        // Admin y supervisor_nivel1 ven TODAS las actividades (estratégicas y diarias)
-        if (userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor_nivel1') {
-          return true;
+        const isCreator = activity.created_by_user_id === userProfile?.id;
+        const isParticipant = activity.participants?.some(p => p.user_profile_id === userProfile?.id);
+        const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
+        const hasParticipants = activity.participants && activity.participants.length > 0;
+        const isDailyPersonal = !isStrategicType && !hasParticipants;
+        
+        if (userProfile?.rol === 'admin') return true;
+        
+        // Supervisores: ven sus propias actividades + estratégicas de todos
+        // NO ven actividades diarias personales de otros
+        if (userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_vendedor') {
+          if (isCreator || isParticipant) return true; // Siempre ver las propias
+          if (isDailyPersonal) return false; // No ver diarias de otros
+          return true; // Ver estratégicas de todos
         }
-        // Los vendedores solo ven las suyas o donde están involucrados
-        return activity.created_by_user_id === userProfile?.id ||
-               activity.participants?.some(p => p.user_profile_id === userProfile?.id);
+        
+        // Otros roles: solo sus propias o donde participan
+        return isCreator || isParticipant;
       });
       setActivities(myActivities);
     } catch (error) {
