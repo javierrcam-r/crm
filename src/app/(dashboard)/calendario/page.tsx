@@ -352,8 +352,9 @@ export default function CalendarioPage() {
   };
 
   // Roles que pueden gestionar actividades diarias desde el calendario
+  // Todos los usuarios pueden crear y ver sus propias actividades diarias
   const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
-  const canManageDailyActivities = isSupervisorN1 || userProfile?.rol === 'supervisor' || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico';
+  const canManageDailyActivities = true; // Todos pueden gestionar sus actividades diarias
 
   const getActivitiesForDay = (date: Date) => {
     return activities.filter((activity) =>
@@ -362,8 +363,8 @@ export default function CalendarioPage() {
   };
 
   // Separar actividades estratégicas de actividades diarias
-  // Diaria: SOLO si tipo tarea/otro, SIN participantes, Y creada por el supervisor_nivel1 actual
-  // Todo lo demás es estratégica (incluye actividades de vendedores que son siempre estratégicas)
+  // Diaria: tipo tarea/otro, SIN participantes, creada por el usuario actual
+  // Estratégica: reunion/capacitacion/seguimiento O cualquier actividad con participantes
   const isActivityStrategic = (activity: Activity) => {
     const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
     if (isStrategicType) return true;
@@ -371,11 +372,12 @@ export default function CalendarioPage() {
     const hasParticipants = activity.participants && activity.participants.length > 0;
     if (hasParticipants) return true;
     
-    // Solo es "diaria" si la creó el supervisor_nivel1 actual como tarea personal
-    const createdByCurrentUser = canManageDailyActivities && activity.created_by_user_id === userProfile?.id;
+    // Es "diaria" si es tarea/otro sin participantes y la creó el usuario actual
+    // Si la creó OTRO usuario, se considera estratégica (porque el usuario no debería verla normalmente)
+    const createdByCurrentUser = activity.created_by_user_id === userProfile?.id;
     if (!createdByCurrentUser) return true; // Si la creó otro usuario, es estratégica
     
-    return false; // Es diaria: tarea/otro, sin participantes, creada por el supervisor actual
+    return false; // Es diaria: tarea/otro, sin participantes, creada por el usuario actual
   };
 
   const getStrategicActivitiesForDay = (date: Date) => {
@@ -423,19 +425,16 @@ export default function CalendarioPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Calendario</h1>
           <p className="text-gray-500 mt-1">
-            {canManageDailyActivities ? 'Gestiona tus actividades diarias y estratégicas' : 'Gestiona tu agenda de visitas'}
+            Gestiona tus actividades diarias, visitas y eventos estratégicos
           </p>
         </div>
         <div className="flex gap-2">
-          {canManageDailyActivities ? (
-            <Link href="/calendario/nueva-actividad">
-              <Button icon={<Plus className="h-4 w-4" />}>Nueva Actividad Diaria</Button>
-            </Link>
-          ) : (
-            <Link href="/calendario/nueva">
-              <Button icon={<Plus className="h-4 w-4" />}>Nueva Visita</Button>
-            </Link>
-          )}
+          <Link href="/calendario/nueva-actividad">
+            <Button icon={<Plus className="h-4 w-4" />}>Actividad Diaria</Button>
+          </Link>
+          <Link href="/calendario/nueva">
+            <Button variant="secondary" icon={<Plus className="h-4 w-4" />}>Nueva Visita</Button>
+          </Link>
         </div>
       </div>
 
