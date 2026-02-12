@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { LogIn, Fingerprint } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -21,13 +22,24 @@ export default function LoginPage() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+  
+  // Estados para la animación de éxito (minimalista)
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
 
   useEffect(() => {
-    if (!loading && userProfile) {
+    if (!loading && userProfile && !showSuccessAnimation) {
       router.push('/');
     }
     checkBiometricAvailability();
-  }, [userProfile, loading, router]);
+  }, [userProfile, loading, router, showSuccessAnimation]);
+  
+  // Animación minimalista: fade + logo + redirect
+  const startSuccessAnimation = (callback: () => void) => {
+    setShowSuccessAnimation(true);
+    setTimeout(() => {
+      callback();
+    }, 1200);
+  };
 
   const checkBiometricAvailability = async () => {
     const available = await isPlatformAuthenticatorAvailable();
@@ -50,13 +62,17 @@ export default function LoginPage() {
       const result = await loginWithTable(username, password);
       if (!result.success) {
         toast.error(result.error || 'Credenciales inválidas');
+        setIsLoading(false);
         return;
       }
-      toast.success('Bienvenido');
-      router.push('/');
+      
+      // Iniciar animación de éxito y luego redirigir
+      startSuccessAnimation(() => {
+        toast.success('¡Bienvenido!');
+        router.push('/');
+      });
     } catch (error: any) {
       toast.error('Error al iniciar sesión');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -111,8 +127,11 @@ export default function LoginPage() {
         setUserProfileDirectly(profile);
       }
       
-      toast.success(`Bienvenido, ${profile.nombre_completo}`);
-      router.push('/');
+      // Iniciar animación de éxito y luego redirigir
+      startSuccessAnimation(() => {
+        toast.success(`¡Bienvenido, ${profile.nombre_completo}!`);
+        router.push('/');
+      });
 
     } catch (error: any) {
       if (error.message === 'Autenticación cancelada por el usuario') {
@@ -136,13 +155,43 @@ export default function LoginPage() {
   if (userProfile) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6 overflow-hidden relative">
+      
+      {/* Animación de éxito - Minimalista */}
+      {showSuccessAnimation && (
+        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center animate-fade-in">
+          <div className="text-center animate-scale-in">
+            <Image
+              src="/logo-disfero.png"
+              alt="Disfero"
+              width={120}
+              height={120}
+              className="w-24 h-24 object-contain mx-auto mb-4"
+              priority
+            />
+            <div className="flex items-center justify-center gap-2 text-white">
+              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-lg font-medium">Bienvenido</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contenido del Login */}
+      <div className={`w-full max-w-sm transition-all duration-300 ${
+        showSuccessAnimation ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+      }`}>
         {/* Logo */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl mb-6">
-            <span className="text-xl font-bold text-white">D</span>
-          </div>
+          <Image
+            src="/logo-disfero.png"
+            alt="Disfero"
+            width={160}
+            height={160}
+            className="mx-auto mb-6 w-40 h-40 object-contain animate-bounce-slow"
+          />
           <h1 className="text-2xl font-semibold text-white tracking-tight">
             CRM <span className="text-indigo-400">Disfero</span>
           </h1>

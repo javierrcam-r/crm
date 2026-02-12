@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -109,16 +110,20 @@ export default function Sidebar() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo - Fixed */}
-      <div className="flex-shrink-0 px-3 sm:px-4 md:px-5 py-1 border-b border-gray-100">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm sm:text-base">D</span>
-          </div>
+      <div className="flex-shrink-0 px-3 sm:px-4 md:px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Image
+            src="/logo-disfero.png"
+            alt="Disfero"
+            width={40}
+            height={40}
+            className="w-9 h-9 sm:w-10 sm:h-10 object-contain flex-shrink-0"
+          />
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 tracking-tight truncate leading-tight">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 tracking-tight truncate leading-tight">
               CRM <span className="text-indigo-600">Disfero</span>
             </h1>
-            <p className="text-[10px] sm:text-xs text-gray-400 leading-tight">Sistema de Gestión</p>
+            <p className="text-xs sm:text-sm text-gray-400 leading-tight">Sistema de Gestión</p>
           </div>
         </div>
       </div>
