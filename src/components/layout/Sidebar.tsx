@@ -46,6 +46,7 @@ const adminNavigation = [
 
 // Panel de supervisión - para supervisor y supervisor_nivel1
 const supervisorNavigation = [
+  { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
   { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },

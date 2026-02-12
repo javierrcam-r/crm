@@ -337,7 +337,7 @@ export default function CalendarioPage() {
 
   // Roles que pueden gestionar actividades diarias desde el calendario
   const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
-  const canManageDailyActivities = isSupervisorN1 || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico';
+  const canManageDailyActivities = isSupervisorN1 || userProfile?.rol === 'supervisor' || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico';
 
   const getActivitiesForDay = (date: Date) => {
     return activities.filter((activity) =>
