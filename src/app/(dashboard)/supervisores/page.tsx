@@ -22,6 +22,9 @@ import {
   ArrowRight,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
 } from 'lucide-react';
 import {
   BarChart,
@@ -42,7 +45,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils';
 import { getActivities } from '@/lib/services/activities';
-import { format, startOfWeek, endOfWeek, isBefore, isAfter } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isBefore, isAfter, addDays, isSameDay, addWeeks, subWeeks, startOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { UserProfile, Activity } from '@/types/database';
 
@@ -103,6 +106,13 @@ export default function SupervisoresPage() {
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
 
+  // Calendario visual
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarVisits, setCalendarVisits] = useState<any[]>([]);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarFilter, setCalendarFilter] = useState<string>('');
+  const [isMobile, setIsMobile] = useState(false);
+
   const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
 
   // Calcular fechas según el período
@@ -142,6 +152,51 @@ export default function SupervisoresPage() {
       loadWeekActivities();
     }
   }, [canView, periodFilter, customStartDate, customEndDate]);
+
+  // Detectar móvil
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Cargar visitas del calendario
+  useEffect(() => {
+    if (canView && showCalendar) {
+      loadCalendarVisits();
+    }
+  }, [canView, showCalendar, calendarDate, calendarFilter]);
+
+  const loadCalendarVisits = async () => {
+    try {
+      const supabase = getSupabaseClient();
+      const weekStart = startOfWeek(calendarDate, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(calendarDate, { weekStartsOn: 1 });
+
+      let query = supabase
+        .from('visits')
+        .select(`
+          *,
+          cliente:clients!visits_client_id_fkey(id, nombre, direccion),
+          creador:user_profiles!visits_created_by_fkey(id, nombre_completo, username)
+        `)
+        .gte('scheduled_date', weekStart.toISOString())
+        .lte('scheduled_date', weekEnd.toISOString())
+        .order('scheduled_date', { ascending: true });
+
+      if (calendarFilter) {
+        query = query.eq('created_by', calendarFilter);
+      }
+
+      const { data } = await query;
+      setCalendarVisits(data || []);
+    } catch (error) {
+      console.error('Error loading calendar visits:', error);
+    }
+  };
 
   const loadWeekActivities = async () => {
     try {
@@ -488,6 +543,30 @@ export default function SupervisoresPage() {
     }
   };
 
+  // Funciones del calendario
+  const getCalendarWeekDays = () => {
+    const weekStart = startOfWeek(calendarDate, { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  };
+
+  const getVisitsForDay = (date: Date) => {
+    return calendarVisits.filter(visit => {
+      const visitDate = parseISO(visit.scheduled_date);
+      return isSameDay(visitDate, date);
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completada': return 'bg-green-100 text-green-800 border-green-200';
+      case 'programada': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'cancelada': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const weekDays = getCalendarWeekDays();
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -678,6 +757,197 @@ export default function SupervisoresPage() {
             )}
           </Card>
         )}
+
+        {/* Calendario Visual */}
+        <Card className="border-blue-200">
+          <div 
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => setShowCalendar(!showCalendar)}
+          >
+            <div className="p-2 rounded-lg bg-blue-100">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-blue-900">Calendario de Visitas</h3>
+              <p className="text-xs text-blue-600">Vista semanal del equipo</p>
+            </div>
+            <button className="p-1 hover:bg-blue-100 rounded-lg transition-colors">
+              {showCalendar ? (
+                <ChevronUp className="h-5 w-5 text-blue-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-blue-600" />
+              )}
+            </button>
+          </div>
+
+          {showCalendar && (
+            <div className="mt-4 space-y-4">
+              {/* Controles del calendario */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCalendarDate(subWeeks(calendarDate, 1))}
+                    className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                  <button
+                    onClick={() => setCalendarDate(new Date())}
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg"
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    onClick={() => setCalendarDate(addWeeks(calendarDate, 1))}
+                    className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                  <span className="text-xs sm:text-sm font-medium text-gray-700 ml-1 sm:ml-2">
+                    {format(weekDays[0], 'd MMM', { locale: es })} - {format(weekDays[6], 'd MMM yyyy', { locale: es })}
+                  </span>
+                </div>
+                
+                {/* Filtro por persona */}
+                <div className="w-full sm:w-56">
+                  <Select
+                    value={calendarFilter}
+                    onChange={(e) => setCalendarFilter(e.target.value)}
+                    className="w-full text-sm"
+                  >
+                    <option value="">👥 Todos los vendedores</option>
+                    {vendedores.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.nombre_completo}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              {/* Vista de semana - Desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <div className="grid grid-cols-7 gap-1 min-w-[600px]">
+                  {weekDays.map((day, index) => {
+                    const dayVisits = getVisitsForDay(day);
+                    const isToday = isSameDay(day, new Date());
+                    
+                    return (
+                      <div key={index} className="min-h-[140px]">
+                        <div className={`text-center p-2 rounded-t-lg ${isToday ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>
+                          <p className="text-xs font-medium">{format(day, 'EEE', { locale: es })}</p>
+                          <p className="text-lg font-bold">{format(day, 'd')}</p>
+                        </div>
+                        <div className="border border-t-0 rounded-b-lg p-1 space-y-1 min-h-[100px] bg-white">
+                          {dayVisits.slice(0, 4).map((visit) => (
+                            <div
+                              key={visit.id}
+                              className={`p-1.5 rounded text-xs border ${getStatusColor(visit.status)} cursor-pointer hover:opacity-80`}
+                              title={`${visit.cliente?.nombre || 'Sin cliente'} - ${visit.creador?.nombre_completo || 'Sin vendedor'}`}
+                            >
+                              <p className="font-medium truncate">{visit.cliente?.nombre || 'Sin cliente'}</p>
+                              <p className="text-[10px] opacity-75 truncate">
+                                {format(parseISO(visit.scheduled_date), 'HH:mm')} - {visit.creador?.nombre_completo?.split(' ')[0] || '?'}
+                              </p>
+                            </div>
+                          ))}
+                          {dayVisits.length > 4 && (
+                            <p className="text-[10px] text-center text-gray-500">+{dayVisits.length - 4} más</p>
+                          )}
+                          {dayVisits.length === 0 && (
+                            <p className="text-[10px] text-center text-gray-400 pt-4">Sin visitas</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Vista de semana - Mobile (lista vertical) */}
+              <div className="md:hidden space-y-2">
+                {weekDays.map((day, index) => {
+                  const dayVisits = getVisitsForDay(day);
+                  const isToday = isSameDay(day, new Date());
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className={`rounded-xl border overflow-hidden ${isToday ? 'border-blue-400 ring-2 ring-blue-100' : 'border-gray-200'}`}
+                    >
+                      <div className={`flex items-center gap-3 px-3 py-2 ${isToday ? 'bg-blue-600 text-white' : 'bg-gray-50'}`}>
+                        <div className="text-center min-w-[40px]">
+                          <p className="text-xs uppercase">{format(day, 'EEE', { locale: es })}</p>
+                          <p className="text-xl font-bold">{format(day, 'd')}</p>
+                        </div>
+                        <div className="flex-1">
+                          <p className={`text-xs ${isToday ? 'text-blue-100' : 'text-gray-500'}`}>
+                            {format(day, 'MMMM yyyy', { locale: es })}
+                          </p>
+                        </div>
+                        <Badge variant={isToday ? 'blue' : 'gray'} className="text-xs">
+                          {dayVisits.length} visita{dayVisits.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                      
+                      {dayVisits.length > 0 ? (
+                        <div className="p-2 space-y-2 bg-white">
+                          {dayVisits.map((visit) => (
+                            <div
+                              key={visit.id}
+                              className={`p-2.5 rounded-lg border ${getStatusColor(visit.status)}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{visit.cliente?.nombre || 'Sin cliente'}</p>
+                                  <div className="flex items-center gap-1 text-xs opacity-75 mt-0.5">
+                                    <Clock className="h-3 w-3" />
+                                    {format(parseISO(visit.scheduled_date), 'HH:mm')}
+                                  </div>
+                                  {visit.cliente?.direccion && (
+                                    <div className="flex items-start gap-1 text-xs opacity-75 mt-0.5">
+                                      <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                                      <span className="truncate">{visit.cliente.direccion}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className="text-[10px] font-medium opacity-80">
+                                    {visit.creador?.nombre_completo?.split(' ')[0] || 'Sin vendedor'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-white text-center">
+                          <p className="text-xs text-gray-400">Sin visitas programadas</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Leyenda */}
+              <div className="flex flex-wrap gap-2 sm:gap-4 pt-2 border-t">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                  <span className="text-xs text-gray-600">Programada</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                  <span className="text-xs text-gray-600">Completada</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                  <span className="text-xs text-gray-600">Cancelada</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
 
       {loading ? (
