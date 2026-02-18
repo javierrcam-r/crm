@@ -541,7 +541,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         <Card className="animate-fade-in" padding="sm">
           <div className="flex items-center gap-3 md:gap-4">
             <Users className="h-7 w-7 md:h-8 md:w-8 text-indigo-500 shrink-0" />
@@ -574,25 +574,6 @@ export default function DashboardPage() {
           <Link href="/calendario">
             <Button variant="ghost" size="sm" className="w-full mt-3 md:mt-4">
               Ver Calendario
-            </Button>
-          </Link>
-        </Card>
-
-        <Card className="animate-fade-in" padding="sm">
-          <div className="flex items-center gap-3 md:gap-4">
-            <TrendingUp className="h-7 w-7 md:h-8 md:w-8 text-purple-500 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xl md:text-2xl font-bold text-gray-900 truncate">
-                {formatCurrency(stats?.orders.weekTotal || 0)}
-              </p>
-              <p className="text-xs md:text-sm text-gray-500">
-                Ventas semana
-              </p>
-            </div>
-          </div>
-          <Link href="/reportes">
-            <Button variant="ghost" size="sm" className="w-full mt-3 md:mt-4">
-              Ver Reportes
             </Button>
           </Link>
         </Card>
