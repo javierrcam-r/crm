@@ -11,15 +11,14 @@ import {
   Edit,
   Trash2,
   Calendar,
-  ShoppingCart,
   Clock,
   Building,
   UserPlus,
   UserX,
-  Plus,
   CreditCard,
   Star,
   Tag,
+  Plus,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -27,13 +26,11 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { getCustomer, deleteCustomer, type Customer } from '@/lib/services/customers';
 import { getVisits, type Visit } from '@/lib/services/visits';
-import { getOrders, type Order } from '@/lib/services/orders';
 import {
   formatDate,
   formatDateTime,
   formatCurrency,
   visitStatusLabels,
-  orderStatusLabels,
   formaPagoLabels,
   calidadPagoLabels,
   calidadPagoColors,
@@ -57,7 +54,6 @@ export default function ClienteDetailPage() {
   const router = useRouter();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [visits, setVisits] = useState<Visit[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -70,14 +66,12 @@ export default function ClienteDetailPage() {
 
   const loadData = async () => {
     try {
-      const [customerData, visitsData, ordersData] = await Promise.all([
+      const [customerData, visitsData] = await Promise.all([
         getCustomer(customerId),
         getVisits({ customer_id: customerId }),
-        getOrders({ customer_id: customerId }),
       ]);
       setCustomer(customerData);
       setVisits(visitsData);
-      setOrders(ordersData);
     } catch (error) {
       console.error('Error cargando cliente:', error);
       toast.error('Error al cargar el cliente');
@@ -159,13 +153,8 @@ export default function ClienteDetailPage() {
         </div>
         <div className="flex gap-2">
           <Link href={`/calendario/nueva?customer=${customerId}`}>
-            <Button variant="secondary" icon={<Calendar className="h-4 w-4" />}>
+            <Button icon={<Calendar className="h-4 w-4" />}>
               Programar Visita
-            </Button>
-          </Link>
-          <Link href={`/pedidos/nuevo?customer=${customerId}`}>
-            <Button icon={<ShoppingCart className="h-4 w-4" />}>
-              Crear Pedido
             </Button>
           </Link>
         </div>
@@ -340,21 +329,9 @@ export default function ClienteDetailPage() {
           {/* Stats */}
           <Card>
             <h3 className="text-sm font-semibold text-gray-500 mb-4">Resumen</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-3 rounded-lg bg-gray-50">
-                <p className="text-2xl font-bold text-gray-900">{visits.length}</p>
-                <p className="text-xs text-gray-500">Visitas</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-gray-50">
-                <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
-                <p className="text-xs text-gray-500">Pedidos</p>
-              </div>
-              <div className="col-span-2 text-center p-3 rounded-lg bg-emerald-50">
-                <p className="text-2xl font-bold text-emerald-600">
-                  {formatCurrency(orders.reduce((sum, o) => sum + o.total, 0))}
-                </p>
-                <p className="text-xs text-gray-500">Total Compras</p>
-              </div>
+            <div className="text-center p-3 rounded-lg bg-gray-50">
+              <p className="text-2xl font-bold text-gray-900">{visits.length}</p>
+              <p className="text-xs text-gray-500">Visitas</p>
             </div>
           </Card>
         </div>
@@ -426,63 +403,6 @@ export default function ClienteDetailPage() {
             )}
           </Card>
 
-          {/* Pedidos */}
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Pedidos
-                <Badge variant="green" className="ml-2">
-                  {orders.length}
-                </Badge>
-              </h2>
-              <Link href={`/pedidos/nuevo?customer=${customerId}`}>
-                <Button variant="ghost" size="sm" icon={<Plus className="h-4 w-4" />}>
-                  Nuevo
-                </Button>
-              </Link>
-            </div>
-
-            {orders.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">
-                No hay pedidos registrados
-              </p>
-            ) : (
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {orders.map((order) => (
-                  <Link
-                    key={order.id}
-                    href={`/pedidos/${order.id}`}
-                    className="block p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-emerald-50">
-                          <ShoppingCart className="h-4 w-4 text-emerald-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {formatDate(order.order_date)}
-                          </p>
-                          <p className="text-sm text-emerald-600">
-                            {formatCurrency(order.total)}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          order.status === 'entregado' ? 'green' :
-                          order.status === 'confirmado' ? 'blue' :
-                          order.status === 'cancelado' ? 'red' : 'gray'
-                        }
-                      >
-                        {orderStatusLabels[order.status]}
-                      </Badge>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Card>
         </div>
       </div>
 

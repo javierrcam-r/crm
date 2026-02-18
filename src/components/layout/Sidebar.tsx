@@ -8,7 +8,6 @@ import {
   Users,
   Calendar,
   Package,
-  ShoppingCart,
   BarChart3,
   Menu,
   X,
@@ -36,7 +35,6 @@ const vendedorNavigation = [
   { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
   { key: 'mapa', name: 'Mapa Visitas', href: '/mapa', icon: Map },
   { key: 'productos', name: 'Productos', href: '/productos', icon: Package },
-  { key: 'pedidos', name: 'Pedidos', href: '/pedidos', icon: ShoppingCart },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
   { key: 'reportes', name: 'Reportes', href: '/reportes', icon: BarChart3 },
 ];
@@ -70,7 +68,6 @@ const actividadesEstrategicas = [
 
 const quickActions = [
   { name: 'Nueva Visita', href: '/calendario/nueva', icon: Calendar },
-  { name: 'Nuevo Pedido', href: '/pedidos/nuevo', icon: ShoppingCart },
   { name: 'Nuevo Cliente', href: '/clientes/nuevo', icon: Users },
 ];
 

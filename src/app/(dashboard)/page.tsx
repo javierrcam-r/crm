@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   Calendar,
   Users,
-  ShoppingCart,
-  TrendingUp,
   Clock,
   AlertTriangle,
   Plus,
@@ -19,21 +17,18 @@ import {
   ChevronDown,
   MessageSquare,
   MapPin,
-  Phone,
   Star,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { getVisitStats, getTodayVisits, getPendingVisits, getVisitsByDate } from '@/lib/services/visits';
-import { getOrderStats, getTodayOrders, getOrdersByDate } from '@/lib/services/orders';
 import { getCustomerStats } from '@/lib/services/customers';
 import { getActivities } from '@/lib/services/activities';
-import { formatTime, formatDate, formatCurrency, visitStatusLabels, orderStatusLabels } from '@/lib/utils';
+import { formatTime, visitStatusLabels } from '@/lib/utils';
 import { format, addDays, subDays, isToday, startOfWeek, endOfWeek, isBefore, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Visit } from '@/lib/services/visits';
-import type { Order } from '@/lib/services/orders';
 import type { Activity } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -44,12 +39,6 @@ interface Stats {
     pending: number;
     weekTotal: number;
     weekCompleted: number;
-  };
-  orders: {
-    todayCount: number;
-    todayTotal: number;
-    weekCount: number;
-    weekTotal: number;
   };
   customers: {
     total: number;
@@ -64,7 +53,6 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
   const [pendingVisits, setPendingVisits] = useState<Visit[]>([]);
-  const [todayOrders, setTodayOrders] = useState<Order[]>([]);
   const [weekActivities, setWeekActivities] = useState<Activity[]>([]);
   const [showActivities, setShowActivities] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -72,7 +60,6 @@ export default function DashboardPage() {
   // Resumen del día
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dayVisits, setDayVisits] = useState<Visit[]>([]);
-  const [dayOrders, setDayOrders] = useState<Order[]>([]);
   const [loadingDay, setLoadingDay] = useState(false);
 
   // Redirigir roles sin acceso al dashboard
@@ -103,24 +90,20 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const [visitStats, orderStats, customerStats, visits, pending, orders, activitiesData] = await Promise.all([
+      const [visitStats, customerStats, visits, pending, activitiesData] = await Promise.all([
         getVisitStats(),
-        getOrderStats(),
         getCustomerStats(),
         getTodayVisits(),
         getPendingVisits(),
-        getTodayOrders(),
         getActivities().catch(() => [] as Activity[]),
       ]);
 
       setStats({
         visits: visitStats,
-        orders: orderStats,
         customers: customerStats,
       });
       setTodayVisits(visits);
       setPendingVisits(pending);
-      setTodayOrders(orders);
       
       // Filtrar actividades: propias o donde participa, de esta semana y no completadas
       const now = new Date();
@@ -167,12 +150,8 @@ export default function DashboardPage() {
     setLoadingDay(true);
     try {
       const dateStr = format(date, 'yyyy-MM-dd');
-      const [visits, orders] = await Promise.all([
-        getVisitsByDate(dateStr),
-        getOrdersByDate(dateStr),
-      ]);
+      const visits = await getVisitsByDate(dateStr);
       setDayVisits(visits);
-      setDayOrders(orders);
     } catch (error) {
       console.error('Error cargando datos del día:', error);
     } finally {
@@ -214,11 +193,6 @@ export default function DashboardPage() {
           <Link href="/calendario/nueva" className="flex-1 md:flex-none">
             <Button icon={<Plus className="h-4 w-4" />} className="w-full md:w-auto">
               <span className="hidden sm:inline">Nueva</span> Visita
-            </Button>
-          </Link>
-          <Link href="/pedidos/nuevo" className="flex-1 md:flex-none">
-            <Button variant="secondary" icon={<ShoppingCart className="h-4 w-4" />} className="w-full md:w-auto">
-              <span className="hidden sm:inline">Nuevo</span> Pedido
             </Button>
           </Link>
         </div>
@@ -315,7 +289,7 @@ export default function DashboardPage() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
         <Card className="animate-fade-in stagger-1" padding="sm">
           <div className="flex items-center gap-3 md:gap-4">
             <div className="p-2 md:p-3 rounded-xl bg-indigo-50 shrink-0">
@@ -344,40 +318,6 @@ export default function DashboardPage() {
               </p>
               <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.visits.pending || 0}</p>
               <p className="text-[10px] md:text-xs text-amber-600">Requieren atención</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="animate-fade-in stagger-3" padding="sm">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2 md:p-3 rounded-xl bg-emerald-50 shrink-0">
-              <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">
-                {isUserAdmin ? 'Pedidos Hoy (Todos)' : 'Pedidos Hoy'}
-              </p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.orders.todayCount || 0}</p>
-              <p className="text-[10px] md:text-xs text-emerald-600 truncate">
-                {formatCurrency(stats?.orders.todayTotal || 0)}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="animate-fade-in stagger-4" padding="sm">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2 md:p-3 rounded-xl bg-purple-50 shrink-0">
-              <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">
-                {isUserAdmin ? 'Semana (Todos)' : 'Semana'}
-              </p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.orders.weekCount || 0}</p>
-              <p className="text-[10px] md:text-xs text-purple-600 truncate">
-                {formatCurrency(stats?.orders.weekTotal || 0)}
-              </p>
             </div>
           </div>
         </Card>
@@ -411,7 +351,7 @@ export default function DashboardPage() {
             <div className="text-gray-400">Cargando...</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
             {/* Visitas del día */}
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
@@ -491,82 +431,6 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-500">
                           <MapPin className="h-3 w-3" />
                           <span className="truncate">{visit.customer.direccion}</span>
-                        </div>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Pedidos del día */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                Pedidos ({dayOrders.length})
-                {dayOrders.length > 0 && (
-                  <span className="text-emerald-600">
-                    - {formatCurrency(dayOrders.reduce((sum, o) => sum + (o.total || 0), 0))}
-                  </span>
-                )}
-              </h3>
-              {dayOrders.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-xl">
-                  <ShoppingCart className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Sin pedidos</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                  {dayOrders.map((order) => (
-                    <Link
-                      key={order.id}
-                      href={`/pedidos/${order.id}`}
-                      className="block p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-900 truncate">
-                            {order.customer?.nombre || 'Cliente'}
-                          </p>
-                          {order.customer?.telefono && (
-                            <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                              <Phone className="h-3 w-3" />
-                              {order.customer.telefono}
-                            </div>
-                          )}
-                          {isUserAdmin && order.user_id && (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Usuario ID: {order.user_id.substring(0, 8)}...
-                            </p>
-                          )}
-                        </div>
-                        <Badge
-                          variant={
-                            order.status === 'entregado' ? 'green' :
-                            order.status === 'confirmado' ? 'blue' :
-                            order.status === 'cancelado' ? 'red' : 'gray'
-                          }
-                        >
-                          {orderStatusLabels[order.status]}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-lg font-bold text-emerald-600">
-                          {formatCurrency(order.total)}
-                        </span>
-                        {order.total_bonificado > 0 && (
-                          <span className="text-xs text-amber-600">
-                            Bonif: {formatCurrency(order.total_bonificado)}
-                          </span>
-                        )}
-                      </div>
-
-                      {order.observacion_general && (
-                        <div className="mt-2 p-2 bg-gray-100 rounded-lg">
-                          <p className="text-xs text-gray-600 line-clamp-2">
-                            {order.observacion_general}
-                          </p>
                         </div>
                       )}
                     </Link>
@@ -674,62 +538,6 @@ export default function DashboardPage() {
           )}
         </Card>
 
-        {/* Pedidos de Hoy */}
-        <Card className="animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900">Pedidos de Hoy</h2>
-            <Link href="/pedidos" className="text-xs md:text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-              Ver todos →
-            </Link>
-          </div>
-          {todayOrders.length === 0 ? (
-            <div className="text-center py-6 md:py-8">
-              <ShoppingCart className="h-10 w-10 md:h-12 md:w-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm text-gray-500">No hay pedidos para hoy</p>
-              <Link href="/pedidos/nuevo">
-                <Button variant="ghost" size="sm" className="mt-3">
-                  Crear pedido
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2 md:space-y-3">
-              {todayOrders.slice(0, 5).map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/pedidos/${order.id}`}
-                  className="flex items-center justify-between p-2.5 md:p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                    <div className="p-1.5 md:p-2 rounded-lg bg-emerald-100 shrink-0">
-                      <ShoppingCart className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 text-sm md:text-base truncate">
-                        {order.customer?.nombre || 'Cliente'}
-                      </p>
-                      <p className="text-xs md:text-sm text-emerald-600 font-semibold">
-                        {formatCurrency(order.total)}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={
-                      order.status === 'entregado' ? 'green' :
-                      order.status === 'confirmado' ? 'blue' :
-                      order.status === 'cancelado' ? 'red' : 'gray'
-                    }
-                  >
-                    <span className="hidden sm:inline">{orderStatusLabels[order.status]}</span>
-                    <span className="sm:hidden">
-                      {order.status === 'entregado' ? '✓' : order.status === 'confirmado' ? '◉' : '○'}
-                    </span>
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          )}
-        </Card>
       </div>
 
       {/* Quick Stats */}

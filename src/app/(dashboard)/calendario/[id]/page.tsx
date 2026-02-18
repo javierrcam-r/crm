@@ -14,7 +14,6 @@ import {
   XCircle,
   RefreshCw,
   Trash2,
-  ShoppingCart,
   MessageSquare,
   Plus,
   Send,
@@ -275,17 +274,11 @@ export default function VisitaDetailPage() {
       {/* Acciones Rápidas - Siempre visibles */}
       <Card className="bg-indigo-50 border-indigo-200">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-indigo-600" />
+          <Calendar className="h-5 w-5 text-indigo-600" />
           Acciones Rápidas
         </h2>
         <div className="flex flex-wrap gap-3">
-          <Link href={`/pedidos/nuevo?customer=${visit.customer_id}`}>
-            <Button icon={<ShoppingCart className="h-4 w-4" />}>
-              Crear Pedido
-            </Button>
-          </Link>
           <Button 
-            variant="secondary" 
             icon={<MessageSquare className="h-4 w-4" />}
             onClick={() => setShowCommentModal(true)}
           >
@@ -395,15 +388,10 @@ export default function VisitaDetailPage() {
                 </div>
               )}
 
-              <div className="pt-4 border-t border-gray-100 flex gap-2">
-                <Link href={`/clientes/${visit.customer.id}`} className="flex-1">
+              <div className="pt-4 border-t border-gray-100">
+                <Link href={`/clientes/${visit.customer.id}`}>
                   <Button variant="secondary" size="sm" className="w-full">
-                    Ver Ficha
-                  </Button>
-                </Link>
-                <Link href={`/pedidos/nuevo?customer=${visit.customer.id}`} className="flex-1">
-                  <Button size="sm" className="w-full" icon={<ShoppingCart className="h-4 w-4" />}>
-                    Pedido
+                    Ver Ficha del Cliente
                   </Button>
                 </Link>
               </div>
