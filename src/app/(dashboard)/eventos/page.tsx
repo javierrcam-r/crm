@@ -95,9 +95,10 @@ export default function EventosPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Calendar className="h-7 w-7 text-indigo-600" />
-            Gestión de Eventos
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Calendar className="h-6 w-6 sm:h-7 sm:w-7 text-indigo-600" />
+            <span className="hidden sm:inline">Gestión de Eventos</span>
+            <span className="sm:hidden">Eventos</span>
           </h1>
           <p className="text-gray-500 mt-1">{isSupervisor ? 'Planifica, ejecuta y monitorea eventos con control financiero' : 'Eventos en los que participas'}</p>
         </div>
@@ -216,23 +217,33 @@ export default function EventosPage() {
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {format(new Date(event.fecha_inicio), "d MMM yyyy", { locale: es })}
-                      </span>
-                      {event.cupo_maximo > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          Cupo: {event.cupo_maximo}
-                        </span>
+                    <div className="flex flex-col gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5 text-green-500" />
+                        <span className="font-medium text-gray-600">Inicio:</span>
+                        {format(new Date(event.fecha_inicio), "d MMM yyyy, HH:mm", { locale: es })}
+                      </div>
+                      {event.fecha_fin && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5 text-red-500" />
+                          <span className="font-medium text-gray-600">Fin:</span>
+                          {format(new Date(event.fecha_fin), "d MMM yyyy, HH:mm", { locale: es })}
+                        </div>
                       )}
-                      {isSupervisor && Number(event.presupuesto_total) > 0 && (
-                        <span className="flex items-center gap-1">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          ${Number(event.presupuesto_total).toLocaleString()}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-4 mt-1">
+                        {event.cupo_maximo > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5" />
+                            Cupo: {event.cupo_maximo}
+                          </span>
+                        )}
+                        {isSupervisor && Number(event.presupuesto_total) > 0 && (
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3.5 w-3.5" />
+                            ${Number(event.presupuesto_total).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Card>

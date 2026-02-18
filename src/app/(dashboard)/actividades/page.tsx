@@ -585,19 +585,20 @@ export default function ActividadesPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Actividades Estratégicas</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Actividades Estratégicas</h1>
+          <p className="text-gray-500 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
             {isSupervisorN1
               ? 'Gestiona y supervisa reuniones, capacitaciones y seguimientos del equipo'
               : 'Gestiona reuniones, capacitaciones y seguimientos con tu equipo'}
           </p>
         </div>
 
-        <Button onClick={() => setShowCreateModal(true)} disabled={tableNotExists}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Actividad Estratégica
+        <Button size="sm" onClick={() => setShowCreateModal(true)} disabled={tableNotExists}>
+          <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+          <span className="hidden sm:inline">Nueva Actividad Estratégica</span>
+          <span className="sm:hidden">Nueva Actividad</span>
         </Button>
       </div>
       
@@ -818,14 +819,14 @@ export default function ActividadesPage() {
       {/* Calendar View */}
       {viewMode === 'calendar' && (
         <Card>
-          <div className="p-4 border-b flex items-center justify-between">
+          <div className="p-3 sm:p-4 border-b flex items-center justify-between">
             <button 
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
               className="p-2 hover:bg-gray-100 rounded-lg"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="font-semibold text-lg">
+            <h3 className="font-semibold text-sm sm:text-lg capitalize">
               {format(currentMonth, 'MMMM yyyy', { locale: es })}
             </h3>
             <button 
@@ -836,8 +837,8 @@ export default function ActividadesPage() {
             </button>
           </div>
           
-          <div className="p-4">
-            {/* Days header */}
+          {/* Desktop: grid mensual */}
+          <div className="hidden sm:block p-4">
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
                 <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
@@ -846,9 +847,7 @@ export default function ActividadesPage() {
               ))}
             </div>
             
-            {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
-              {/* Empty cells for days before month start */}
               {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, i) => (
                 <div key={`empty-${i}`} className="h-24 bg-gray-50 rounded-lg" />
               ))}
@@ -890,6 +889,48 @@ export default function ActividadesPage() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Móvil: lista de días con actividades */}
+          <div className="sm:hidden divide-y divide-gray-100">
+            {calendarDays.filter(day => getActivitiesForDay(day).length > 0).length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-sm">Sin actividades este mes</div>
+            ) : (
+              calendarDays.filter(day => getActivitiesForDay(day).length > 0).map(day => {
+                const dayActivities = getActivitiesForDay(day);
+                const isCurrentDay = isToday(day);
+                return (
+                  <div key={day.toISOString()} className={`p-3 ${isCurrentDay ? 'bg-indigo-50/50' : ''}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`w-9 h-9 rounded-full flex flex-col items-center justify-center flex-shrink-0 ${
+                        isCurrentDay ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        <span className="text-[10px] leading-none uppercase font-medium">
+                          {format(day, 'EEE', { locale: es })}
+                        </span>
+                        <span className="text-sm font-bold leading-none">{format(day, 'd')}</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-600 capitalize">
+                        {format(day, 'EEEE d', { locale: es })}
+                      </span>
+                      <span className="ml-auto text-xs text-gray-400">{dayActivities.length}</span>
+                    </div>
+                    <div className="space-y-1.5 ml-12">
+                      {dayActivities.map(activity => (
+                        <div 
+                          key={activity.id}
+                          onClick={() => openActivityDetail(activity)}
+                          className={`text-xs px-2.5 py-1.5 rounded-lg cursor-pointer ${tipoColors[activity.tipo]} flex items-center justify-between`}
+                        >
+                          <span className="truncate font-medium">{activity.titulo}</span>
+                          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
       )}

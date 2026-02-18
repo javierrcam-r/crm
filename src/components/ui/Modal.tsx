@@ -44,24 +44,25 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', n
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
       <div
         className={cn(
-          'bg-white rounded-2xl shadow-2xl border border-gray-200/50 w-full',
-          'max-h-[90vh] flex flex-col',
+          'bg-white w-full flex flex-col',
+          'rounded-t-2xl sm:rounded-2xl shadow-2xl border-0 sm:border border-gray-200/50',
+          'max-h-[92vh] sm:max-h-[90vh]',
           'transform transition-all duration-200 ease-out',
-          'animate-in fade-in-0 zoom-in-95',
+          'animate-in fade-in-0 slide-in-from-bottom-4 sm:zoom-in-95',
           sizes[size]
         )}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900 truncate pr-2">{title}</h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors group"
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors group flex-shrink-0"
             >
               <X className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
             </button>
@@ -69,8 +70,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', n
         )}
         <div className={cn(
           'overflow-y-auto flex-1',
-          !noPadding && 'p-6',
-          !title && 'pt-6'
+          !noPadding && 'p-4 sm:p-6',
+          !title && 'pt-4 sm:pt-6'
         )}>
           {children}
         </div>

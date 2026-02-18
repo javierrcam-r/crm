@@ -248,7 +248,7 @@ function NuevaVisitaContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
             <Link href="/calendario">
               <Button variant="secondary">Cancelar</Button>
             </Link>

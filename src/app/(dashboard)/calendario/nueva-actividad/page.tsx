@@ -188,7 +188,7 @@ function NuevaActividadContent() {
           </div>
 
           {/* Tipo y Prioridad */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo *</label>
               <select
@@ -227,7 +227,7 @@ function NuevaActividadContent() {
               <CalendarIcon className="h-3.5 w-3.5" />
               Fechas y horarios
             </h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Fecha y Hora de Inicio *"
                 type="datetime-local"
@@ -439,7 +439,7 @@ function NuevaActividadContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
             <Link href="/calendario">
               <Button variant="secondary">Cancelar</Button>
             </Link>
