@@ -18,11 +18,16 @@ const THEME_STORAGE_KEY = 'crm_theme_preference';
 function getThemeByTime(): ResolvedTheme {
   if (typeof window === 'undefined') return 'light';
   
-  const now = new Date();
-  const hour = now.getHours();
+  // Obtener hora actual en zona horaria de Ecuador (America/Guayaquil, UTC-5)
+  const ecuadorTime = new Date().toLocaleString('en-US', { 
+    timeZone: 'America/Guayaquil',
+    hour: 'numeric',
+    hour12: false 
+  });
+  const hour = parseInt(ecuadorTime, 10);
   
-  // Dark mode: 6 PM (18:00) a 7 AM (07:00)
-  // Light mode: 7 AM (07:00) a 6 PM (18:00)
+  // Dark mode: 6 PM (18:00) a 7 AM (07:00) hora Ecuador
+  // Light mode: 7 AM (07:00) a 6 PM (18:00) hora Ecuador
   if (hour >= 18 || hour < 7) {
     return 'dark';
   }
