@@ -127,7 +127,7 @@ export default function ClientesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando clientes...</div>
+        <div className="text-gray-500 dark:text-gray-300">Cargando clientes...</div>
       </div>
     );
   }
@@ -137,8 +137,8 @@ export default function ClientesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Clientes y Prospectos</h1>
-          <p className="text-gray-500 text-sm md:text-base mt-1">
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">Clientes y Prospectos</h1>
+          <p className="text-gray-500 dark:text-gray-300 text-sm md:text-base mt-1">
             Gestiona tu cartera de clientes
           </p>
         </div>
@@ -170,7 +170,7 @@ export default function ClientesPage() {
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-500">
             <Select
               options={estadoOptions}
               value={filterEstado}
@@ -221,18 +221,18 @@ export default function ClientesPage() {
                       <div
                         className={cn(
                           'p-2 rounded-lg',
-                          estadoInfo.variant === 'green' ? 'bg-emerald-50' : 
-                          estadoInfo.variant === 'red' ? 'bg-red-50' : 'bg-blue-50'
+                          estadoInfo.variant === 'green' ? 'bg-emerald-50 dark:bg-emerald-900/30' : 
+                          estadoInfo.variant === 'red' ? 'bg-red-50 dark:bg-red-900/30' : 'bg-blue-50 dark:bg-blue-900/30'
                         )}
                       >
                         <IconoEstado className={cn(
                           'h-5 w-5',
-                          estadoInfo.variant === 'green' ? 'text-emerald-600' : 
-                          estadoInfo.variant === 'red' ? 'text-red-600' : 'text-blue-600'
+                          estadoInfo.variant === 'green' ? 'text-emerald-600 dark:text-emerald-400' : 
+                          estadoInfo.variant === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'
                         )} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{customer.nombre}</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{customer.nombre}</h3>
                         <Badge variant={estadoInfo.variant}>
                           {estadoInfo.label}
                         </Badge>
@@ -242,19 +242,19 @@ export default function ClientesPage() {
 
                   <div className="space-y-2 text-sm">
                     {customer.telefono && (
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-300">
                         <Phone className="h-4 w-4" />
                         <span>{customer.telefono}</span>
                       </div>
                     )}
                     {customer.email && (
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-300">
                         <Mail className="h-4 w-4" />
                         <span className="truncate">{customer.email}</span>
                       </div>
                     )}
                     {(customer.ciudad || customer.zona) && (
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-300">
                         <MapPin className="h-4 w-4" />
                         <span>
                           {[customer.zona, customer.ciudad].filter(Boolean).join(', ')}
@@ -264,8 +264,8 @@ export default function ClientesPage() {
                   </div>
 
                   {customer.etiquetas && customer.etiquetas.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                      <span className="text-xs text-gray-400">
+                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-dark-500">
+                      <span className="text-xs text-gray-400 dark:text-gray-300">
                         {customer.etiquetas.slice(0, 3).join(', ')}
                         {customer.etiquetas.length > 3 && ` +${customer.etiquetas.length - 3} más`}
                       </span>

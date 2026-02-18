@@ -107,7 +107,7 @@ export default function Sidebar() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo - Fixed */}
-      <div className="flex-shrink-0 px-3 sm:px-4 md:px-5 py-4 border-b border-gray-100">
+      <div className="flex-shrink-0 px-3 sm:px-4 md:px-5 py-4 border-b border-gray-100 dark:border-dark-700">
         <div className="flex items-center gap-3 sm:gap-4">
           <Image
             src="/logo-disfero.png"
@@ -117,10 +117,10 @@ export default function Sidebar() {
             className="w-9 h-9 sm:w-10 sm:h-10 object-contain flex-shrink-0"
           />
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 tracking-tight truncate leading-tight">
-              CRM <span className="text-indigo-600">Disfero</span>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight truncate leading-tight">
+              CRM <span className="text-indigo-600 dark:text-indigo-400">Disfero</span>
             </h1>
-            <p className="text-xs sm:text-sm text-gray-400 leading-tight">Sistema de Gestión</p>
+            <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-300 leading-tight">Sistema de Gestión</p>
           </div>
         </div>
       </div>
@@ -129,8 +129,8 @@ export default function Sidebar() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
         {/* Quick Actions - Solo para vendedores */}
         {userProfile?.rol === 'vendedor' && (
-          <div className="p-3 sm:p-4 border-b border-gray-100">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
+          <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-dark-700">
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
               Acciones Rápidas
             </p>
             <div className="space-y-1">
@@ -139,11 +139,11 @@ export default function Sidebar() {
                   key={action.name}
                   href={action.href}
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 sm:gap-2.5 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 rounded-xl
-                           hover:bg-indigo-50 hover:text-indigo-700 transition-all duration-200
+                  className="flex items-center gap-2 sm:gap-2.5 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 dark:text-white rounded-xl
+                           hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200
                            group"
                 >
-                  <div className="p-1 rounded-lg bg-gray-100 group-hover:bg-indigo-100 transition-colors">
+                  <div className="p-1 rounded-lg bg-gray-100 dark:bg-dark-700 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800 transition-colors">
                     <Plus className="h-3 w-3" />
                   </div>
                   {action.name}
@@ -158,7 +158,7 @@ export default function Sidebar() {
           {/* Menú Principal - Para VENDEDORES y SUPERVISOR+VENDEDOR */}
           {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor') && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
                 Menú Principal
               </p>
               {filterByConfig(vendedorNavigation).map((item, index) => {
@@ -173,24 +173,24 @@ export default function Sidebar() {
                       'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
                       'animate-slide-in opacity-0 text-sm',
                       active
-                        ? 'bg-indigo-50 text-indigo-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
                     )}
                     style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
                   >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
+                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
                     <span>{item.name}</span>
                   </Link>
                 );
               })}
-              <div className="my-3 sm:my-4 border-t border-gray-100"></div>
+              <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
             </>
           )}
 
           {/* Panel Supervisor - para supervisor, supervisor_nivel1, supervisor_vendedor y admin */}
           {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor') && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
                 Supervisión
               </p>
               {filterByConfig(userProfile?.rol === 'supervisor_nivel1' ? supervisorN1Navigation : supervisorNavigation).map((item, index) => {
@@ -205,17 +205,17 @@ export default function Sidebar() {
                       'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
                       'animate-slide-in opacity-0 text-sm',
                       active
-                        ? 'bg-indigo-50 text-indigo-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
                     )}
                     style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
                   >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
+                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
                     <span>{item.name}</span>
                   </Link>
                 );
               })}
-              <div className="my-3 sm:my-4 border-t border-gray-100"></div>
+              <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
             </>
           )}
 
@@ -227,11 +227,11 @@ export default function Sidebar() {
               className={cn(
                 'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200 text-sm mb-1',
                 isActive('/calendario')
-                  ? 'bg-indigo-50 text-indigo-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                  : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
               )}
             >
-              <Calendar className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/calendario') ? 'text-indigo-600' : 'text-gray-400')} />
+              <Calendar className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/calendario') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
               <span>Calendario</span>
             </Link>
           )}
@@ -239,7 +239,7 @@ export default function Sidebar() {
           {/* Actividades Estratégicas - Disponible para TODOS los roles */}
           {userProfile && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
                 {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
               </p>
               {filterByConfig(actividadesEstrategicas).map((item, index) => {
@@ -254,12 +254,12 @@ export default function Sidebar() {
                       'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
                       'animate-slide-in opacity-0 text-sm',
                       active
-                        ? 'bg-indigo-50 text-indigo-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
                     )}
                     style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
                   >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
+                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
                     <span>{item.name}</span>
                   </Link>
                 );
@@ -270,8 +270,8 @@ export default function Sidebar() {
           {/* Admin Navigation */}
           {isUserAdmin && (
             <>
-              <div className="my-3 sm:my-4 border-t border-gray-100"></div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 sm:mb-3">
+              <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
                 Administración
               </p>
               {adminNavigation.map((item, index) => {
@@ -286,12 +286,12 @@ export default function Sidebar() {
                       'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
                       'animate-slide-in opacity-0 text-sm',
                       active
-                        ? 'bg-indigo-50 text-indigo-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
                     )}
                     style={{ animationDelay: `${(supervisorNavigation.length + index) * 0.05}s`, animationFillMode: 'forwards' }}
                   >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600' : 'text-gray-400')} />
+                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
                     <span>{item.name}</span>
                   </Link>
                 );
@@ -300,31 +300,31 @@ export default function Sidebar() {
           )}
 
           {/* Configuración - Accesible para todos */}
-          <div className="my-3 sm:my-4 border-t border-gray-100"></div>
+          <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
           <Link
             href="/configuracion"
             onClick={() => setMobileOpen(false)}
             className={cn(
               'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200 text-sm',
               isActive('/configuracion')
-                ? 'bg-indigo-50 text-indigo-700 font-medium'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
             )}
           >
-            <Settings className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/configuracion') ? 'text-indigo-600' : 'text-gray-400')} />
+            <Settings className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/configuracion') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
             <span>Configuración</span>
           </Link>
         </nav>
       </div>
 
       {/* Footer - Fixed */}
-      <div className="flex-shrink-0 p-3 sm:p-4 border-t border-gray-100 bg-white">
+      <div className="flex-shrink-0 p-3 sm:p-4 border-t border-gray-100 dark:border-dark-700 bg-white dark:bg-dark-900">
         {userProfile && (
-          <div className="mb-2 sm:mb-3 pb-2 sm:pb-3 border-b border-gray-100">
-            <p className="text-[10px] sm:text-xs font-medium text-gray-500 mb-0.5">
+          <div className="mb-2 sm:mb-3 pb-2 sm:pb-3 border-b border-gray-100 dark:border-dark-700">
+            <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-300 mb-0.5">
               Usuario:
             </p>
-            <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
+            <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">
               {userProfile.nombre_completo}
             </p>
             {isUserAdmin && (
@@ -363,17 +363,17 @@ export default function Sidebar() {
         {/* Botón de Logout */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 rounded-xl
-                   hover:bg-red-50 hover:text-red-700 transition-all duration-200
+          className="w-full flex items-center gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 dark:text-white rounded-xl
+                   hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-400 transition-all duration-200
                    group mb-2"
         >
-          <div className="p-1 rounded-lg bg-gray-100 group-hover:bg-red-100 transition-colors">
+          <div className="p-1 rounded-lg bg-gray-100 dark:bg-dark-700 group-hover:bg-red-100 dark:group-hover:bg-red-900/50 transition-colors">
             <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </div>
           <span>Cerrar Sesión</span>
         </button>
 
-        <p className="text-[9px] sm:text-[10px] text-gray-400 text-center">
+        <p className="text-[9px] sm:text-[10px] text-gray-400 dark:text-gray-400 text-center">
           CRM Disfero v1.0
         </p>
       </div>
@@ -385,13 +385,13 @@ export default function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-white border border-gray-200 shadow-md active:scale-95 transition-transform"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 shadow-md active:scale-95 transition-transform"
         aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
       >
         {mobileOpen ? (
-          <X className="h-5 w-5 text-gray-600" />
+          <X className="h-5 w-5 text-gray-600 dark:text-white" />
         ) : (
-          <Menu className="h-5 w-5 text-gray-600" />
+          <Menu className="h-5 w-5 text-gray-600 dark:text-white" />
         )}
       </button>
 
@@ -406,7 +406,7 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full w-[240px] sm:w-64 bg-white border-r border-gray-100',
+          'fixed left-0 top-0 h-full w-[240px] sm:w-64 bg-white dark:bg-dark-900 border-r border-gray-100 dark:border-dark-800',
           'z-40 transition-transform duration-300',
           'md:translate-x-0 shadow-sm',
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'

@@ -14,11 +14,11 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', loading, icon, children, disabled, ...props }, ref) => {
     const variants = {
-      primary: 'bg-indigo-500 text-white hover:bg-indigo-600 focus:ring-indigo-200',
-      secondary: 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 focus:ring-gray-200',
-      success: 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-200',
-      danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-200',
-      ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+      primary: 'bg-indigo-500 text-white hover:bg-indigo-600 focus:ring-indigo-200 dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:focus:ring-indigo-800',
+      secondary: 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 focus:ring-gray-200 dark:bg-dark-600 dark:text-white dark:hover:bg-dark-500 dark:border-dark-500 dark:focus:ring-dark-500',
+      success: 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-200 dark:focus:ring-emerald-800',
+      danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-200 dark:focus:ring-red-800',
+      ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-white dark:hover:bg-dark-600 dark:hover:text-white',
     };
 
     const sizes = {
@@ -32,7 +32,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         className={cn(
           'inline-flex items-center justify-center gap-2 font-medium transition-all duration-200',
-          'focus:outline-none focus:ring-2 focus:ring-offset-1',
+          'focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-dark-800',
           variants[variant],
           sizes[size],
           (disabled || loading) && 'opacity-50 cursor-not-allowed',

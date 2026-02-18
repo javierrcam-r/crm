@@ -23,10 +23,10 @@ export default function DashboardLayout({
   // Mostrar loading mientras se verifica autenticación
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-800">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-gray-600">Cargando...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Cargando...</p>
         </div>
       </div>
     );

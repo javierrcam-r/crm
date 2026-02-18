@@ -233,7 +233,7 @@ export default function ReportesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando reportes...</div>
+        <div className="text-gray-500 dark:text-gray-300">Cargando reportes...</div>
       </div>
     );
   }
@@ -242,15 +242,15 @@ export default function ReportesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Reportes</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Reportes</h1>
+        <p className="text-gray-500 dark:text-gray-300 mt-1">
           Analiza tus ventas y exporta datos
         </p>
       </div>
 
       {/* Quick Exports */}
       <Card>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Exportar Datos
         </h2>
         <div className="flex flex-wrap gap-3">
@@ -274,7 +274,7 @@ export default function ReportesPage() {
       {/* Resumen Diario */}
       <Card>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Resumen del Día
           </h2>
           <div className="flex items-center gap-3">
@@ -297,32 +297,32 @@ export default function ReportesPage() {
 
         {/* Daily Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 rounded-lg bg-indigo-50 text-center">
-            <ShoppingCart className="h-6 w-6 text-indigo-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-center">
+            <ShoppingCart className="h-6 w-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {dailyOrders.length}
             </p>
-            <p className="text-sm text-gray-500">Pedidos</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Pedidos</p>
           </div>
-          <div className="p-4 rounded-lg bg-emerald-50 text-center">
-            <TrendingUp className="h-6 w-6 text-emerald-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-emerald-600">
+          <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-center">
+            <TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {formatCurrency(dailyTotalAmount)}
             </p>
-            <p className="text-sm text-gray-500">Total Ventas</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Total Ventas</p>
           </div>
-          <div className="p-4 rounded-lg bg-purple-50 text-center">
-            <Package className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-center">
+            <Package className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {dailyTotalItems}
             </p>
-            <p className="text-sm text-gray-500">Productos Vendidos</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Productos Vendidos</p>
           </div>
         </div>
 
         {/* Daily Orders List */}
         {dailyOrders.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">
+          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
             No hay pedidos para este día
           </p>
         ) : (
@@ -330,18 +330,18 @@ export default function ReportesPage() {
             {dailyOrders.map((order) => (
               <div
                 key={order.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-dark-600"
               >
                 <div>
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 dark:text-white">
                     {order.customer?.nombre}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-300">
                     {order.items?.length || 0} productos
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-emerald-600">
+                  <p className="font-semibold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(order.total)}
                   </p>
                   <Badge
@@ -365,7 +365,7 @@ export default function ReportesPage() {
       {/* Resumen por Período */}
       <Card>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Resumen por Período
           </h2>
           <div className="flex items-center gap-3">
@@ -375,7 +375,7 @@ export default function ReportesPage() {
               onChange={(e) => setDateFrom(e.target.value)}
               className="w-auto"
             />
-            <span className="text-gray-500">a</span>
+            <span className="text-gray-500 dark:text-gray-300">a</span>
             <Input
               type="date"
               value={dateTo}
@@ -394,31 +394,31 @@ export default function ReportesPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg bg-gray-50 text-center">
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-600 text-center">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {periodTotalOrders}
             </p>
-            <p className="text-sm text-gray-500">Total Pedidos</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Total Pedidos</p>
           </div>
-          <div className="p-4 rounded-lg bg-emerald-50 text-center">
-            <p className="text-2xl font-bold text-emerald-600">
+          <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-center">
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {formatCurrency(periodTotalAmount)}
             </p>
-            <p className="text-sm text-gray-500">Total Ventas</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Total Ventas</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-50 text-center">
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-600 text-center">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {periodDelivered}
             </p>
-            <p className="text-sm text-gray-500">Entregados</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Entregados</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-50 text-center">
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-600 text-center">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {periodTotalOrders > 0
                 ? formatCurrency(periodTotalAmount / periodTotalOrders)
                 : formatCurrency(0)}
             </p>
-            <p className="text-sm text-gray-500">Promedio por Pedido</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Promedio por Pedido</p>
           </div>
         </div>
       </Card>
@@ -426,7 +426,7 @@ export default function ReportesPage() {
       {/* Productos Más Vendidos */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Productos Más Vendidos (30 días)
           </h2>
           <Button
@@ -440,7 +440,7 @@ export default function ReportesPage() {
         </div>
 
         {topProducts.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">
+          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
             No hay datos de productos vendidos
           </p>
         ) : (
@@ -462,8 +462,8 @@ export default function ReportesPage() {
                       <span
                         className={
                           index < 3
-                            ? 'font-bold text-amber-600'
-                            : 'text-gray-400'
+                            ? 'font-bold text-amber-600 dark:text-amber-400'
+                            : 'text-gray-400 dark:text-gray-500'
                         }
                       >
                         {index + 1}
@@ -471,22 +471,22 @@ export default function ReportesPage() {
                     </td>
                     <td>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-gray-900 dark:text-white">
                           {product.name}
                         </p>
-                        <p className="text-sm text-gray-500">{product.sku}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{product.sku}</p>
                       </div>
                     </td>
                     <td>
                       <Badge variant="blue">{product.category}</Badge>
                     </td>
                     <td className="text-right">
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-gray-900 dark:text-white">
                         {product.totalQty}
                       </span>
                     </td>
                     <td className="text-right">
-                      <span className="font-semibold text-emerald-600">
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(product.totalAmount)}
                       </span>
                     </td>

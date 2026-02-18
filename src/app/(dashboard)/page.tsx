@@ -166,7 +166,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Cargando dashboard...</div>
+        <div className="text-gray-400 dark:text-gray-400">Cargando dashboard...</div>
       </div>
     );
   }
@@ -177,12 +177,12 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
             {isUserAdmin && (
               <Badge variant="red">Vista Administrador</Badge>
             )}
           </div>
-          <p className="text-gray-500 text-sm md:text-base mt-1">
+          <p className="text-gray-500 dark:text-gray-300 text-sm md:text-base mt-1">
             {isUserAdmin 
               ? 'Resumen general del sistema - Datos de todos los usuarios'
               : `Resumen de tu actividad${userProfile ? ` - ${userProfile.nombre_completo}` : ''}`
@@ -200,24 +200,24 @@ export default function DashboardPage() {
 
       {/* Recordatorio de Actividades Estratégicas */}
       {weekActivities.length > 0 && (
-        <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50 animate-fade-in">
+        <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 animate-fade-in">
           <div 
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setShowActivities(!showActivities)}
           >
-            <div className="p-2 rounded-lg bg-purple-100">
-              <Star className="h-5 w-5 text-purple-600 fill-purple-600" />
+            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+              <Star className="h-5 w-5 text-purple-600 dark:text-purple-400 fill-purple-600 dark:fill-purple-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-purple-900">Actividades Estratégicas</h3>
-              <p className="text-xs text-purple-600">Esta semana y pendientes</p>
+              <h3 className="font-semibold text-purple-900 dark:text-purple-100">Actividades Estratégicas</h3>
+              <p className="text-xs text-purple-600 dark:text-purple-400">Esta semana y pendientes</p>
             </div>
             <Badge variant="purple">{weekActivities.length}</Badge>
-            <button className="p-1 hover:bg-purple-100 rounded-lg transition-colors">
+            <button className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg transition-colors">
               {showActivities ? (
-                <ChevronUp className="h-5 w-5 text-purple-600" />
+                <ChevronUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               ) : (
-                <ChevronDown className="h-5 w-5 text-purple-600" />
+                <ChevronDown className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               )}
             </button>
           </div>
@@ -236,8 +236,8 @@ export default function DashboardPage() {
                       href="/actividades"
                       className={`flex flex-col gap-2 p-3 rounded-lg transition-colors ${
                         isOverdue 
-                          ? 'bg-red-100/70 hover:bg-red-100 border border-red-200' 
-                          : 'bg-white/70 hover:bg-white border border-purple-100'
+                          ? 'bg-red-100/70 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-800' 
+                          : 'bg-white/70 dark:bg-dark-800/70 hover:bg-white dark:hover:bg-dark-800 border border-purple-100 dark:border-purple-800'
                       }`}
                     >
                       <div className="flex items-start gap-2">
@@ -246,10 +246,10 @@ export default function DashboardPage() {
                           activity.prioridad === 'media' ? 'bg-amber-500' : 'bg-green-500'
                         }`} />
                         <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate text-sm ${isOverdue ? 'text-red-800' : 'text-gray-900'}`}>
+                          <p className={`font-medium truncate text-sm ${isOverdue ? 'text-red-800 dark:text-red-300' : 'text-gray-900 dark:text-white'}`}>
                             {activity.titulo}
                           </p>
-                          <p className={`text-xs ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                          <p className={`text-xs ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-300'}`}>
                             {isOverdue && '⚠️ '}
                             {format(activityDate, "EEE dd MMM 'a las' HH:mm", { locale: es })}
                           </p>
@@ -264,8 +264,8 @@ export default function DashboardPage() {
                       {/* Participantes */}
                       {participants.length > 0 && (
                         <div className="flex items-center gap-1 ml-4">
-                          <Users className="h-3 w-3 text-gray-400" />
-                          <p className="text-[10px] text-gray-500 truncate">
+                          <Users className="h-3 w-3 text-gray-400 dark:text-gray-300" />
+                          <p className="text-[10px] text-gray-500 dark:text-gray-300 truncate">
                             {participants.slice(0, 3).map(p => p.user_profile?.nombre_completo?.split(' ')[0] || 'Usuario').join(', ')}
                             {participants.length > 3 && ` +${participants.length - 3}`}
                           </p>
@@ -278,7 +278,7 @@ export default function DashboardPage() {
               {weekActivities.length > 6 && (
                 <Link 
                   href="/actividades" 
-                  className="mt-3 text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                  className="mt-3 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 flex items-center gap-1"
                 >
                   Ver todas ({weekActivities.length}) <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -292,15 +292,15 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 md:gap-4">
         <Card className="animate-fade-in stagger-1" padding="sm">
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2 md:p-3 rounded-xl bg-indigo-50 shrink-0">
-              <Calendar className="h-5 w-5 md:h-6 md:w-6 text-indigo-600" />
+            <div className="p-2 md:p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 shrink-0">
+              <Calendar className="h-5 w-5 md:h-6 md:w-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-300 truncate">
                 {isUserAdmin ? 'Visitas Hoy (Todos)' : 'Visitas Hoy'}
               </p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.visits.today || 0}</p>
-              <p className="text-[10px] md:text-xs text-emerald-600">
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stats?.visits.today || 0}</p>
+              <p className="text-[10px] md:text-xs text-emerald-600 dark:text-emerald-400">
                 {stats?.visits.todayCompleted || 0} completadas
               </p>
             </div>
@@ -309,15 +309,15 @@ export default function DashboardPage() {
 
         <Card className="animate-fade-in stagger-2" padding="sm">
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2 md:p-3 rounded-xl bg-amber-50 shrink-0">
-              <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
+            <div className="p-2 md:p-3 rounded-xl bg-amber-50 dark:bg-amber-900/30 shrink-0">
+              <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs md:text-sm text-gray-500 truncate">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-300 truncate">
                 {isUserAdmin ? 'Pendientes (Todos)' : 'Pendientes'}
               </p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.visits.pending || 0}</p>
-              <p className="text-[10px] md:text-xs text-amber-600">Requieren atención</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stats?.visits.pending || 0}</p>
+              <p className="text-[10px] md:text-xs text-amber-600 dark:text-amber-400">Requieren atención</p>
             </div>
           </div>
         </Card>
@@ -326,8 +326,8 @@ export default function DashboardPage() {
       {/* Resumen del Día con Selector */}
       <Card className="animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-indigo-500" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
             Resumen del Día
           </h2>
           <div className="flex items-center gap-2">
@@ -336,7 +336,7 @@ export default function DashboardPage() {
             </Button>
             <button
               onClick={goToToday}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors min-w-[140px] text-center"
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-dark-700 rounded-lg hover:bg-gray-200 dark:hover:bg-dark-600 transition-colors min-w-[140px] text-center"
             >
               {isToday(selectedDate) ? 'Hoy' : format(selectedDate, "EEE d 'de' MMM", { locale: es })}
             </button>
@@ -348,20 +348,20 @@ export default function DashboardPage() {
 
         {loadingDay ? (
           <div className="flex items-center justify-center py-12">
-            <div className="text-gray-400">Cargando...</div>
+            <div className="text-gray-400 dark:text-gray-400">Cargando...</div>
           </div>
         ) : (
           <div>
             {/* Visitas del día */}
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-3 flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Visitas ({dayVisits.length})
               </h3>
               {dayVisits.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-xl">
-                  <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Sin visitas programadas</p>
+                <div className="text-center py-8 bg-gray-50 dark:bg-dark-700/50 rounded-xl">
+                  <Calendar className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-300">Sin visitas programadas</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
@@ -369,20 +369,20 @@ export default function DashboardPage() {
                     <Link
                       key={visit.id}
                       href={`/calendario/${visit.id}`}
-                      className="block p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+                      className="block p-3 rounded-xl bg-gray-50 dark:bg-dark-700/50 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-dark-500"
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 min-w-0 mb-1">
-                            <span className="text-sm font-bold text-indigo-600 shrink-0">
+                            <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                               {formatTime(visit.scheduled_at)}
                             </span>
-                            <span className="font-medium text-gray-900 truncate">
+                            <span className="font-medium text-gray-900 dark:text-white truncate">
                               {visit.customer?.nombre || 'Cliente'}
                             </span>
                           </div>
                           {isUserAdmin && visit.user_id && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-300">
                               Usuario ID: {visit.user_id.substring(0, 8)}...
                             </p>
                           )}
@@ -399,17 +399,17 @@ export default function DashboardPage() {
                       </div>
                       
                       {visit.objetivo && (
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
                           {visit.objetivo}
                         </p>
                       )}
 
                       {/* Comentarios/Resultado si está completada */}
                       {visit.status === 'completada' && visit.resultado && (
-                        <div className="mt-2 p-2 bg-emerald-50 rounded-lg">
+                        <div className="mt-2 p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
                           <div className="flex items-start gap-2">
-                            <MessageSquare className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                            <p className="text-sm text-emerald-700 line-clamp-2">
+                            <MessageSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                            <p className="text-sm text-emerald-700 dark:text-emerald-300 line-clamp-2">
                               {visit.resultado}
                             </p>
                           </div>
@@ -417,10 +417,10 @@ export default function DashboardPage() {
                       )}
 
                       {visit.observaciones && (
-                        <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                        <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                           <div className="flex items-start gap-2">
-                            <MessageSquare className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                            <p className="text-sm text-blue-700 line-clamp-2">
+                            <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <p className="text-sm text-blue-700 dark:text-blue-300 line-clamp-2">
                               {visit.observaciones}
                             </p>
                           </div>
@@ -428,7 +428,7 @@ export default function DashboardPage() {
                       )}
 
                       {visit.customer?.direccion && (
-                        <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-500 dark:text-gray-300">
                           <MapPin className="h-3 w-3" />
                           <span className="truncate">{visit.customer.direccion}</span>
                         </div>
@@ -444,11 +444,11 @@ export default function DashboardPage() {
 
       {/* Visitas Pendientes (Vencidas) */}
       {pendingVisits.length > 0 && (
-        <Card className="animate-fade-in border-amber-200 bg-amber-50/30">
+        <Card className="animate-fade-in border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/20">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              <h2 className="text-base md:text-lg font-semibold text-gray-900">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
                 Visitas Vencidas
               </h2>
               <Badge variant="yellow">{pendingVisits.length}</Badge>
@@ -459,18 +459,18 @@ export default function DashboardPage() {
               <Link
                 key={visit.id}
                 href={`/calendario/${visit.id}`}
-                className="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-100 hover:border-amber-200 transition-colors"
+                className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-dark-800 border border-amber-100 dark:border-amber-800 hover:border-amber-200 dark:hover:border-amber-700 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+                  <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400 shrink-0" />
                   <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
+                    <p className="font-medium text-gray-900 dark:text-white truncate">
                       {visit.customer?.nombre || 'Cliente'}
                     </p>
-                    <p className="text-sm text-gray-500 truncate">{visit.objetivo}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-300 truncate">{visit.objetivo}</p>
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-gray-400 shrink-0" />
+                <ArrowRight className="h-4 w-4 text-gray-400 dark:text-gray-300 shrink-0" />
               </Link>
             ))}
           </div>
@@ -482,15 +482,15 @@ export default function DashboardPage() {
         {/* Visitas de Hoy */}
         <Card className="animate-fade-in">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900">Agenda de Hoy</h2>
-            <Link href="/calendario" className="text-xs md:text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Agenda de Hoy</h2>
+            <Link href="/calendario" className="text-xs md:text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium">
               Ver calendario →
             </Link>
           </div>
           {todayVisits.length === 0 ? (
             <div className="text-center py-6 md:py-8">
-              <Calendar className="h-10 w-10 md:h-12 md:w-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm text-gray-500">No hay visitas programadas para hoy</p>
+              <Calendar className="h-10 w-10 md:h-12 md:w-12 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-gray-300">No hay visitas programadas para hoy</p>
               <Link href="/calendario/nueva">
                 <Button variant="ghost" size="sm" className="mt-3">
                   Programar visita
@@ -503,19 +503,19 @@ export default function DashboardPage() {
                 <Link
                   key={visit.id}
                   href={`/calendario/${visit.id}`}
-                  className="flex items-center justify-between p-2.5 md:p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                  className="flex items-center justify-between p-2.5 md:p-3 rounded-xl bg-gray-50 dark:bg-dark-700/50 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
                 >
                   <div className="flex items-center gap-2 md:gap-3 min-w-0">
                     <div className="text-center min-w-[45px] md:min-w-[50px]">
-                      <p className="text-sm md:text-lg font-bold text-indigo-600">
+                      <p className="text-sm md:text-lg font-bold text-indigo-600 dark:text-indigo-400">
                         {formatTime(visit.scheduled_at)}
                       </p>
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 text-sm md:text-base truncate">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base truncate">
                         {visit.customer?.nombre || 'Cliente'}
                       </p>
-                      <p className="text-xs md:text-sm text-gray-500 truncate max-w-[150px] md:max-w-[200px]">
+                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-300 truncate max-w-[150px] md:max-w-[200px]">
                         {visit.objetivo}
                       </p>
                     </div>
@@ -544,10 +544,10 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         <Card className="animate-fade-in" padding="sm">
           <div className="flex items-center gap-3 md:gap-4">
-            <Users className="h-7 w-7 md:h-8 md:w-8 text-indigo-500 shrink-0" />
+            <Users className="h-7 w-7 md:h-8 md:w-8 text-indigo-500 dark:text-indigo-400 shrink-0" />
             <div className="min-w-0">
-              <p className="text-xl md:text-2xl font-bold text-gray-900">{stats?.customers.total || 0}</p>
-              <p className="text-xs md:text-sm text-gray-500 truncate">
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stats?.customers.total || 0}</p>
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-300 truncate">
                 {stats?.customers.clientes || 0} clientes · {stats?.customers.prospectos || 0} prospectos
               </p>
             </div>
@@ -561,12 +561,12 @@ export default function DashboardPage() {
 
         <Card className="animate-fade-in" padding="sm">
           <div className="flex items-center gap-3 md:gap-4">
-            <CheckCircle className="h-7 w-7 md:h-8 md:w-8 text-emerald-500 shrink-0" />
+            <CheckCircle className="h-7 w-7 md:h-8 md:w-8 text-emerald-500 dark:text-emerald-400 shrink-0" />
             <div className="min-w-0">
-              <p className="text-xl md:text-2xl font-bold text-gray-900">
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                 {stats?.visits.weekTotal || 0}
               </p>
-              <p className="text-xs md:text-sm text-gray-500 truncate">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-300 truncate">
                 Visitas semana ({stats?.visits.weekCompleted || 0} completadas)
               </p>
             </div>

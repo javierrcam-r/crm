@@ -9,6 +9,7 @@ export type OrderStatus = 'borrador' | 'enviado' | 'confirmado' | 'entregado' | 
 export type FormaPago = 'contado' | 'cheque' | 'plazos_cortos' | 'plazos_medios' | 'plazos_largos';
 export type CalidadPago = 'buena' | 'regular' | 'mala';
 export type UserRole = 'admin' | 'vendedor' | 'supervisor' | 'supervisor_nivel1' | 'supervisor_vendedor' | 'marketing' | 'tecnico';
+export type ThemePreference = 'light' | 'dark' | 'auto';
 export type ActivityType = 'reunion' | 'tarea' | 'seguimiento' | 'capacitacion' | 'otro';
 export type ActivityStatus = 'planificacion' | 'haciendo' | 'realizado' | 'cancelado';
 export type ActivityPriority = 'baja' | 'media' | 'alta' | 'urgente';
@@ -258,6 +259,7 @@ export interface UserProfile {
   password: string | null;
   password_temp: string | null;
   debe_cambiar_password: boolean;
+  theme_preference: ThemePreference;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -274,6 +276,7 @@ export interface UserProfileInsert {
   password?: string | null;
   password_temp?: string | null;
   debe_cambiar_password?: boolean;
+  theme_preference?: ThemePreference;
   created_by?: string | null;
 }
 

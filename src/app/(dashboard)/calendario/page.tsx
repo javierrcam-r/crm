@@ -446,41 +446,41 @@ export default function CalendarioPage() {
   const getActivityStyle = (activity: Activity, isStrategic: boolean) => {
     if (isActivityFromTecnico(activity)) {
       return {
-        bg: 'bg-amber-100 text-amber-800 border-l-2 border-amber-500 hover:bg-amber-200',
-        bgLarge: 'bg-amber-100 text-amber-800 border-l-4 border-amber-500 hover:bg-amber-200',
+        bg: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-l-2 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60',
+        bgLarge: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-l-4 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60',
         icon: '👷',
         badge: 'Técnico',
-        badgeClass: 'bg-amber-200 text-amber-800',
+        badgeClass: 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200',
         dotColor: 'bg-amber-500'
       };
     }
     if (isStrategic) {
       return {
-        bg: 'bg-purple-100 text-purple-700 border-l-2 border-purple-500 hover:bg-purple-200',
-        bgLarge: 'bg-purple-100 text-purple-700 border-l-4 border-purple-500 hover:bg-purple-200',
+        bg: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200 border-l-2 border-purple-500 hover:bg-purple-200 dark:hover:bg-purple-900/60',
+        bgLarge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200 border-l-4 border-purple-500 hover:bg-purple-200 dark:hover:bg-purple-900/60',
         icon: '⭐',
         badge: 'Estratégica',
-        badgeClass: 'bg-purple-200 text-purple-800',
+        badgeClass: 'bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200',
         dotColor: 'bg-purple-500'
       };
     }
     return {
-      bg: 'bg-blue-100 text-blue-700 border-l-2 border-blue-500 hover:bg-blue-200',
-      bgLarge: 'bg-blue-100 text-blue-700 border-l-4 border-blue-500 hover:bg-blue-200',
+      bg: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 border-l-2 border-blue-500 hover:bg-blue-200 dark:hover:bg-blue-900/60',
+      bgLarge: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 border-l-4 border-blue-500 hover:bg-blue-200 dark:hover:bg-blue-900/60',
       icon: '📋',
       badge: 'Diaria',
-      badgeClass: 'bg-blue-200 text-blue-800',
+      badgeClass: 'bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200',
       dotColor: 'bg-blue-500'
     };
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completada': return 'bg-emerald-50 text-emerald-700';
-      case 'programada': return 'bg-blue-50 text-blue-700';
-      case 'cancelada': return 'bg-gray-100 text-gray-600';
-      case 'no_atendio': return 'bg-amber-50 text-amber-700';
-      default: return 'bg-purple-50 text-purple-700';
+      case 'completada': return 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300';
+      case 'programada': return 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300';
+      case 'cancelada': return 'bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300';
+      case 'no_atendio': return 'bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300';
+      default: return 'bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300';
     }
   };
 
@@ -499,7 +499,7 @@ export default function CalendarioPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando calendario...</div>
+        <div className="text-gray-500 dark:text-gray-300">Cargando calendario...</div>
       </div>
     );
   }
@@ -510,8 +510,8 @@ export default function CalendarioPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Calendario</h1>
-            <p className="text-gray-500 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Calendario</h1>
+            <p className="text-gray-500 dark:text-gray-300 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
               Gestiona tus actividades diarias, visitas y eventos estratégicos
             </p>
           </div>
@@ -563,10 +563,10 @@ export default function CalendarioPage() {
 
       {/* Visitas Pendientes */}
       {pendingVisits.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/30">
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/20">
           <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <h2 className="font-semibold text-gray-900">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <h2 className="font-semibold text-gray-900 dark:text-white">
               Visitas Vencidas
               <Badge variant="yellow" className="ml-2">{pendingVisits.length}</Badge>
             </h2>
@@ -576,14 +576,14 @@ export default function CalendarioPage() {
               <Link
                 key={visit.id}
                 href={`/calendario/${visit.id}`}
-                className="flex items-center gap-3 p-3 rounded-lg bg-amber-100/50 hover:bg-amber-100 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-lg bg-amber-100/50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
               >
-                <Clock className="h-4 w-4 text-amber-600" />
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
+                  <p className="font-medium text-gray-900 dark:text-white truncate">
                     {visit.customer?.nombre}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {format(new Date(visit.scheduled_at), "dd MMM 'a las' HH:mm", { locale: es })}
                   </p>
                 </div>
@@ -600,7 +600,7 @@ export default function CalendarioPage() {
             <Button variant="ghost" size="sm" onClick={navigatePrevious}>
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h2 className="text-sm sm:text-lg font-semibold text-gray-900 text-center truncate">
+            <h2 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white text-center truncate">
               {view === 'month'
                 ? format(currentDate, 'MMMM yyyy', { locale: es })
                 : view === 'week'
@@ -647,11 +647,11 @@ export default function CalendarioPage() {
       {view === 'month' && (
         <Card padding="none" className="hidden md:block">
           {/* Days Header */}
-          <div className="grid grid-cols-7 border-b border-gray-200">
+          <div className="grid grid-cols-7 border-b border-gray-200 dark:border-dark-500">
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
               <div
                 key={day}
-                className="p-2 lg:p-3 text-center text-xs lg:text-sm font-semibold text-gray-500 bg-gray-50"
+                className="p-2 lg:p-3 text-center text-xs lg:text-sm font-semibold text-gray-500 dark:text-gray-300 bg-gray-50 dark:bg-dark-700"
               >
                 {day}
               </div>
@@ -687,7 +687,7 @@ export default function CalendarioPage() {
                     <span
                       className={cn(
                         'text-sm font-medium',
-                        today ? 'bg-indigo-500 text-white px-2 py-0.5 rounded' : 'text-gray-900'
+                        today ? 'bg-indigo-500 text-white px-2 py-0.5 rounded' : 'text-gray-900 dark:text-white'
                       )}
                     >
                       {format(day, 'd')}
@@ -734,7 +734,7 @@ export default function CalendarioPage() {
                             href={`/calendario/${visit.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className={cn(
-                              'calendar-event block bg-gray-100 text-gray-600 border-l-2 border-gray-400'
+                              'calendar-event block bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-l-2 border-gray-400'
                             )}
                           >
                             <span className="font-medium">{formatTime(visit.scheduled_at)}</span>
@@ -792,9 +792,9 @@ export default function CalendarioPage() {
       {view === 'month' && (
         <Card padding="none" className="md:hidden">
           {/* Encabezado días */}
-          <div className="grid grid-cols-7 bg-gray-50 border-b">
+          <div className="grid grid-cols-7 bg-gray-50 dark:bg-dark-700 border-b dark:border-dark-500">
             {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-              <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500">
+              <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-300">
                 {d}
               </div>
             ))}
@@ -824,22 +824,22 @@ export default function CalendarioPage() {
                   key={index}
                   onClick={() => setSelectedDayMobile(isSelected ? null : day)}
                   className={cn(
-                    'min-h-[52px] p-1 border-r border-b cursor-pointer transition-all',
+                    'min-h-[52px] p-1 border-r border-b dark:border-dark-500 cursor-pointer transition-all',
                     (index + 1) % 7 === 0 && 'border-r-0',
-                    !isCurrentMonth && 'bg-gray-50 opacity-50',
-                    today && 'bg-indigo-50',
-                    isSelected && 'ring-2 ring-indigo-500 ring-inset bg-indigo-100'
+                    !isCurrentMonth && 'bg-gray-50 dark:bg-dark-700 opacity-50',
+                    today && 'bg-indigo-50 dark:bg-indigo-900/30',
+                    isSelected && 'ring-2 ring-indigo-500 ring-inset bg-indigo-100 dark:bg-indigo-900/50'
                   )}
                 >
                   <div className="flex flex-col items-center">
                     <span className={cn(
                       'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
-                      today ? 'bg-indigo-600 text-white' : isCurrentMonth ? 'text-gray-700' : 'text-gray-400'
+                      today ? 'bg-indigo-600 text-white' : isCurrentMonth ? 'text-gray-700 dark:text-white' : 'text-gray-400 dark:text-gray-500'
                     )}>
                       {format(day, 'd')}
                     </span>
                     {totalItems > 0 && (
-                      <span className="text-[8px] font-medium text-gray-500 bg-gray-100 px-1 rounded-full mt-0.5">
+                      <span className="text-[8px] font-medium text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-dark-500 px-1 rounded-full mt-0.5">
                         {totalItems}
                       </span>
                     )}
@@ -858,7 +858,7 @@ export default function CalendarioPage() {
           
           {/* Panel de día seleccionado */}
           {selectedDayMobile && (
-            <div className="border-t animate-in slide-in-from-top-2 duration-200">
+            <div className="border-t dark:border-dark-500 animate-in slide-in-from-top-2 duration-200">
               <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                 <div>
                   <p className="font-bold">{format(selectedDayMobile, "EEEE d 'de' MMMM", { locale: es })}</p>
@@ -881,7 +881,7 @@ export default function CalendarioPage() {
                 </button>
               </div>
               
-              <div className="p-3 max-h-[250px] overflow-y-auto bg-white">
+              <div className="p-3 max-h-[250px] overflow-y-auto bg-white dark:bg-dark-700">
                 {(() => {
                   const dayVisits = getVisitsForDay(selectedDayMobile);
                   const dayStrategic = getStrategicActivitiesForDay(selectedDayMobile);
@@ -894,8 +894,8 @@ export default function CalendarioPage() {
                   if (!hasItems) {
                     return (
                       <div className="text-center py-6">
-                        <CalendarIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500 text-sm">Sin actividades para este día</p>
+                        <CalendarIcon className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Sin actividades para este día</p>
                       </div>
                     );
                   }
@@ -912,7 +912,7 @@ export default function CalendarioPage() {
                                   <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
                                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
                                 </div>
-                                <p className="font-medium text-gray-900">{activity.titulo}</p>
+                                <p className="font-medium">{activity.titulo}</p>
                               </div>
                             );
                           })}
@@ -924,16 +924,16 @@ export default function CalendarioPage() {
                                   <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
                                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
                                 </div>
-                                <p className="font-medium text-gray-900">{activity.titulo}</p>
+                                <p className="font-medium">{activity.titulo}</p>
                               </div>
                             );
                           })}
                           {dayVisits.map((visit) => (
-                            <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 border-l-4 border-gray-400">
-                              <span className="text-xs font-bold text-gray-600">{formatTime(visit.scheduled_at)}</span>
-                              <p className="font-medium text-gray-900">{visit.customer?.nombre}</p>
+                            <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 dark:bg-dark-600 border-l-4 border-gray-400">
+                              <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{formatTime(visit.scheduled_at)}</span>
+                              <p className="font-medium text-gray-900 dark:text-white">{visit.customer?.nombre}</p>
                               {visit.customer?.direccion && (
-                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
                                   <MapPin className="h-3 w-3" />
                                   {visit.customer.direccion}
                                 </p>
@@ -948,14 +948,14 @@ export default function CalendarioPage() {
                             return (
                               <div key={`ma-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
                                 <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                                <p className="font-medium text-gray-900">{activity.titulo}</p>
+                                <p className="font-medium">{activity.titulo}</p>
                               </div>
                             );
                           })}
                           {dayVisits.map((visit) => (
                             <Link key={visit.id} href={`/calendario/${visit.id}`} className={cn('block p-3 rounded-lg', getStatusColor(visit.status))}>
                               <span className="text-xs font-bold">{formatTime(visit.scheduled_at)}</span>
-                              <p className="font-medium text-gray-900">{visit.customer?.nombre}</p>
+                              <p className="font-medium">{visit.customer?.nombre}</p>
                             </Link>
                           ))}
                         </>
@@ -972,7 +972,7 @@ export default function CalendarioPage() {
       {view === 'week' && (
         <Card padding="none">
           {/* Desktop: grid 7 columnas */}
-          <div className="hidden md:grid grid-cols-7 divide-x divide-gray-200">
+          <div className="hidden md:grid grid-cols-7 divide-x divide-gray-200 dark:divide-dark-500">
             {weekDays.map((day, index) => {
               const dayVisits = getVisitsForDay(day);
               const dayActivities = getActivitiesForDay(day);
@@ -980,12 +980,12 @@ export default function CalendarioPage() {
 
               return (
                 <div key={index} className="min-h-[400px]">
-                  <div className={cn('p-3 text-center border-b border-gray-200', today && 'bg-indigo-50')}>
-                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                  <div className={cn('p-3 text-center border-b border-gray-200 dark:border-dark-500', today && 'bg-indigo-50 dark:bg-indigo-900/30')}>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
                       {format(day, 'EEEE', { locale: es })}
                       {dayActivities.length > 0 && <Star className="h-3 w-3 text-purple-500 fill-purple-500" />}
                     </p>
-                    <p className={cn('text-xl font-bold mt-1', today ? 'text-indigo-600' : 'text-gray-900')}>
+                    <p className={cn('text-xl font-bold mt-1', today ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white')}>
                       {format(day, 'd')}
                     </p>
                   </div>
@@ -1017,7 +1017,7 @@ export default function CalendarioPage() {
                           );
                         })}
                         {dayVisits.map((visit) => (
-                          <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-2 rounded-lg text-sm bg-gray-100 text-gray-600 border-l-4 border-gray-400">
+                          <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-2 rounded-lg text-sm bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-l-4 border-gray-400">
                             <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
                             <p className="truncate">{visit.customer?.nombre}</p>
                           </Link>
@@ -1051,16 +1051,16 @@ export default function CalendarioPage() {
           {/* Móvil: Calendario con cuadros */}
           <div className="md:hidden">
             {/* Grid de encabezados */}
-            <div className="grid grid-cols-7 bg-gray-50 border-b">
+            <div className="grid grid-cols-7 bg-gray-50 dark:bg-dark-700 border-b dark:border-dark-500">
               {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-                <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500">
+                <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-300">
                   {d}
                 </div>
               ))}
             </div>
             
             {/* Grid de días */}
-            <div className="grid grid-cols-7 border-b">
+            <div className="grid grid-cols-7 border-b dark:border-dark-500">
               {weekDays.map((day, index) => {
                 const dayVisits = getVisitsForDay(day);
                 const dayStrategic = getStrategicActivitiesForDay(day);
@@ -1077,21 +1077,21 @@ export default function CalendarioPage() {
                     key={index}
                     onClick={() => setSelectedDayMobile(isSelected ? null : day)}
                     className={cn(
-                      'min-h-[70px] p-1 border-r cursor-pointer transition-all',
+                      'min-h-[70px] p-1 border-r dark:border-dark-500 cursor-pointer transition-all',
                       index === 6 && 'border-r-0',
-                      today && 'bg-indigo-50',
-                      isSelected && 'ring-2 ring-indigo-500 ring-inset bg-indigo-100'
+                      today && 'bg-indigo-50 dark:bg-indigo-900/30',
+                      isSelected && 'ring-2 ring-indigo-500 ring-inset bg-indigo-100 dark:bg-indigo-900/50'
                     )}
                   >
                     <div className="flex flex-col items-center">
                       <span className={cn(
                         'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold mb-1',
-                        today ? 'bg-indigo-600 text-white' : 'text-gray-700'
+                        today ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-white'
                       )}>
                         {format(day, 'd')}
                       </span>
                       {totalItems > 0 && (
-                        <span className="text-[9px] font-medium text-gray-500 bg-gray-100 px-1.5 rounded-full">
+                        <span className="text-[9px] font-medium text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-dark-500 px-1.5 rounded-full">
                           {totalItems}
                         </span>
                       )}
@@ -1117,7 +1117,7 @@ export default function CalendarioPage() {
             
             {/* Panel de día seleccionado */}
             {selectedDayMobile && (
-              <div className="bg-white border-t animate-in slide-in-from-top-2 duration-200">
+              <div className="bg-white dark:bg-dark-700 border-t dark:border-dark-500 animate-in slide-in-from-top-2 duration-200">
                 <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                   <div>
                     <p className="font-bold">{format(selectedDayMobile, "EEEE d 'de' MMMM", { locale: es })}</p>
@@ -1153,8 +1153,8 @@ export default function CalendarioPage() {
                     if (!hasItems) {
                       return (
                         <div className="text-center py-6">
-                          <CalendarIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">Sin actividades para este día</p>
+                          <CalendarIcon className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                          <p className="text-gray-500 dark:text-gray-400 text-sm">Sin actividades para este día</p>
                         </div>
                       );
                     }
@@ -1171,7 +1171,7 @@ export default function CalendarioPage() {
                                     <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
                                   </div>
-                                  <p className="font-medium text-gray-900">{activity.titulo}</p>
+                                  <p className="font-medium">{activity.titulo}</p>
                                 </div>
                               );
                             })}
@@ -1183,16 +1183,16 @@ export default function CalendarioPage() {
                                     <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
                                   </div>
-                                  <p className="font-medium text-gray-900">{activity.titulo}</p>
+                                  <p className="font-medium">{activity.titulo}</p>
                                 </div>
                               );
                             })}
                             {dayVisits.map((visit) => (
-                              <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 border-l-4 border-gray-400">
-                                <span className="text-xs font-bold text-gray-600">{formatTime(visit.scheduled_at)}</span>
-                                <p className="font-medium text-gray-900">{visit.customer?.nombre}</p>
+                              <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 dark:bg-dark-600 border-l-4 border-gray-400">
+                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{formatTime(visit.scheduled_at)}</span>
+                                <p className="font-medium text-gray-900 dark:text-white">{visit.customer?.nombre}</p>
                                 {visit.customer?.direccion && (
-                                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
                                     <MapPin className="h-3 w-3" />
                                     {visit.customer.direccion}
                                   </p>
@@ -1207,14 +1207,14 @@ export default function CalendarioPage() {
                               return (
                                 <div key={`wma-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
                                   <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                                  <p className="font-medium text-gray-900">{activity.titulo}</p>
+                                  <p className="font-medium">{activity.titulo}</p>
                                 </div>
                               );
                             })}
                             {dayVisits.map((visit) => (
                               <Link key={visit.id} href={`/calendario/${visit.id}`} className={cn('block p-3 rounded-lg', getStatusColor(visit.status))}>
                                 <span className="text-xs font-bold">{formatTime(visit.scheduled_at)}</span>
-                                <p className="font-medium text-gray-900">{visit.customer?.nombre}</p>
+                                <p className="font-medium">{visit.customer?.nombre}</p>
                               </Link>
                             ))}
                           </>
@@ -1253,34 +1253,34 @@ export default function CalendarioPage() {
                       className={cn(
                         'flex items-center justify-between p-3 sm:p-4 rounded-lg transition-colors cursor-pointer',
                         isStrategic 
-                          ? 'bg-purple-50 hover:bg-purple-100 border-l-4 border-purple-500' 
-                          : 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500'
+                          ? 'bg-purple-50 dark:bg-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border-l-4 border-purple-500' 
+                          : 'bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border-l-4 border-blue-500'
                       )}
                     >
                       <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                         <div className="text-center min-w-[40px] sm:min-w-[60px]">
-                          <p className="text-[10px] sm:text-xs text-gray-500">
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                             {format(new Date(activity.fecha_inicio), 'EEE', { locale: es })}
                           </p>
-                          <p className="text-base sm:text-lg font-bold text-gray-900">
+                          <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                             {format(new Date(activity.fecha_inicio), 'd')}
                           </p>
-                          <p className="text-[10px] sm:text-xs text-gray-500">
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                             {format(new Date(activity.fecha_inicio), 'MMM', { locale: es })}
                           </p>
                         </div>
-                        <div className="border-l border-gray-200 pl-2 sm:pl-4 flex-1 min-w-0">
+                        <div className="border-l border-gray-200 dark:border-dark-500 pl-2 sm:pl-4 flex-1 min-w-0">
                           <p className={cn(
                             'text-xs sm:text-sm font-semibold',
-                            isStrategic ? 'text-purple-600' : 'text-blue-600'
+                            isStrategic ? 'text-purple-600 dark:text-purple-300' : 'text-blue-600 dark:text-blue-300'
                           )}>
                             {format(new Date(activity.fecha_inicio), 'HH:mm', { locale: es })}
                           </p>
-                          <p className="text-sm font-medium text-gray-900 flex items-center gap-1 truncate">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1 truncate">
                             {isStrategic && <Star className="h-3 w-3 text-purple-500 fill-purple-500 flex-shrink-0" />}
                             {activity.titulo}
                           </p>
-                          <div className="hidden sm:flex items-center gap-3 mt-2 text-xs text-gray-500">
+                          <div className="hidden sm:flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
                             {activity.creator && (
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">Creado por:</span>
@@ -1326,7 +1326,7 @@ export default function CalendarioPage() {
                 {/* Actividades estratégicas */}
                 {activities.length > 0 && (
                   <>
-                    <h3 className="text-sm font-semibold text-purple-700 flex items-center gap-2 mb-2">
+                    <h3 className="text-sm font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2 mb-2">
                       <Star className="h-4 w-4 fill-purple-500" />
                       Actividades Estratégicas ({activities.length})
                     </h3>
@@ -1339,39 +1339,39 @@ export default function CalendarioPage() {
                           className={cn(
                             'flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer',
                             isStrategic
-                              ? 'bg-purple-50 hover:bg-purple-100 border-l-4 border-purple-500'
-                              : 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500'
+                              ? 'bg-purple-50 dark:bg-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border-l-4 border-purple-500'
+                              : 'bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border-l-4 border-blue-500'
                           )}
                         >
                           <div className="flex items-center gap-4">
                             <div className="text-center min-w-[60px]">
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {format(new Date(activity.fecha_inicio), 'EEE', { locale: es })}
                               </p>
-                              <p className="text-lg font-bold text-gray-900">
+                              <p className="text-lg font-bold text-gray-900 dark:text-white">
                                 {format(new Date(activity.fecha_inicio), 'd')}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {format(new Date(activity.fecha_inicio), 'MMM', { locale: es })}
                               </p>
                             </div>
-                            <div className="border-l border-gray-200 pl-4 flex-1 min-w-0">
+                            <div className="border-l border-gray-200 dark:border-dark-500 pl-4 flex-1 min-w-0">
                               <p className={cn(
                                 'font-semibold',
-                                isStrategic ? 'text-purple-600' : 'text-blue-600'
+                                isStrategic ? 'text-purple-600 dark:text-purple-300' : 'text-blue-600 dark:text-blue-300'
                               )}>
                                 {format(new Date(activity.fecha_inicio), 'HH:mm', { locale: es })}
                               </p>
-                              <p className="font-medium text-gray-900 flex items-center gap-1">
+                              <p className="font-medium text-gray-900 dark:text-white flex items-center gap-1">
                                 {isStrategic && <Star className="h-3 w-3 text-purple-500 fill-purple-500" />}
                                 {activity.titulo}
                               </p>
                               {activity.descripcion && (
-                                <p className="text-sm text-gray-500 mt-1 line-clamp-1">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
                                   {activity.descripcion}
                                 </p>
                               )}
-                              <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
                                 {activity.creator && (
                                   <span className="flex items-center gap-1">
                                     <span className="font-medium">Creado por:</span>
@@ -1405,7 +1405,7 @@ export default function CalendarioPage() {
                 {/* Visitas */}
                 {visits.length > 0 && (
                   <>
-                    <h3 className="text-sm font-semibold text-indigo-700 flex items-center gap-2 mt-4 mb-2">
+                    <h3 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-2 mt-4 mb-2">
                       <CalendarIcon className="h-4 w-4" />
                       Visitas ({visits.length})
                     </h3>
@@ -1413,29 +1413,29 @@ export default function CalendarioPage() {
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
-                        className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                        className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-dark-600 hover:bg-gray-100 dark:hover:bg-dark-500 transition-colors"
                       >
                         <div className="flex items-center gap-4">
                           <div className="text-center min-w-[60px]">
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {format(new Date(visit.scheduled_at), 'EEE', { locale: es })}
                             </p>
-                            <p className="text-lg font-bold text-gray-900">
+                            <p className="text-lg font-bold text-gray-900 dark:text-white">
                               {format(new Date(visit.scheduled_at), 'd')}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {format(new Date(visit.scheduled_at), 'MMM', { locale: es })}
                             </p>
                           </div>
-                          <div className="border-l border-gray-200 pl-4">
-                            <p className="font-semibold text-indigo-600">
+                          <div className="border-l border-gray-200 dark:border-dark-500 pl-4">
+                            <p className="font-semibold text-indigo-600 dark:text-indigo-400">
                               {formatTime(visit.scheduled_at)}
                             </p>
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-gray-900 dark:text-white">
                               {visit.customer?.nombre}
                             </p>
                             {visit.objetivo && (
-                              <p className="text-sm text-gray-500 mt-1">
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 {visit.objetivo}
                               </p>
                             )}
@@ -1464,7 +1464,7 @@ export default function CalendarioPage() {
       {selectedDate && view === 'month' && (
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">
+            <h3 className="font-semibold text-gray-900 dark:text-white">
               {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
             </h3>
             {canManageDailyActivities ? (
@@ -1486,7 +1486,7 @@ export default function CalendarioPage() {
               {/* Actividades Estratégicas */}
               {getStrategicActivitiesForDay(selectedDate).length > 0 && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center gap-1">
+                  <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-1">
                     <Star className="h-4 w-4 fill-purple-500" />
                     Actividades Estratégicas ({getStrategicActivitiesForDay(selectedDate).length})
                   </h4>
@@ -1495,26 +1495,26 @@ export default function CalendarioPage() {
                       <div
                         key={activity.id}
                         onClick={() => openActivityDetail(activity)}
-                        className="block p-4 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-100 transition-colors"
+                        className="block p-4 rounded-lg bg-purple-50 dark:bg-purple-900/40 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-purple-700">
+                              <p className="font-semibold text-purple-700 dark:text-purple-300">
                                 {format(new Date(activity.fecha_inicio), 'HH:mm')}
                               </p>
                               {activity.fecha_fin && (
-                                <span className="text-xs text-purple-600">
+                                <span className="text-xs text-purple-600 dark:text-purple-400">
                                   - {format(new Date(activity.fecha_fin), 'HH:mm')}
                                 </span>
                               )}
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-medium">Estratégica</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 font-medium">Estratégica</span>
                             </div>
-                            <p className="font-medium text-gray-900 mb-1">{activity.titulo}</p>
+                            <p className="font-medium text-gray-900 dark:text-white mb-1">{activity.titulo}</p>
                             {activity.descripcion && (
-                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{activity.descripcion}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">{activity.descripcion}</p>
                             )}
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-2">
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
                               {activity.creator && (
                                 <span className="flex items-center gap-1">
                                   <span className="font-medium">Creado por:</span>
@@ -1526,7 +1526,7 @@ export default function CalendarioPage() {
                                   <Users className="h-3 w-3" />
                                   <span>{activity.participants.length} involucrado{activity.participants.length > 1 ? 's' : ''}</span>
                                   {activity.participants.length <= 2 && (
-                                    <span className="text-gray-400">
+                                    <span className="text-gray-400 dark:text-gray-500">
                                       ({activity.participants.map(p => p.user_profile?.nombre_completo || 'Usuario').join(', ')})
                                     </span>
                                   )}
@@ -1539,7 +1539,7 @@ export default function CalendarioPage() {
                                 </span>
                               )}
                               {activity.es_virtual && activity.enlace_reunion && (
-                                <span className="flex items-center gap-1 text-purple-600">
+                                <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
                                   <Video className="h-3 w-3" />
                                   <span>Virtual</span>
                                 </span>
@@ -1557,10 +1557,10 @@ export default function CalendarioPage() {
                               {activity.estado}
                             </Badge>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              activity.prioridad === 'urgente' ? 'bg-red-100 text-red-700' :
-                              activity.prioridad === 'alta' ? 'bg-orange-100 text-orange-700' :
-                              activity.prioridad === 'media' ? 'bg-blue-100 text-blue-700' :
-                              'bg-gray-100 text-gray-700'
+                              activity.prioridad === 'urgente' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' :
+                              activity.prioridad === 'alta' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' :
+                              activity.prioridad === 'media' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                              'bg-gray-100 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300'
                             }`}>
                               {activity.prioridad}
                             </span>
@@ -1574,7 +1574,7 @@ export default function CalendarioPage() {
               {/* Actividades Diarias */}
               {getDailyActivitiesForDay(selectedDate).length > 0 && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-blue-700 mb-3 flex items-center gap-1">
+                  <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3 flex items-center gap-1">
                     📋 Actividades Diarias ({getDailyActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-3">
@@ -1582,26 +1582,26 @@ export default function CalendarioPage() {
                       <div
                         key={activity.id}
                         onClick={() => openActivityDetail(activity)}
-                        className="block p-4 rounded-lg bg-blue-50 border-l-4 border-blue-500 cursor-pointer hover:bg-blue-100 transition-colors"
+                        className="block p-4 rounded-lg bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-blue-700">
+                              <p className="font-semibold text-blue-700 dark:text-blue-300">
                                 {format(new Date(activity.fecha_inicio), 'HH:mm')}
                               </p>
                               {activity.fecha_fin && (
-                                <span className="text-xs text-blue-600">
+                                <span className="text-xs text-blue-600 dark:text-blue-400">
                                   - {format(new Date(activity.fecha_fin), 'HH:mm')}
                                 </span>
                               )}
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-200 text-blue-800 font-medium">Diaria</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 font-medium">Diaria</span>
                             </div>
-                            <p className="font-medium text-gray-900 mb-1">{activity.titulo}</p>
+                            <p className="font-medium text-gray-900 dark:text-white mb-1">{activity.titulo}</p>
                             {activity.descripcion && (
-                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{activity.descripcion}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">{activity.descripcion}</p>
                             )}
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-2">
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
                               {activity.creator && (
                                 <span className="flex items-center gap-1">
                                   <span className="font-medium">Creado por:</span>
@@ -1613,7 +1613,7 @@ export default function CalendarioPage() {
                                   <Users className="h-3 w-3" />
                                   <span>{activity.participants.length} involucrado{activity.participants.length > 1 ? 's' : ''}</span>
                                   {activity.participants.length <= 2 && (
-                                    <span className="text-gray-400">
+                                    <span className="text-gray-400 dark:text-gray-500">
                                       ({activity.participants.map(p => p.user_profile?.nombre_completo || 'Usuario').join(', ')})
                                     </span>
                                   )}
@@ -1626,7 +1626,7 @@ export default function CalendarioPage() {
                                 </span>
                               )}
                               {activity.es_virtual && activity.enlace_reunion && (
-                                <span className="flex items-center gap-1 text-blue-600">
+                                <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                                   <Video className="h-3 w-3" />
                                   <span>Virtual</span>
                                 </span>
@@ -1644,10 +1644,10 @@ export default function CalendarioPage() {
                               {activity.estado}
                             </Badge>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              activity.prioridad === 'urgente' ? 'bg-red-100 text-red-700' :
-                              activity.prioridad === 'alta' ? 'bg-orange-100 text-orange-700' :
-                              activity.prioridad === 'media' ? 'bg-blue-100 text-blue-700' :
-                              'bg-gray-100 text-gray-700'
+                              activity.prioridad === 'urgente' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' :
+                              activity.prioridad === 'alta' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' :
+                              activity.prioridad === 'media' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                              'bg-gray-100 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300'
                             }`}>
                               {activity.prioridad}
                             </span>
@@ -1661,13 +1661,13 @@ export default function CalendarioPage() {
               {/* Visitas (secundario) */}
               {getVisitsForDay(selectedDate).length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-600 mb-2">Visitas</h4>
+                  <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Visitas</h4>
                   <div className="space-y-2">
                     {getVisitsForDay(selectedDate).map((visit) => (
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
-                        className="flex items-center justify-between p-3 rounded-lg bg-gray-100 text-gray-600"
+                        className="flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-300"
                       >
                         <div>
                           <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
@@ -1679,7 +1679,7 @@ export default function CalendarioPage() {
                 </div>
               )}
               {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && (
-                <p className="text-center text-gray-500 py-4">
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
                   No hay actividades para este día
                 </p>
               )}
@@ -1689,7 +1689,7 @@ export default function CalendarioPage() {
               {/* Actividades Estratégicas para vendedores */}
               {getActivitiesForDay(selectedDate).length > 0 && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center gap-1">
+                  <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-1">
                     <Star className="h-4 w-4 fill-purple-500" />
                     Mis Actividades Estratégicas ({getActivitiesForDay(selectedDate).length})
                   </h4>

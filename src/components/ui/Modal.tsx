@@ -49,8 +49,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', n
     >
       <div
         className={cn(
-          'bg-white w-full flex flex-col',
-          'rounded-t-2xl sm:rounded-2xl shadow-2xl border-0 sm:border border-gray-200/50',
+          'bg-white dark:bg-dark-700 w-full flex flex-col',
+          'rounded-t-2xl sm:rounded-2xl shadow-2xl border-0 sm:border border-gray-200/50 dark:border-dark-500',
           'max-h-[92vh] sm:max-h-[90vh]',
           'transform transition-all duration-200 ease-out',
           'animate-in fade-in-0 slide-in-from-bottom-4 sm:zoom-in-95',
@@ -58,13 +58,13 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', n
         )}
       >
         {title && (
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
-            <h2 className="text-base sm:text-xl font-semibold text-gray-900 truncate pr-2">{title}</h2>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 dark:border-dark-500 flex-shrink-0">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900 dark:text-white truncate pr-2">{title}</h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors group flex-shrink-0"
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors group flex-shrink-0"
             >
-              <X className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              <X className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white transition-colors" />
             </button>
           </div>
         )}

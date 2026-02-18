@@ -64,11 +64,11 @@ const tipoLabels: Record<ActivityType, string> = {
 };
 
 const tipoColors: Record<ActivityType, string> = {
-  reunion: 'bg-blue-100 text-blue-700',
-  tarea: 'bg-purple-100 text-purple-700',
-  seguimiento: 'bg-amber-100 text-amber-700',
-  capacitacion: 'bg-green-100 text-green-700',
-  otro: 'bg-gray-100 text-gray-700'
+  reunion: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+  tarea: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
+  seguimiento: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+  capacitacion: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  otro: 'bg-gray-100 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300'
 };
 
 const prioridadLabels: Record<ActivityPriority, string> = {
@@ -79,10 +79,10 @@ const prioridadLabels: Record<ActivityPriority, string> = {
 };
 
 const prioridadColors: Record<ActivityPriority, string> = {
-  baja: 'bg-gray-100 text-gray-600',
-  media: 'bg-blue-100 text-blue-600',
-  alta: 'bg-orange-100 text-orange-600',
-  urgente: 'bg-red-100 text-red-600'
+  baja: 'bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300',
+  media: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300',
+  alta: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300',
+  urgente: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300'
 };
 
 const estadoLabels: Record<ActivityStatus, string> = {
@@ -93,10 +93,10 @@ const estadoLabels: Record<ActivityStatus, string> = {
 };
 
 const estadoColors: Record<ActivityStatus, { bg: string; border: string; text: string }> = {
-  planificacion: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' },
-  haciendo: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
-  realizado: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' },
-  cancelado: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' }
+  planificacion: { bg: 'bg-slate-50 dark:bg-slate-800/50', border: 'border-slate-200 dark:border-slate-700', text: 'text-slate-700 dark:text-slate-300' },
+  haciendo: { bg: 'bg-blue-50 dark:bg-blue-900/30', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-300' },
+  realizado: { bg: 'bg-green-50 dark:bg-green-900/30', border: 'border-green-200 dark:border-green-800', text: 'text-green-700 dark:text-green-300' },
+  cancelado: { bg: 'bg-red-50 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-300' }
 };
 
 // Opciones de recurrencia tipo Google Calendar
@@ -492,7 +492,7 @@ export default function ActividadesPage() {
   // Activity Card Component
   const ActivityCard = ({ activity, compact = false }: { activity: Activity; compact?: boolean }) => (
     <div 
-      className={`bg-white rounded-lg border shadow-sm p-3 cursor-pointer hover:shadow-md transition-shadow ${
+      className={`bg-white dark:bg-dark-600 rounded-lg border border-gray-200 dark:border-dark-500 shadow-sm p-3 cursor-pointer hover:shadow-md transition-shadow ${
         compact ? 'p-2' : ''
       }`}
       onClick={() => openActivityDetail(activity)}
@@ -506,15 +506,15 @@ export default function ActividadesPage() {
         </span>
       </div>
       
-      <h4 className={`font-medium text-gray-900 ${compact ? 'text-sm' : ''} line-clamp-2`}>
+      <h4 className={`font-medium text-gray-900 dark:text-white ${compact ? 'text-sm' : ''} line-clamp-2`}>
         {activity.titulo}
       </h4>
       
       {!compact && activity.descripcion && (
-        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{activity.descripcion}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{activity.descripcion}</p>
       )}
       
-      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
         <span className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {format(parseISO(activity.fecha_inicio), 'HH:mm', { locale: es })}
@@ -528,7 +528,7 @@ export default function ActividadesPage() {
         )}
         
         {activity.es_virtual ? (
-          <Video className="h-3 w-3 text-blue-500" />
+          <Video className="h-3 w-3 text-blue-500 dark:text-blue-400" />
         ) : activity.ubicacion && (
           <MapPin className="h-3 w-3" />
         )}
@@ -536,9 +536,9 @@ export default function ActividadesPage() {
       
       {/* Información del creador */}
       {activity.creator && (
-        <div className="mt-2 pt-2 border-t border-gray-100">
-          <div className="text-xs text-gray-500">
-            <span className="text-gray-700">{activity.creator.nombre_completo}</span>
+        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-dark-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-gray-700 dark:text-gray-300">{activity.creator.nombre_completo}</span>
           </div>
         </div>
       )}
@@ -587,8 +587,8 @@ export default function ActividadesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Actividades Estratégicas</h1>
-          <p className="text-gray-500 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Actividades Estratégicas</h1>
+          <p className="text-gray-500 dark:text-gray-300 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
             {isSupervisorN1
               ? 'Gestiona y supervisa reuniones, capacitaciones y seguimientos del equipo'
               : 'Gestiona reuniones, capacitaciones y seguimientos con tu equipo'}
@@ -610,7 +610,7 @@ export default function ActividadesPage() {
               <p className={`text-sm font-medium ${estadoColors[col.status].text}`}>
                 {estadoLabels[col.status]}
               </p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{col.activities.length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{col.activities.length}</p>
             </div>
           </Card>
         ))}
@@ -625,27 +625,27 @@ export default function ActividadesPage() {
                 <p className={`text-sm font-medium ${estadoColors.realizado.text}`}>
                   {estadoLabels.realizado}
                 </p>
-                <button className="p-1 hover:bg-green-100 rounded-lg transition-colors">
+                <button className="p-1 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-lg transition-colors">
                   {showRealizados ? (
-                    <Minus className="h-4 w-4 text-green-600" />
+                    <Minus className="h-4 w-4 text-green-600 dark:text-green-400" />
                   ) : (
-                    <Plus className="h-4 w-4 text-green-600" />
+                    <Plus className="h-4 w-4 text-green-600 dark:text-green-400" />
                   )}
                 </button>
               </div>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                 {filteredActivities.filter(a => a.estado === 'realizado').length}
               </p>
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
                 {showRealizados ? 'Clic para ocultar' : 'Clic para ver'}
               </p>
             </div>
           </div>
         )}
-        <Card className="bg-gray-50 border border-gray-200">
+        <Card className="bg-gray-50 dark:bg-dark-600 border border-gray-200 dark:border-dark-500">
           <div className="p-4">
-            <p className="text-sm font-medium text-gray-600">Total</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{filteredActivities.length}</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{filteredActivities.length}</p>
           </div>
         </Card>
       </div>
@@ -687,14 +687,14 @@ export default function ActividadesPage() {
               placeholder="Buscar..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full sm:w-48"
+              className="pl-9 pr-4 py-2 border border-gray-200 dark:border-dark-500 rounded-lg text-sm w-full sm:w-48 bg-white dark:bg-dark-600 text-gray-900 dark:text-white"
             />
           </div>
 
           <select
             value={filterTipo}
             onChange={e => setFilterTipo(e.target.value as ActivityType | '')}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border border-gray-200 dark:border-dark-500 rounded-lg text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white"
           >
             <option value="">Todos los tipos</option>
             <option value="reunion">Reunión</option>
@@ -705,7 +705,7 @@ export default function ActividadesPage() {
           <select
             value={filterPrioridad}
             onChange={e => setFilterPrioridad(e.target.value as ActivityPriority | '')}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border border-gray-200 dark:border-dark-500 rounded-lg text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white"
           >
             <option value="">Todas las prioridades</option>
             {Object.entries(prioridadLabels).map(([value, label]) => (
@@ -718,7 +718,7 @@ export default function ActividadesPage() {
             <select
               value={filterPersona}
               onChange={e => setFilterPersona(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-sm bg-purple-50 border-purple-200"
+              className="px-3 py-2 border rounded-lg text-sm bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-gray-900 dark:text-white"
             >
               <option value="">👥 Todas las personas</option>
               {users.map(user => (
@@ -752,14 +752,14 @@ export default function ActividadesPage() {
                   {estadoLabels[column.status]}
                 </h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">{column.activities.length}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{column.activities.length}</span>
                   {column.status === 'realizado' && (
                     <button
                       onClick={() => setShowRealizados(false)}
-                      className="p-1 hover:bg-green-100 rounded-lg transition-colors"
+                      className="p-1 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-lg transition-colors"
                       title="Ocultar Realizados"
                     >
-                      <Minus className="h-4 w-4 text-green-600" />
+                      <Minus className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </button>
                   )}
                 </div>
@@ -767,7 +767,7 @@ export default function ActividadesPage() {
               
               <div className="space-y-3">
                 {column.activities.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-sm">
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
                     Sin actividades
                   </div>
                 ) : (
@@ -777,11 +777,11 @@ export default function ActividadesPage() {
                       
                       {/* Quick status change buttons */}
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="flex gap-1 bg-white rounded-lg shadow-lg p-1">
+                        <div className="flex gap-1 bg-white dark:bg-dark-600 rounded-lg shadow-lg p-1">
                           {column.status !== 'planificacion' && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleStatusChange(activity.id, 'planificacion'); }}
-                              className="p-1 hover:bg-gray-100 rounded"
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-500 rounded"
                               title="Mover a Planificación"
                             >
                               <Circle className="h-4 w-4 text-slate-500" />
@@ -790,19 +790,19 @@ export default function ActividadesPage() {
                           {column.status !== 'haciendo' && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleStatusChange(activity.id, 'haciendo'); }}
-                              className="p-1 hover:bg-gray-100 rounded"
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-500 rounded"
                               title="Mover a En Progreso"
                             >
-                              <AlertCircle className="h-4 w-4 text-blue-500" />
+                              <AlertCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                             </button>
                           )}
                           {column.status !== 'realizado' && isSupervisorN1 && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleStatusChange(activity.id, 'realizado'); }}
-                              className="p-1 hover:bg-gray-100 rounded"
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-500 rounded"
                               title="Marcar como Realizado (Solo Supervisor N1)"
                             >
-                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
                             </button>
                           )}
                         </div>

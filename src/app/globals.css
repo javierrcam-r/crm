@@ -38,6 +38,46 @@
   --color-info-soft: #dbeafe;
 }
 
+/* =====================================================
+   TEMA OSCURO - Azul profundo para cuidar los ojos
+   ===================================================== */
+.dark {
+  /* Colores principales - Azul muy oscuro */
+  --color-bg-primary: #0a1929;
+  --color-bg-secondary: #0d2137;
+  --color-bg-tertiary: #132f4c;
+  --color-bg-card: #0d2137;
+  
+  /* Acentos */
+  --color-accent-primary: #5c9eff;
+  --color-accent-secondary: #90caf9;
+  --color-accent-soft: #1a3a5c;
+  
+  /* Texto - Alta legibilidad */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b8c7d9;
+  --color-text-muted: #7a8fa6;
+  
+  /* Bordes */
+  --color-border: #1e3a5c;
+  --color-border-soft: #132f4c;
+  
+  /* Estados */
+  --color-success: #4ade80;
+  --color-success-soft: #0d3321;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #422006;
+  --color-error: #f87171;
+  --color-error-soft: #450a0a;
+  --color-info: #60a5fa;
+  --color-info-soft: #0c2d4d;
+}
+
+.dark body {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -72,6 +112,14 @@ body {
   background: #94a3b8;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Scrollbar delgada para sidebar */
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;
@@ -90,10 +138,22 @@ body {
   background: #cbd5e1;
 }
 
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Firefox scrollbar */
 .scrollbar-thin {
   scrollbar-width: thin;
   scrollbar-color: #e2e8f0 transparent;
+}
+
+.dark .scrollbar-thin {
+  scrollbar-color: #475569 transparent;
 }
 
 /* =====================================================
@@ -105,6 +165,11 @@ body {
   .card {
     @apply bg-white border border-gray-100 rounded-2xl;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  }
+  
+  .dark .card {
+    @apply bg-[#0d2137] border-[#1e3a5c];
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
   
   .card-hover {
@@ -119,17 +184,21 @@ body {
   /* Botones */
   .btn {
     @apply px-4 py-2.5 rounded-xl font-medium transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#0a1929];
   }
   
   .btn-primary {
-    @apply bg-indigo-500 text-white hover:bg-indigo-600;
+    @apply bg-indigo-500 text-white hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-500;
     @apply focus:ring-indigo-500;
   }
   
   .btn-secondary {
     @apply bg-white text-gray-700 hover:bg-gray-50 border border-gray-200;
     @apply focus:ring-gray-300;
+  }
+  
+  .dark .btn-secondary {
+    @apply bg-[#132f4c] text-white hover:bg-[#1e3a5c] border-[#1e3a5c];
   }
   
   .btn-success {
@@ -145,6 +214,10 @@ body {
   .btn-ghost {
     @apply bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900;
   }
+  
+  .dark .btn-ghost {
+    @apply text-white hover:bg-[#132f4c] hover:text-white;
+  }
 
   /* Inputs */
   .input {
@@ -154,13 +227,29 @@ body {
     @apply transition-all duration-200;
   }
   
+  .dark .input {
+    @apply bg-[#132f4c] border-[#1e3a5c] text-white placeholder-gray-400;
+  }
+  
+  .dark .input:focus {
+    @apply border-indigo-500 ring-indigo-900/50;
+  }
+  
   .input-error {
     @apply border-red-300 focus:border-red-400 focus:ring-red-100;
+  }
+  
+  .dark .input-error {
+    @apply border-red-500;
   }
 
   /* Labels */
   .label {
     @apply block text-sm font-medium text-gray-600 mb-1.5;
+  }
+  
+  .dark .label {
+    @apply text-gray-200;
   }
 
   /* Badges */
@@ -169,32 +258,36 @@ body {
   }
   
   .badge-blue {
-    @apply bg-blue-50 text-blue-700;
+    @apply bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
   }
   
   .badge-green {
-    @apply bg-emerald-50 text-emerald-700;
+    @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400;
   }
   
   .badge-yellow {
-    @apply bg-amber-50 text-amber-700;
+    @apply bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
   }
   
   .badge-red {
-    @apply bg-red-50 text-red-700;
+    @apply bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400;
   }
   
   .badge-purple {
-    @apply bg-purple-50 text-purple-700;
+    @apply bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400;
   }
   
   .badge-gray {
-    @apply bg-gray-100 text-gray-600;
+    @apply bg-gray-100 text-gray-600 dark:bg-[#132f4c] dark:text-gray-200;
   }
 
   /* Tables */
   .table-container {
     @apply overflow-x-auto rounded-xl border border-gray-100 bg-white;
+  }
+  
+  .dark .table-container {
+    @apply border-[#1e3a5c] bg-[#0d2137];
   }
   
   .table {
@@ -206,12 +299,24 @@ body {
     @apply bg-gray-50/50 border-b border-gray-100;
   }
   
+  .dark .table th {
+    @apply text-gray-300 bg-[#0a1929] border-[#1e3a5c];
+  }
+  
   .table td {
     @apply px-4 py-3.5 border-b border-gray-50;
   }
   
+  .dark .table td {
+    @apply border-[#1e3a5c]/50 text-white;
+  }
+  
   .table tr:hover td {
     @apply bg-gray-50/50;
+  }
+  
+  .dark .table tr:hover td {
+    @apply bg-[#132f4c]/50;
   }
   
   .table tr:last-child td {
@@ -228,6 +333,10 @@ body {
     @apply bg-white rounded-2xl shadow-2xl border border-gray-100;
     @apply max-h-[90vh] overflow-auto;
   }
+  
+  .dark .modal {
+    @apply bg-[#0d2137] border-[#1e3a5c];
+  }
 
   /* Sidebar */
   .sidebar {
@@ -235,13 +344,25 @@ body {
     @apply flex flex-col z-40;
   }
   
+  .dark .sidebar {
+    @apply bg-[#0a1929] border-[#1e3a5c];
+  }
+  
   .sidebar-link {
     @apply flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl mx-2;
     @apply hover:bg-gray-50 hover:text-gray-900 transition-all duration-200;
   }
   
+  .dark .sidebar-link {
+    @apply text-gray-300 hover:bg-[#132f4c] hover:text-white;
+  }
+  
   .sidebar-link-active {
     @apply bg-indigo-50 text-indigo-700 font-medium;
+  }
+  
+  .dark .sidebar-link-active {
+    @apply bg-indigo-900/40 text-indigo-300;
   }
 
   /* Stats cards */
@@ -253,8 +374,16 @@ body {
     @apply text-2xl font-bold text-gray-900;
   }
   
+  .dark .stat-value {
+    @apply text-white;
+  }
+  
   .stat-label {
     @apply text-sm text-gray-500;
+  }
+  
+  .dark .stat-label {
+    @apply text-gray-300;
   }
 
   /* Empty state */
@@ -266,17 +395,33 @@ body {
     @apply mx-auto h-12 w-12 text-gray-300;
   }
   
+  .dark .empty-state-icon {
+    @apply text-gray-500;
+  }
+  
   .empty-state-title {
     @apply mt-4 text-lg font-semibold text-gray-900;
+  }
+  
+  .dark .empty-state-title {
+    @apply text-white;
   }
   
   .empty-state-text {
     @apply mt-2 text-gray-500;
   }
+  
+  .dark .empty-state-text {
+    @apply text-gray-300;
+  }
 
   /* Loading */
   .loading-spinner {
     @apply animate-spin h-5 w-5 text-indigo-500;
+  }
+  
+  .dark .loading-spinner {
+    @apply text-indigo-400;
   }
 }
 
@@ -318,8 +463,16 @@ body {
   @apply hover:bg-gray-50 transition-colors cursor-pointer;
 }
 
+.dark .calendar-day {
+  @apply border-[#1e3a5c] bg-[#0d2137] hover:bg-[#132f4c];
+}
+
 .calendar-day-today {
   @apply bg-indigo-50/50 border-indigo-200;
+}
+
+.dark .calendar-day-today {
+  @apply bg-indigo-900/30 border-indigo-500/50;
 }
 
 .calendar-day-other-month {
@@ -680,4 +833,33 @@ body {
 
 .animate-shimmer {
   animation: shimmer 2s ease-in-out infinite;
+}
+
+/* =====================================================
+   DARK MODE - Override global para fondos y textos
+   ===================================================== */
+
+@layer utilities {
+  /* Fondos claros se convierten en azules oscuros en dark mode */
+  .dark-bg-override {
+    @apply dark:!bg-[#0d2137];
+  }
+}
+
+/* Override global de fondos grises en dark mode - NO usar @apply aquí */
+:is(.dark) [class*="bg-gray-50"]:not([class*="dark:"]) {
+  background-color: #0d2137;
+}
+
+:is(.dark) [class*="bg-gray-100"]:not([class*="dark:"]) {
+  background-color: #132f4c;
+}
+
+/* Bordes en dark mode */
+:is(.dark) [class*="border-gray-100"]:not([class*="dark:"]) {
+  border-color: #1e3a5c;
+}
+
+:is(.dark) [class*="border-gray-200"]:not([class*="dark:"]) {
+  border-color: #1e3a5c;
 }

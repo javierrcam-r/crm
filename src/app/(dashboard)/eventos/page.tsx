@@ -16,10 +16,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const statusConfig: Record<EventStatus, { label: string; color: string; bg: string }> = {
-  planeado: { label: 'Planeado', color: 'text-blue-700', bg: 'bg-blue-100' },
-  en_ejecucion: { label: 'En Ejecución', color: 'text-amber-700', bg: 'bg-amber-100' },
-  finalizado: { label: 'Finalizado', color: 'text-green-700', bg: 'bg-green-100' },
-  cancelado: { label: 'Cancelado', color: 'text-red-700', bg: 'bg-red-100' },
+  planeado: { label: 'Planeado', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-100 dark:bg-blue-900/40' },
+  en_ejecucion: { label: 'En Ejecución', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/40' },
+  finalizado: { label: 'Finalizado', color: 'text-green-700 dark:text-green-300', bg: 'bg-green-100 dark:bg-green-900/40' },
+  cancelado: { label: 'Cancelado', color: 'text-red-700 dark:text-red-300', bg: 'bg-red-100 dark:bg-red-900/40' },
 };
 
 const typeLabels: Record<EventType, string> = {
@@ -82,9 +82,9 @@ export default function EventosPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md text-center p-8">
-          <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Acceso Denegado</h2>
-          <p className="text-gray-600">Solo supervisores pueden acceder a este módulo.</p>
+          <BarChart3 className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Acceso Denegado</h2>
+          <p className="text-gray-600 dark:text-gray-300">Solo supervisores pueden acceder a este módulo.</p>
         </Card>
       </div>
     );
@@ -95,12 +95,12 @@ export default function EventosPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Calendar className="h-6 w-6 sm:h-7 sm:w-7 text-indigo-600" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Calendar className="h-6 w-6 sm:h-7 sm:w-7 text-indigo-600 dark:text-indigo-400" />
             <span className="hidden sm:inline">Gestión de Eventos</span>
             <span className="sm:hidden">Eventos</span>
           </h1>
-          <p className="text-gray-500 mt-1">{isSupervisor ? 'Planifica, ejecuta y monitorea eventos con control financiero' : 'Eventos en los que participas'}</p>
+          <p className="text-gray-500 dark:text-gray-300 mt-1">{isSupervisor ? 'Planifica, ejecuta y monitorea eventos con control financiero' : 'Eventos en los que participas'}</p>
         </div>
         {isSupervisor && (
           <Link href="/eventos/nuevo">
@@ -114,37 +114,37 @@ export default function EventosPage() {
 
       {/* Stats */}
       <div className={`grid gap-4 ${isSupervisor ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3'}`}>
-        <Card className="bg-indigo-50 border border-indigo-200">
+        <Card className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800">
           <div className="p-4">
-            <p className="text-xs font-medium text-indigo-600 uppercase">Total</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+            <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase">Total</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
           </div>
         </Card>
         {isSupervisor && (
-          <Card className="bg-blue-50 border border-blue-200">
+          <Card className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
             <div className="p-4">
-              <p className="text-xs font-medium text-blue-600 uppercase">Planeados</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.planeados}</p>
+              <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">Planeados</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.planeados}</p>
             </div>
           </Card>
         )}
-        <Card className="bg-amber-50 border border-amber-200">
+        <Card className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
           <div className="p-4">
-            <p className="text-xs font-medium text-amber-600 uppercase">En Ejecución</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.enEjecucion}</p>
+            <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase">En Ejecución</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.enEjecucion}</p>
           </div>
         </Card>
-        <Card className="bg-green-50 border border-green-200">
+        <Card className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
           <div className="p-4">
-            <p className="text-xs font-medium text-green-600 uppercase">Finalizados</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.finalizados}</p>
+            <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase">Finalizados</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.finalizados}</p>
           </div>
         </Card>
         {isSupervisor && (
-          <Card className="bg-purple-50 border border-purple-200">
+          <Card className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800">
             <div className="p-4">
-              <p className="text-xs font-medium text-purple-600 uppercase">Presupuesto</p>
-              <p className="text-lg font-bold text-gray-900 mt-1">${stats.presupuestoTotal.toLocaleString()}</p>
+              <p className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase">Presupuesto</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">${stats.presupuestoTotal.toLocaleString()}</p>
             </div>
           </Card>
         )}
@@ -154,20 +154,20 @@ export default function EventosPage() {
       <Card>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
             <input
               type="text"
               placeholder="Buscar evento..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="px-3 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white">
             <option value="">Todos los estados</option>
             {Object.entries(statusConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
-          <select value={filterType} onChange={e => setFilterType(e.target.value as any)} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white">
+          <select value={filterType} onChange={e => setFilterType(e.target.value as any)} className="px-3 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white">
             <option value="">Todos los tipos</option>
             {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
@@ -178,13 +178,13 @@ export default function EventosPage() {
       {/* Events Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
         </div>
       ) : filtered.length === 0 ? (
         <Card className="text-center py-16">
-          <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay eventos</h3>
-          <p className="text-gray-500 mb-4">{isSupervisor ? 'Crea tu primer evento para empezar' : 'No tienes eventos asignados'}</p>
+          <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No hay eventos</h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">{isSupervisor ? 'Crea tu primer evento para empezar' : 'No tienes eventos asignados'}</p>
           {isSupervisor && <Link href="/eventos/nuevo"><Button><Plus className="h-4 w-4 mr-2" />Crear Evento</Button></Link>}
         </Card>
       ) : (
@@ -198,35 +198,35 @@ export default function EventosPage() {
                   <div className="p-5 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 text-lg line-clamp-1">{event.nombre}</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-lg line-clamp-1">{event.nombre}</h3>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.color} font-medium`}>{sc.label}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{typeLabels[event.tipo]}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-dark-500 text-gray-600 dark:text-gray-300">{typeLabels[event.tipo]}</span>
                         </div>
                       </div>
-                      <ModalIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                      <ModalIcon className="h-5 w-5 text-gray-400 dark:text-gray-400 flex-shrink-0" />
                     </div>
                     
-                    {event.objetivo && <p className="text-sm text-gray-600 line-clamp-2">{event.objetivo}</p>}
+                    {event.objetivo && <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{event.objetivo}</p>}
                     
                     {(event as any).marcas && (event as any).marcas.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {(event as any).marcas.map((m: string) => (
-                          <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{m}</span>
+                          <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">{m}</span>
                         ))}
                       </div>
                     )}
                     
-                    <div className="flex flex-col gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                    <div className="flex flex-col gap-2 text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-dark-500">
                       <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5 text-green-500" />
-                        <span className="font-medium text-gray-600">Inicio:</span>
+                        <Calendar className="h-3.5 w-3.5 text-green-500 dark:text-green-400" />
+                        <span className="font-medium text-gray-600 dark:text-gray-300">Inicio:</span>
                         {format(new Date(event.fecha_inicio), "d MMM yyyy, HH:mm", { locale: es })}
                       </div>
                       {event.fecha_fin && (
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5 text-red-500" />
-                          <span className="font-medium text-gray-600">Fin:</span>
+                          <Calendar className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
+                          <span className="font-medium text-gray-600 dark:text-gray-300">Fin:</span>
                           {format(new Date(event.fecha_fin), "d MMM yyyy, HH:mm", { locale: es })}
                         </div>
                       )}

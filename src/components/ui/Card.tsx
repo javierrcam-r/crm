@@ -20,8 +20,8 @@ export default function Card({ children, className, hover = false, padding = 'md
   return (
     <div
       className={cn(
-        'bg-white border border-gray-100 rounded-2xl',
-        'shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
+        'bg-white dark:bg-dark-700 border border-gray-100 dark:border-dark-500 rounded-2xl',
+        'shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
         hover && 'card-hover cursor-pointer',
         paddings[padding],
         className
@@ -52,7 +52,7 @@ interface CardTitleProps {
 
 export function CardTitle({ children, className }: CardTitleProps) {
   return (
-    <h3 className={cn('text-lg font-semibold text-gray-900', className)}>
+    <h3 className={cn('text-lg font-semibold text-gray-900 dark:text-white', className)}>
       {children}
     </h3>
   );
@@ -65,7 +65,7 @@ interface CardDescriptionProps {
 
 export function CardDescription({ children, className }: CardDescriptionProps) {
   return (
-    <p className={cn('text-sm text-gray-500 mt-1', className)}>
+    <p className={cn('text-sm text-gray-500 dark:text-gray-300 mt-1', className)}>
       {children}
     </p>
   );
