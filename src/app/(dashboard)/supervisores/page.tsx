@@ -25,6 +25,9 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
+  LayoutGrid,
+  List,
+  X,
 } from 'lucide-react';
 import {
   BarChart,
@@ -111,6 +114,7 @@ export default function SupervisoresPage() {
   const [calendarVisits, setCalendarVisits] = useState<any[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarFilter, setCalendarFilter] = useState<string>('');
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
@@ -786,24 +790,24 @@ export default function SupervisoresPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setCalendarDate(subWeeks(calendarDate, 1))}
-                    className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg"
+                    onClick={() => { setCalendarDate(subWeeks(calendarDate, 1)); setSelectedDay(null); }}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
                   >
-                    <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
                   <button
-                    onClick={() => setCalendarDate(new Date())}
-                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg"
+                    onClick={() => { setCalendarDate(new Date()); setSelectedDay(null); }}
+                    className="px-3 py-1.5 text-sm font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg"
                   >
                     Hoy
                   </button>
                   <button
-                    onClick={() => setCalendarDate(addWeeks(calendarDate, 1))}
-                    className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg"
+                    onClick={() => { setCalendarDate(addWeeks(calendarDate, 1)); setSelectedDay(null); }}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
                   >
-                    <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <ChevronRight className="h-5 w-5" />
                   </button>
-                  <span className="text-xs sm:text-sm font-medium text-gray-700 ml-1 sm:ml-2">
+                  <span className="text-sm font-medium text-gray-700 ml-2">
                     {format(weekDays[0], 'd MMM', { locale: es })} - {format(weekDays[6], 'd MMM yyyy', { locale: es })}
                   </span>
                 </div>
@@ -825,37 +829,68 @@ export default function SupervisoresPage() {
                 </div>
               </div>
 
-              {/* Vista de semana - Desktop */}
-              <div className="hidden md:block overflow-x-auto">
-                <div className="grid grid-cols-7 gap-1 min-w-[600px]">
+              {/* Calendario con cuadros */}
+              <div className="bg-white rounded-xl border overflow-hidden">
+                {/* Encabezado días de la semana */}
+                <div className="grid grid-cols-7 bg-gray-50 border-b">
+                  {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
+                    <div key={day} className="py-2 text-center text-xs font-semibold text-gray-600 uppercase">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Días del calendario */}
+                <div className="grid grid-cols-7">
                   {weekDays.map((day, index) => {
                     const dayVisits = getVisitsForDay(day);
                     const isToday = isSameDay(day, new Date());
+                    const isSelected = selectedDay && isSameDay(day, selectedDay);
                     
                     return (
-                      <div key={index} className="min-h-[140px]">
-                        <div className={`text-center p-2 rounded-t-lg ${isToday ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>
-                          <p className="text-xs font-medium">{format(day, 'EEE', { locale: es })}</p>
-                          <p className="text-lg font-bold">{format(day, 'd')}</p>
+                      <div
+                        key={index}
+                        onClick={() => setSelectedDay(isSelected ? null : day)}
+                        className={`
+                          min-h-[80px] sm:min-h-[100px] p-1.5 sm:p-2 border-r border-b cursor-pointer transition-all
+                          ${index === 6 ? 'border-r-0' : ''}
+                          ${isToday ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'}
+                          ${isSelected ? 'ring-2 ring-blue-500 ring-inset bg-blue-100' : ''}
+                        `}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`
+                            inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-bold
+                            ${isToday ? 'bg-blue-600 text-white' : 'text-gray-700'}
+                          `}>
+                            {format(day, 'd')}
+                          </span>
+                          {dayVisits.length > 0 && (
+                            <span className="text-[10px] sm:text-xs font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                              {dayVisits.length}
+                            </span>
+                          )}
                         </div>
-                        <div className="border border-t-0 rounded-b-lg p-1 space-y-1 min-h-[100px] bg-white">
-                          {dayVisits.slice(0, 4).map((visit) => (
+                        
+                        {/* Mini indicadores de visitas */}
+                        <div className="space-y-0.5 sm:space-y-1">
+                          {dayVisits.slice(0, 2).map((visit) => (
                             <div
                               key={visit.id}
-                              className={`p-1.5 rounded text-xs border ${getStatusColor(visit.status)} cursor-pointer hover:opacity-80`}
-                              title={`${visit.cliente?.nombre || 'Sin cliente'} - ${visit.creador?.nombre_completo || 'Sin vendedor'}`}
+                              className={`
+                                text-[8px] sm:text-[10px] px-1 py-0.5 rounded truncate
+                                ${visit.status === 'completada' ? 'bg-green-100 text-green-800' : ''}
+                                ${visit.status === 'programada' ? 'bg-blue-100 text-blue-800' : ''}
+                                ${visit.status === 'cancelada' ? 'bg-red-100 text-red-800' : ''}
+                              `}
                             >
-                              <p className="font-medium truncate">{visit.cliente?.nombre || 'Sin cliente'}</p>
-                              <p className="text-[10px] opacity-75 truncate">
-                                {format(parseISO(visit.scheduled_date), 'HH:mm')} - {visit.creador?.nombre_completo?.split(' ')[0] || '?'}
-                              </p>
+                              {visit.cliente?.nombre || 'Visita'}
                             </div>
                           ))}
-                          {dayVisits.length > 4 && (
-                            <p className="text-[10px] text-center text-gray-500">+{dayVisits.length - 4} más</p>
-                          )}
-                          {dayVisits.length === 0 && (
-                            <p className="text-[10px] text-center text-gray-400 pt-4">Sin visitas</p>
+                          {dayVisits.length > 2 && (
+                            <p className="text-[8px] sm:text-[10px] text-center text-gray-400">
+                              +{dayVisits.length - 2} más
+                            </p>
                           )}
                         </div>
                       </div>
@@ -864,74 +899,77 @@ export default function SupervisoresPage() {
                 </div>
               </div>
 
-              {/* Vista de semana - Mobile (lista vertical) */}
-              <div className="md:hidden space-y-2">
-                {weekDays.map((day, index) => {
-                  const dayVisits = getVisitsForDay(day);
-                  const isToday = isSameDay(day, new Date());
-                  
-                  return (
-                    <div 
-                      key={index} 
-                      className={`rounded-xl border overflow-hidden ${isToday ? 'border-blue-400 ring-2 ring-blue-100' : 'border-gray-200'}`}
+              {/* Panel de día seleccionado */}
+              {selectedDay && (
+                <div className="bg-white rounded-xl border overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                    <div>
+                      <p className="text-lg font-bold">{format(selectedDay, "EEEE d 'de' MMMM", { locale: es })}</p>
+                      <p className="text-blue-100 text-sm">{getVisitsForDay(selectedDay).length} visita(s) programada(s)</p>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedDay(null)}
+                      className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                     >
-                      <div className={`flex items-center gap-3 px-3 py-2 ${isToday ? 'bg-blue-600 text-white' : 'bg-gray-50'}`}>
-                        <div className="text-center min-w-[40px]">
-                          <p className="text-xs uppercase">{format(day, 'EEE', { locale: es })}</p>
-                          <p className="text-xl font-bold">{format(day, 'd')}</p>
-                        </div>
-                        <div className="flex-1">
-                          <p className={`text-xs ${isToday ? 'text-blue-100' : 'text-gray-500'}`}>
-                            {format(day, 'MMMM yyyy', { locale: es })}
-                          </p>
-                        </div>
-                        <Badge variant={isToday ? 'blue' : 'gray'} className="text-xs">
-                          {dayVisits.length} visita{dayVisits.length !== 1 ? 's' : ''}
-                        </Badge>
-                      </div>
-                      
-                      {dayVisits.length > 0 ? (
-                        <div className="p-2 space-y-2 bg-white">
-                          {dayVisits.map((visit) => (
-                            <div
-                              key={visit.id}
-                              className={`p-2.5 rounded-lg border ${getStatusColor(visit.status)}`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm truncate">{visit.cliente?.nombre || 'Sin cliente'}</p>
-                                  <div className="flex items-center gap-1 text-xs opacity-75 mt-0.5">
-                                    <Clock className="h-3 w-3" />
-                                    {format(parseISO(visit.scheduled_date), 'HH:mm')}
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-4">
+                    {getVisitsForDay(selectedDay).length > 0 ? (
+                      <div className="space-y-3">
+                        {getVisitsForDay(selectedDay).map((visit) => (
+                          <div
+                            key={visit.id}
+                            className={`p-3 rounded-lg border-l-4 bg-gray-50 ${
+                              visit.status === 'completada' ? 'border-l-green-500' :
+                              visit.status === 'programada' ? 'border-l-blue-500' :
+                              'border-l-red-500'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-gray-900">{visit.cliente?.nombre || 'Sin cliente'}</p>
+                                <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                                  <Clock className="h-4 w-4" />
+                                  <span>{format(parseISO(visit.scheduled_date), 'HH:mm')}</span>
+                                </div>
+                                {visit.cliente?.direccion && (
+                                  <div className="flex items-start gap-2 mt-1 text-sm text-gray-600">
+                                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                                    <span>{visit.cliente.direccion}</span>
                                   </div>
-                                  {visit.cliente?.direccion && (
-                                    <div className="flex items-start gap-1 text-xs opacity-75 mt-0.5">
-                                      <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
-                                      <span className="truncate">{visit.cliente.direccion}</span>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <p className="text-[10px] font-medium opacity-80">
-                                    {visit.creador?.nombre_completo?.split(' ')[0] || 'Sin vendedor'}
-                                  </p>
-                                </div>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <Badge 
+                                  variant={
+                                    visit.status === 'completada' ? 'green' :
+                                    visit.status === 'programada' ? 'blue' : 'red'
+                                  }
+                                >
+                                  {visit.status}
+                                </Badge>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {visit.creador?.nombre_completo || 'Sin vendedor'}
+                                </p>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-4 bg-white text-center">
-                          <p className="text-xs text-gray-400">Sin visitas programadas</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No hay visitas para este día</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Leyenda */}
-              <div className="flex flex-wrap gap-2 sm:gap-4 pt-2 border-t">
+              <div className="flex flex-wrap gap-4 pt-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-blue-500"></span>
                   <span className="text-xs text-gray-600">Programada</span>

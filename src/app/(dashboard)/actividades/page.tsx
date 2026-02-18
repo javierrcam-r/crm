@@ -713,14 +713,14 @@ export default function ActividadesPage() {
             ))}
           </select>
 
-          {/* Filtro por persona - Solo para Supervisor N1 */}
-          {isSupervisorN1 && (
+          {/* Filtro por persona - Supervisores y Admin */}
+          {(userProfile?.rol === 'admin' || userProfile?.rol?.includes('supervisor')) && (
             <select
               value={filterPersona}
               onChange={e => setFilterPersona(e.target.value)}
               className="px-3 py-2 border rounded-lg text-sm bg-purple-50 border-purple-200"
             >
-              <option value="">Todas las personas</option>
+              <option value="">👥 Todas las personas</option>
               {users.map(user => (
                 <option key={user.id} value={user.id}>
                   {user.nombre_completo}
