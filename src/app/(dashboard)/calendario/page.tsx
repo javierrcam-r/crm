@@ -102,18 +102,15 @@ export default function CalendarioPage() {
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [showTecnicoActivities, setShowTecnicoActivities] = useState(false);
+  const [tecnicoUserIds, setTecnicoUserIds] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [filterByUser, setFilterByUser] = useState<string>('');
   const [selectedDayMobile, setSelectedDayMobile] = useState<Date | null>(null);
 
-  // Detectar móvil y forzar vista semana
+  // Detectar móvil
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile && view === 'month') {
-        setView('week');
-      }
+      setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -574,20 +571,18 @@ export default function CalendarioPage() {
             </Button>
           </div>
           <div className="flex items-center gap-1">
-            {!isMobile && (
-              <Button
-                variant={view === 'month' ? 'primary' : 'ghost'}
-                size="sm"
-                onClick={() => setView('month')}
-              >
-                <Grid className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Mes</span>
-              </Button>
-            )}
+            <Button
+              variant={view === 'month' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => { setView('month'); setSelectedDayMobile(null); }}
+            >
+              <Grid className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Mes</span>
+            </Button>
             <Button
               variant={view === 'week' ? 'primary' : 'ghost'}
               size="sm"
-              onClick={() => setView('week')}
+              onClick={() => { setView('week'); setSelectedDayMobile(null); }}
             >
               <CalendarIcon className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Semana</span>
@@ -737,6 +732,172 @@ export default function CalendarioPage() {
               );
             })}
           </div>
+        </Card>
+      )}
+
+      {/* Vista Mes - Móvil */}
+      {view === 'month' && (
+        <Card padding="none" className="md:hidden">
+          {/* Encabezado días */}
+          <div className="grid grid-cols-7 bg-gray-50 border-b">
+            {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
+              <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500">
+                {d}
+              </div>
+            ))}
+          </div>
+          
+          {/* Grid de días del mes */}
+          <div className="grid grid-cols-7">
+            {calendarDays.map((day, index) => {
+              const dayVisits = getVisitsForDay(day);
+              const strategicActivities = getStrategicActivitiesForDay(day);
+              const dailyActivities = getDailyActivitiesForDay(day);
+              const dayAllAct = getActivitiesForDay(day);
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const isSelected = selectedDayMobile && isSameDay(day, selectedDayMobile);
+              const today = isToday(day);
+              const totalItems = canManageDailyActivities 
+                ? strategicActivities.length + dailyActivities.length + dayVisits.length 
+                : dayAllAct.length + dayVisits.length;
+
+              return (
+                <div
+                  key={index}
+                  onClick={() => setSelectedDayMobile(isSelected ? null : day)}
+                  className={cn(
+                    'min-h-[52px] p-1 border-r border-b cursor-pointer transition-all',
+                    (index + 1) % 7 === 0 && 'border-r-0',
+                    !isCurrentMonth && 'bg-gray-50 opacity-50',
+                    today && 'bg-indigo-50',
+                    isSelected && 'ring-2 ring-indigo-500 ring-inset bg-indigo-100'
+                  )}
+                >
+                  <div className="flex flex-col items-center">
+                    <span className={cn(
+                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
+                      today ? 'bg-indigo-600 text-white' : isCurrentMonth ? 'text-gray-700' : 'text-gray-400'
+                    )}>
+                      {format(day, 'd')}
+                    </span>
+                    {totalItems > 0 && (
+                      <span className="text-[8px] font-medium text-gray-500 bg-gray-100 px-1 rounded-full mt-0.5">
+                        {totalItems}
+                      </span>
+                    )}
+                    {/* Indicadores de colores */}
+                    <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
+                      {strategicActivities.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>}
+                      {dailyActivities.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>}
+                      {dayVisits.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Panel de día seleccionado */}
+          {selectedDayMobile && (
+            <div className="border-t animate-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                <div>
+                  <p className="font-bold">{format(selectedDayMobile, "EEEE d 'de' MMMM", { locale: es })}</p>
+                  <p className="text-indigo-100 text-sm">
+                    {(() => {
+                      const dv = getVisitsForDay(selectedDayMobile);
+                      const ds = getStrategicActivitiesForDay(selectedDayMobile);
+                      const dd = getDailyActivitiesForDay(selectedDayMobile);
+                      const da = getActivitiesForDay(selectedDayMobile);
+                      const total = canManageDailyActivities ? ds.length + dd.length + dv.length : da.length + dv.length;
+                      return `${total} elemento${total !== 1 ? 's' : ''}`;
+                    })()}
+                  </p>
+                </div>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setSelectedDayMobile(null); }}
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-3 max-h-[250px] overflow-y-auto bg-white">
+                {(() => {
+                  const dayVisits = getVisitsForDay(selectedDayMobile);
+                  const dayStrategic = getStrategicActivitiesForDay(selectedDayMobile);
+                  const dayDaily = getDailyActivitiesForDay(selectedDayMobile);
+                  const dayAllAct = getActivitiesForDay(selectedDayMobile);
+                  const hasItems = canManageDailyActivities 
+                    ? (dayStrategic.length + dayDaily.length + dayVisits.length) > 0 
+                    : (dayAllAct.length + dayVisits.length) > 0;
+
+                  if (!hasItems) {
+                    return (
+                      <div className="text-center py-6">
+                        <CalendarIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">Sin actividades para este día</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {canManageDailyActivities ? (
+                        <>
+                          {dayStrategic.map((activity) => (
+                            <div key={`ms-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer active:bg-purple-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold text-purple-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                <Badge variant="purple" className="text-[10px]">Estratégica</Badge>
+                              </div>
+                              <p className="font-medium text-gray-900">{activity.titulo}</p>
+                            </div>
+                          ))}
+                          {dayDaily.map((activity) => (
+                            <div key={`md-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-blue-50 border-l-4 border-blue-500 cursor-pointer active:bg-blue-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold text-blue-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                <Badge variant="blue" className="text-[10px]">Diaria</Badge>
+                              </div>
+                              <p className="font-medium text-gray-900">{activity.titulo}</p>
+                            </div>
+                          ))}
+                          {dayVisits.map((visit) => (
+                            <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 border-l-4 border-gray-400">
+                              <span className="text-xs font-bold text-gray-600">{formatTime(visit.scheduled_at)}</span>
+                              <p className="font-medium text-gray-900">{visit.customer?.nombre}</p>
+                              {visit.customer?.direccion && (
+                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {visit.customer.direccion}
+                                </p>
+                              )}
+                            </Link>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          {dayAllAct.map((activity) => (
+                            <div key={`ma-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer active:bg-purple-100">
+                              <span className="text-xs font-bold text-purple-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                              <p className="font-medium text-gray-900">{activity.titulo}</p>
+                            </div>
+                          ))}
+                          {dayVisits.map((visit) => (
+                            <Link key={visit.id} href={`/calendario/${visit.id}`} className={cn('block p-3 rounded-lg', getStatusColor(visit.status))}>
+                              <span className="text-xs font-bold">{formatTime(visit.scheduled_at)}</span>
+                              <p className="font-medium text-gray-900">{visit.customer?.nombre}</p>
+                            </Link>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
