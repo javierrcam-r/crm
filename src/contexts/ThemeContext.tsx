@@ -15,14 +15,23 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'crm_theme_preference';
 
-function getSystemTheme(): ResolvedTheme {
+function getThemeByTime(): ResolvedTheme {
   if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  
+  const now = new Date();
+  const hour = now.getHours();
+  
+  // Dark mode: 6 PM (18:00) a 7 AM (07:00)
+  // Light mode: 7 AM (07:00) a 6 PM (18:00)
+  if (hour >= 18 || hour < 7) {
+    return 'dark';
+  }
+  return 'light';
 }
 
 function resolveTheme(preference: ThemePreference): ResolvedTheme {
   if (preference === 'auto') {
-    return getSystemTheme();
+    return getThemeByTime();
   }
   return preference;
 }
@@ -77,17 +86,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return;
     
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = () => {
+    // Verificar el tema cada minuto cuando está en modo auto
+    const checkTimeBasedTheme = () => {
       if (theme === 'auto') {
-        applyTheme(getSystemTheme());
+        const newResolved = getThemeByTime();
+        if (newResolved !== resolvedTheme) {
+          applyTheme(newResolved);
+        }
       }
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme, mounted, applyTheme]);
+    // Verificar inmediatamente
+    checkTimeBasedTheme();
+    
+    // Verificar cada minuto
+    const interval = setInterval(checkTimeBasedTheme, 60000);
+    
+    return () => clearInterval(interval);
+  }, [theme, mounted, applyTheme, resolvedTheme]);
 
   if (!mounted) {
     return (
