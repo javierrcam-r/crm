@@ -184,10 +184,13 @@ export default function CalendarioPage() {
       const currentRol = userProfile?.rol;
       
       // Si está activo el filtro de técnico, obtener IDs de usuarios técnicos
-      let tecnicoUserIds: string[] = [];
+      let tecnicoIds: string[] = [];
       if (showTecnicoActivities) {
         const allUsers = await getAllUsersForSelection();
-        tecnicoUserIds = allUsers.filter(u => u.rol === 'tecnico').map(u => u.id);
+        tecnicoIds = allUsers.filter(u => u.rol === 'tecnico').map(u => u.id);
+        setTecnicoUserIds(tecnicoIds);
+      } else {
+        setTecnicoUserIds([]);
       }
       
       const myActivities = activitiesData.filter(activity => {
@@ -196,7 +199,7 @@ export default function CalendarioPage() {
           activity.participants.some(p => p.user_profile_id === currentId);
         
         // Si está activo el filtro de técnico, incluir actividades diarias del técnico
-        if (showTecnicoActivities && tecnicoUserIds.includes(activity.created_by_user_id || '')) {
+        if (showTecnicoActivities && tecnicoIds.includes(activity.created_by_user_id || '')) {
           return true;
         }
         
@@ -434,6 +437,43 @@ export default function CalendarioPage() {
     return getActivitiesForDay(date).filter(activity => !isActivityStrategic(activity));
   };
 
+  // Verificar si una actividad es de un técnico
+  const isActivityFromTecnico = (activity: Activity) => {
+    return showTecnicoActivities && tecnicoUserIds.includes(activity.created_by_user_id || '');
+  };
+
+  // Obtener clases de estilo para actividad (estratégica, diaria o técnico)
+  const getActivityStyle = (activity: Activity, isStrategic: boolean) => {
+    if (isActivityFromTecnico(activity)) {
+      return {
+        bg: 'bg-amber-100 text-amber-800 border-l-2 border-amber-500 hover:bg-amber-200',
+        bgLarge: 'bg-amber-100 text-amber-800 border-l-4 border-amber-500 hover:bg-amber-200',
+        icon: '👷',
+        badge: 'Técnico',
+        badgeClass: 'bg-amber-200 text-amber-800',
+        dotColor: 'bg-amber-500'
+      };
+    }
+    if (isStrategic) {
+      return {
+        bg: 'bg-purple-100 text-purple-700 border-l-2 border-purple-500 hover:bg-purple-200',
+        bgLarge: 'bg-purple-100 text-purple-700 border-l-4 border-purple-500 hover:bg-purple-200',
+        icon: '⭐',
+        badge: 'Estratégica',
+        badgeClass: 'bg-purple-200 text-purple-800',
+        dotColor: 'bg-purple-500'
+      };
+    }
+    return {
+      bg: 'bg-blue-100 text-blue-700 border-l-2 border-blue-500 hover:bg-blue-200',
+      bgLarge: 'bg-blue-100 text-blue-700 border-l-4 border-blue-500 hover:bg-blue-200',
+      icon: '📋',
+      badge: 'Diaria',
+      badgeClass: 'bg-blue-200 text-blue-800',
+      dotColor: 'bg-blue-500'
+    };
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completada': return 'bg-emerald-50 text-emerald-700';
@@ -491,13 +531,17 @@ export default function CalendarioPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button 
-            variant={showTecnicoActivities ? "primary" : "ghost"}
-            size="sm"
+          <button 
             onClick={() => setShowTecnicoActivities(!showTecnicoActivities)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+              showTecnicoActivities 
+                ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' 
+                : 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300'
+            }`}
           >
-            {showTecnicoActivities ? '✓ Viendo Act. Técnico' : 'Ver Act. Técnico'}
-          </Button>
+            <span className="text-base">{showTecnicoActivities ? '✓' : '👷'}</span>
+            {showTecnicoActivities ? 'Viendo Técnico' : 'Ver Técnico'}
+          </button>
           
           {/* Filtro por persona - Solo supervisores */}
           {(userProfile?.rol === 'admin' || userProfile?.rol?.includes('supervisor')) && (
@@ -655,28 +699,34 @@ export default function CalendarioPage() {
                   <div className="space-y-1">
                     {canManageDailyActivities ? (
                       <>
-                        {/* Actividades Estratégicas (color púrpura) - Prioridad alta */}
-                        {strategicActivities.slice(0, 2).map((activity) => (
-                          <div
-                            key={`act-strategic-${activity.id}`}
-                            onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
-                            className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors"
-                          >
-                            <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                            <span className="ml-1 truncate">⭐{activity.titulo}</span>
-                          </div>
-                        ))}
-                        {/* Actividades Diarias (color azul) */}
-                        {dailyActivities.slice(0, strategicActivities.length > 0 ? 1 : 2).map((activity) => (
-                          <div
-                            key={`act-daily-${activity.id}`}
-                            onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
-                            className="calendar-event block bg-blue-100 text-blue-700 border-l-2 border-blue-500 cursor-pointer hover:bg-blue-200 transition-colors"
-                          >
-                            <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                            <span className="ml-1 truncate">📋{activity.titulo}</span>
-                          </div>
-                        ))}
+                        {/* Actividades Estratégicas - Prioridad alta */}
+                        {strategicActivities.slice(0, 2).map((activity) => {
+                          const style = getActivityStyle(activity, true);
+                          return (
+                            <div
+                              key={`act-strategic-${activity.id}`}
+                              onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
+                              className={`calendar-event block cursor-pointer transition-colors ${style.bg}`}
+                            >
+                              <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                              <span className="ml-1 truncate">{style.icon}{activity.titulo}</span>
+                            </div>
+                          );
+                        })}
+                        {/* Actividades Diarias */}
+                        {dailyActivities.slice(0, strategicActivities.length > 0 ? 1 : 2).map((activity) => {
+                          const style = getActivityStyle(activity, false);
+                          return (
+                            <div
+                              key={`act-daily-${activity.id}`}
+                              onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
+                              className={`calendar-event block cursor-pointer transition-colors ${style.bg}`}
+                            >
+                              <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                              <span className="ml-1 truncate">{style.icon}{activity.titulo}</span>
+                            </div>
+                          );
+                        })}
                         {/* Visitas (color gris, secundario) */}
                         {dayVisits.slice(0, (strategicActivities.length + dailyActivities.length) > 0 ? 0 : 2).map((visit) => (
                           <Link
@@ -694,17 +744,20 @@ export default function CalendarioPage() {
                       </>
                     ) : (
                       <>
-                        {/* Actividades Estratégicas (color púrpura) */}
-                        {dayActivities.slice(0, 2).map((activity) => (
-                          <div
-                            key={`act-${activity.id}`}
-                            onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
-                            className="calendar-event block bg-purple-100 text-purple-700 border-l-2 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors"
-                          >
-                            <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                            <span className="ml-1 truncate">⭐ {activity.titulo}</span>
-                          </div>
-                        ))}
+                        {/* Actividades */}
+                        {dayActivities.slice(0, 2).map((activity) => {
+                          const style = getActivityStyle(activity, isActivityStrategic(activity));
+                          return (
+                            <div
+                              key={`act-${activity.id}`}
+                              onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
+                              className={`calendar-event block cursor-pointer transition-colors ${style.bg}`}
+                            >
+                              <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                              <span className="ml-1 truncate">{style.icon} {activity.titulo}</span>
+                            </div>
+                          );
+                        })}
                         {/* Visitas */}
                         {dayVisits.slice(0, dayActivities.length > 0 ? 1 : 3).map((visit) => (
                           <Link
@@ -760,6 +813,11 @@ export default function CalendarioPage() {
               const totalItems = canManageDailyActivities 
                 ? strategicActivities.length + dailyActivities.length + dayVisits.length 
                 : dayAllAct.length + dayVisits.length;
+              
+              // Detectar actividades de técnico
+              const hasTecnicoActivities = dayAllAct.some(a => isActivityFromTecnico(a));
+              const hasNonTecnicoStrategic = strategicActivities.some(a => !isActivityFromTecnico(a));
+              const hasNonTecnicoDaily = dailyActivities.some(a => !isActivityFromTecnico(a));
 
               return (
                 <div
@@ -787,8 +845,9 @@ export default function CalendarioPage() {
                     )}
                     {/* Indicadores de colores */}
                     <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                      {strategicActivities.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>}
-                      {dailyActivities.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>}
+                      {hasTecnicoActivities && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
+                      {hasNonTecnicoStrategic && <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>}
+                      {hasNonTecnicoDaily && <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>}
                       {dayVisits.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>}
                     </div>
                   </div>
@@ -845,24 +904,30 @@ export default function CalendarioPage() {
                     <div className="space-y-2">
                       {canManageDailyActivities ? (
                         <>
-                          {dayStrategic.map((activity) => (
-                            <div key={`ms-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer active:bg-purple-100">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-bold text-purple-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                                <Badge variant="purple" className="text-[10px]">Estratégica</Badge>
+                          {dayStrategic.map((activity) => {
+                            const style = getActivityStyle(activity, true);
+                            return (
+                              <div key={`ms-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
+                                </div>
+                                <p className="font-medium text-gray-900">{activity.titulo}</p>
                               </div>
-                              <p className="font-medium text-gray-900">{activity.titulo}</p>
-                            </div>
-                          ))}
-                          {dayDaily.map((activity) => (
-                            <div key={`md-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-blue-50 border-l-4 border-blue-500 cursor-pointer active:bg-blue-100">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-bold text-blue-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                                <Badge variant="blue" className="text-[10px]">Diaria</Badge>
+                            );
+                          })}
+                          {dayDaily.map((activity) => {
+                            const style = getActivityStyle(activity, false);
+                            return (
+                              <div key={`md-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
+                                </div>
+                                <p className="font-medium text-gray-900">{activity.titulo}</p>
                               </div>
-                              <p className="font-medium text-gray-900">{activity.titulo}</p>
-                            </div>
-                          ))}
+                            );
+                          })}
                           {dayVisits.map((visit) => (
                             <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 border-l-4 border-gray-400">
                               <span className="text-xs font-bold text-gray-600">{formatTime(visit.scheduled_at)}</span>
@@ -878,12 +943,15 @@ export default function CalendarioPage() {
                         </>
                       ) : (
                         <>
-                          {dayAllAct.map((activity) => (
-                            <div key={`ma-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer active:bg-purple-100">
-                              <span className="text-xs font-bold text-purple-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                              <p className="font-medium text-gray-900">{activity.titulo}</p>
-                            </div>
-                          ))}
+                          {dayAllAct.map((activity) => {
+                            const style = getActivityStyle(activity, isActivityStrategic(activity));
+                            return (
+                              <div key={`ma-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
+                                <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                <p className="font-medium text-gray-900">{activity.titulo}</p>
+                              </div>
+                            );
+                          })}
                           {dayVisits.map((visit) => (
                             <Link key={visit.id} href={`/calendario/${visit.id}`} className={cn('block p-3 rounded-lg', getStatusColor(visit.status))}>
                               <span className="text-xs font-bold">{formatTime(visit.scheduled_at)}</span>
@@ -924,24 +992,30 @@ export default function CalendarioPage() {
                   <div className="p-2 space-y-2">
                     {canManageDailyActivities ? (
                       <>
-                        {getStrategicActivitiesForDay(day).map((activity) => (
-                          <div key={`act-strategic-${activity.id}`} className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors" onClick={() => openActivityDetail(activity)}>
-                            <div className="flex items-center justify-between mb-0.5">
-                              <p className="font-semibold flex items-center gap-1"><Star className="h-3 w-3 fill-purple-500" />{format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-medium">Estratégica</span>
+                        {getStrategicActivitiesForDay(day).map((activity) => {
+                          const style = getActivityStyle(activity, true);
+                          return (
+                            <div key={`act-strategic-${activity.id}`} className={`block p-2 rounded-lg text-sm cursor-pointer transition-colors ${style.bgLarge}`} onClick={() => openActivityDetail(activity)}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <p className="font-semibold flex items-center gap-1">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
+                              </div>
+                              <p className="truncate font-medium">{activity.titulo}</p>
                             </div>
-                            <p className="truncate font-medium">{activity.titulo}</p>
-                          </div>
-                        ))}
-                        {getDailyActivitiesForDay(day).map((activity) => (
-                          <div key={`act-daily-${activity.id}`} className="block p-2 rounded-lg text-sm bg-blue-100 text-blue-700 border-l-4 border-blue-500 cursor-pointer hover:bg-blue-200 transition-colors" onClick={() => openActivityDetail(activity)}>
-                            <div className="flex items-center justify-between mb-0.5">
-                              <p className="font-semibold">{format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-200 text-blue-800 font-medium">Diaria</span>
+                          );
+                        })}
+                        {getDailyActivitiesForDay(day).map((activity) => {
+                          const style = getActivityStyle(activity, false);
+                          return (
+                            <div key={`act-daily-${activity.id}`} className={`block p-2 rounded-lg text-sm cursor-pointer transition-colors ${style.bgLarge}`} onClick={() => openActivityDetail(activity)}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <p className="font-semibold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
+                              </div>
+                              <p className="truncate font-medium">{activity.titulo}</p>
                             </div>
-                            <p className="truncate font-medium">{activity.titulo}</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {dayVisits.map((visit) => (
                           <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-2 rounded-lg text-sm bg-gray-100 text-gray-600 border-l-4 border-gray-400">
                             <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
@@ -951,12 +1025,15 @@ export default function CalendarioPage() {
                       </>
                     ) : (
                       <>
-                        {dayActivities.map((activity) => (
-                          <div key={`act-${activity.id}`} className="block p-2 rounded-lg text-sm bg-purple-100 text-purple-700 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-200 transition-colors" onClick={() => openActivityDetail(activity)}>
-                            <p className="font-semibold flex items-center gap-1"><Star className="h-3 w-3 fill-purple-500" />{format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
-                            <p className="truncate font-medium">{activity.titulo}</p>
-                          </div>
-                        ))}
+                        {dayActivities.map((activity) => {
+                          const style = getActivityStyle(activity, isActivityStrategic(activity));
+                          return (
+                            <div key={`act-${activity.id}`} className={`block p-2 rounded-lg text-sm cursor-pointer transition-colors ${style.bgLarge}`} onClick={() => openActivityDetail(activity)}>
+                              <p className="font-semibold flex items-center gap-1">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
+                              <p className="truncate font-medium">{activity.titulo}</p>
+                            </div>
+                          );
+                        })}
                         {dayVisits.map((visit) => (
                           <Link key={visit.id} href={`/calendario/${visit.id}`} className={cn('block p-2 rounded-lg text-sm', getStatusColor(visit.status))}>
                             <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
@@ -1019,11 +1096,19 @@ export default function CalendarioPage() {
                         </span>
                       )}
                       {/* Indicadores de colores */}
-                      <div className="flex gap-0.5 mt-1 flex-wrap justify-center">
-                        {dayStrategic.length > 0 && <span className="w-2 h-2 rounded-full bg-purple-500"></span>}
-                        {dayDaily.length > 0 && <span className="w-2 h-2 rounded-full bg-blue-500"></span>}
-                        {dayVisits.length > 0 && <span className="w-2 h-2 rounded-full bg-gray-400"></span>}
-                      </div>
+                      {(() => {
+                        const hasTecnico = dayAllAct.some(a => isActivityFromTecnico(a));
+                        const hasNonTecnicoStrategic = dayStrategic.some(a => !isActivityFromTecnico(a));
+                        const hasNonTecnicoDaily = dayDaily.some(a => !isActivityFromTecnico(a));
+                        return (
+                          <div className="flex gap-0.5 mt-1 flex-wrap justify-center">
+                            {hasTecnico && <span className="w-2 h-2 rounded-full bg-amber-500"></span>}
+                            {hasNonTecnicoStrategic && <span className="w-2 h-2 rounded-full bg-purple-500"></span>}
+                            {hasNonTecnicoDaily && <span className="w-2 h-2 rounded-full bg-blue-500"></span>}
+                            {dayVisits.length > 0 && <span className="w-2 h-2 rounded-full bg-gray-400"></span>}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -1078,24 +1163,30 @@ export default function CalendarioPage() {
                       <div className="space-y-2">
                         {canManageDailyActivities ? (
                           <>
-                            {dayStrategic.map((activity) => (
-                              <div key={`ms-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer active:bg-purple-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs font-bold text-purple-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                                  <Badge variant="purple" className="text-[10px]">Estratégica</Badge>
+                            {dayStrategic.map((activity) => {
+                              const style = getActivityStyle(activity, true);
+                              return (
+                                <div key={`wms-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
+                                  </div>
+                                  <p className="font-medium text-gray-900">{activity.titulo}</p>
                                 </div>
-                                <p className="font-medium text-gray-900">{activity.titulo}</p>
-                              </div>
-                            ))}
-                            {dayDaily.map((activity) => (
-                              <div key={`md-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-blue-50 border-l-4 border-blue-500 cursor-pointer active:bg-blue-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs font-bold text-blue-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                                  <Badge variant="blue" className="text-[10px]">Diaria</Badge>
+                              );
+                            })}
+                            {dayDaily.map((activity) => {
+                              const style = getActivityStyle(activity, false);
+                              return (
+                                <div key={`wmd-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
+                                  </div>
+                                  <p className="font-medium text-gray-900">{activity.titulo}</p>
                                 </div>
-                                <p className="font-medium text-gray-900">{activity.titulo}</p>
-                              </div>
-                            ))}
+                              );
+                            })}
                             {dayVisits.map((visit) => (
                               <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 border-l-4 border-gray-400">
                                 <span className="text-xs font-bold text-gray-600">{formatTime(visit.scheduled_at)}</span>
@@ -1111,12 +1202,15 @@ export default function CalendarioPage() {
                           </>
                         ) : (
                           <>
-                            {dayAllAct.map((activity) => (
-                              <div key={`ma-${activity.id}`} onClick={() => openActivityDetail(activity)} className="p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 cursor-pointer active:bg-purple-100">
-                                <span className="text-xs font-bold text-purple-700">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
-                                <p className="font-medium text-gray-900">{activity.titulo}</p>
-                              </div>
-                            ))}
+                            {dayAllAct.map((activity) => {
+                              const style = getActivityStyle(activity, isActivityStrategic(activity));
+                              return (
+                                <div key={`wma-${activity.id}`} onClick={() => openActivityDetail(activity)} className={`p-3 rounded-lg cursor-pointer active:opacity-80 ${style.bgLarge}`}>
+                                  <span className="text-xs font-bold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
+                                  <p className="font-medium text-gray-900">{activity.titulo}</p>
+                                </div>
+                              );
+                            })}
                             {dayVisits.map((visit) => (
                               <Link key={visit.id} href={`/calendario/${visit.id}`} className={cn('block p-3 rounded-lg', getStatusColor(visit.status))}>
                                 <span className="text-xs font-bold">{formatTime(visit.scheduled_at)}</span>
