@@ -43,8 +43,8 @@ export default function EventosPage() {
   const [filterType, setFilterType] = useState<EventType | ''>('');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
-  const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'marketing';
-  const isVendor = userProfile?.rol === 'vendedor';
+  const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
+  const isVendor = userProfile?.rol === 'vendedor' || userProfile?.rol === 'marketing';
   const canView = isSupervisor || isVendor;
 
   useEffect(() => {
