@@ -759,14 +759,15 @@ export default function CalendarioPage() {
                   <div className="space-y-1">
                     {/* Actividades de Eventos */}
                     {dayEventActs.slice(0, 1).map((ea) => (
-                      <div
+                      <Link
                         key={`evt-${ea.id}`}
+                        href={`/eventos/${ea.event_id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="calendar-event block bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200 border-l-2 border-rose-500"
+                        className="calendar-event block cursor-pointer bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200 border-l-2 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60"
                       >
                         <span className="font-medium">{format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
                         <span className="ml-1 truncate">🎯{ea.nombre}</span>
-                      </div>
+                      </Link>
                     ))}
                     {/* Actividades Estratégicas */}
                     {strategicActivities.slice(0, dayEventActs.length > 0 ? 1 : 2).map((activity) => {
@@ -934,14 +935,14 @@ export default function CalendarioPage() {
                   return (
                     <div className="space-y-2">
                       {dayEventActs.map((ea) => (
-                        <div key={`me-${ea.id}`} className="p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500">
+                        <Link key={`me-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60 active:opacity-80">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
                           </div>
                           <p className="font-medium">{ea.nombre}</p>
                           {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
-                        </div>
+                        </Link>
                       ))}
                       {dayStrategic.map((activity) => {
                         const style = getActivityStyle(activity, true);
@@ -1011,14 +1012,14 @@ export default function CalendarioPage() {
                   </div>
                   <div className="p-2 space-y-2">
                     {dayEventActs.map((ea) => (
-                      <div key={`wevt-${ea.id}`} className="block p-2 rounded-lg text-sm bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500">
+                      <Link key={`wevt-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-2 rounded-lg text-sm bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60 transition-colors">
                         <div className="flex items-center justify-between mb-0.5">
                           <p className="font-semibold flex items-center gap-1">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</p>
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
                         </div>
                         <p className="truncate font-medium">{ea.nombre}</p>
                         {ea.events && <p className="text-[10px] opacity-70 truncate">{ea.events.nombre}</p>}
-                      </div>
+                      </Link>
                     ))}
                     {getFilteredStrategicForDay(day).map((activity) => {
                       const style = getActivityStyle(activity, true);
@@ -1158,14 +1159,14 @@ export default function CalendarioPage() {
                     return (
                       <div className="space-y-2">
                         {dayEventActs.map((ea) => (
-                          <div key={`wme-${ea.id}`} className="p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500">
+                          <Link key={`wme-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60 active:opacity-80">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
                             </div>
                             <p className="font-medium">{ea.nombre}</p>
                             {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
-                          </div>
+                          </Link>
                         ))}
                         {dayStrategic.map((activity) => {
                           const style = getActivityStyle(activity, true);
@@ -1242,8 +1243,9 @@ export default function CalendarioPage() {
                       Actividades de Eventos ({filteredEventActsList.length})
                     </h3>
                     {filteredEventActsList.map((ea) => (
-                      <div
+                      <Link
                         key={`list-evt-${ea.id}`}
+                        href={`/eventos/${ea.event_id}`}
                         className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 border-l-4 border-rose-500 transition-colors"
                       >
                         <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
@@ -1274,7 +1276,7 @@ export default function CalendarioPage() {
                         <Badge variant={ea.estado === 'completada' ? 'green' : ea.estado === 'en_progreso' ? 'blue' : ea.estado === 'bloqueada' ? 'red' : 'yellow'}>
                           {ea.estado.replace('_', ' ')}
                         </Badge>
-                      </div>
+                      </Link>
                     ))}
                   </>
                 )}

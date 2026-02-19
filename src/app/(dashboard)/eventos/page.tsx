@@ -5,14 +5,15 @@ import Link from 'next/link';
 import {
   Plus, Calendar, Users, DollarSign, Target, Search, Filter,
   TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3,
-  MapPin, Video, Globe, LayoutGrid, CalendarDays,
+  MapPin, Video, Globe, LayoutGrid, CalendarDays, PieChart,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import EventCalendar from '@/components/events/EventCalendar';
+import EventsDashboard from '@/components/events/EventsDashboard';
 import { useAuth } from '@/contexts/AuthContext';
-import { getEvents, getVendorEvents, type Event, type EventStatus, type EventType } from '@/lib/services/events';
+import { getEvents, getVendorEvents, getAllEventExpenses, getAllEventParticipants, type Event, type EventStatus, type EventType, type EventExpense, type EventParticipant } from '@/lib/services/events';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
@@ -37,11 +38,13 @@ export default function EventosPage() {
   const { userProfile } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  const [allExpenses, setAllExpenses] = useState<EventExpense[]>([]);
+  const [allParticipants, setAllParticipants] = useState<EventParticipant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<EventStatus | ''>('');
   const [filterType, setFilterType] = useState<EventType | ''>('');
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'resumen'>('list');
 
   const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
   const isVendor = userProfile?.rol === 'vendedor' || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico';
@@ -54,8 +57,14 @@ export default function EventosPage() {
   const loadEvents = async () => {
     try {
       if (isSupervisor) {
-        const data = await getEvents();
+        const [data, expenses, participants] = await Promise.all([
+          getEvents(),
+          getAllEventExpenses().catch(() => []),
+          getAllEventParticipants().catch(() => []),
+        ]);
         setEvents(data);
+        setAllExpenses(expenses);
+        setAllParticipants(participants);
       } else if (isVendor && userProfile) {
         const data = await getVendorEvents(userProfile.id);
         setEvents(data);
@@ -205,6 +214,19 @@ export default function EventosPage() {
             >
               <CalendarDays className="h-4 w-4" />
             </button>
+            {isSupervisor && (
+              <button
+                onClick={() => setViewMode('resumen')}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === 'resumen' 
+                    ? 'bg-white dark:bg-dark-600 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+                title="Dashboard / Resumen"
+              >
+                <PieChart className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </Card>
@@ -214,6 +236,8 @@ export default function EventosPage() {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
         </div>
+      ) : viewMode === 'resumen' && isSupervisor ? (
+        <EventsDashboard events={events} expenses={allExpenses} participants={allParticipants} />
       ) : filtered.length === 0 ? (
         <Card className="text-center py-16">
           <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />

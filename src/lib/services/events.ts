@@ -367,6 +367,29 @@ export async function updateProvider(id: string, provider: Partial<EventProvider
 }
 
 // =====================================================
+// BULK DATA FOR DASHBOARD
+// =====================================================
+export async function getAllEventExpenses() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_expenses')
+    .select('*')
+    .order('fecha');
+  if (error) throw error;
+  return data as EventExpense[];
+}
+
+export async function getAllEventParticipants() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_participants')
+    .select('*')
+    .order('created_at');
+  if (error) throw error;
+  return data as EventParticipant[];
+}
+
+// =====================================================
 // KPIs - Computed from data
 // =====================================================
 export function computeEventKPIs(event: Event, expenses: EventExpense[], activities: EventActivity[], participants: EventParticipant[]) {

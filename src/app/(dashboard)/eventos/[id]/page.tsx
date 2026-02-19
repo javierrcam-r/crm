@@ -827,7 +827,7 @@ export default function EventDetailPage() {
           <div className="bg-amber-50 rounded-xl p-4 space-y-3">
             <h4 className="text-xs font-semibold text-amber-600 uppercase">🏷️ Marcas del Evento</h4>
             <div className="flex flex-wrap gap-2">
-              {['Schwarzkopf', 'Hipertín', 'Keyra', 'Sutra', 'Sin Marca'].map(brand => {
+              {['Schwarzkopf', 'Hipertín', 'Keyra', 'Sutra', 'Myrialis', 'Sin Marca'].map(brand => {
                 const selected = (editEventForm.marcas || []).includes(brand);
                 return (
                   <button key={brand} type="button" onClick={() => setEditEventForm((p: any) => ({ ...p, marcas: selected ? (p.marcas || []).filter((b: string) => b !== brand) : [...(p.marcas || []), brand] }))} className={`text-sm px-3 py-1.5 rounded-full border transition-all ${selected ? 'bg-amber-200 text-amber-800 border-amber-400 font-semibold' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300'}`}>

@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { CheckCircle } from 'lucide-react';
 
-const BRAND_OPTIONS = ['Schwarzkopf', 'Hipertín', 'Keyra', 'Sutra', 'Sin Marca'];
+const BRAND_OPTIONS = ['Schwarzkopf', 'Hipertín', 'Keyra', 'Sutra', 'Myrialis', 'Sin Marca'];
 
 export default function NuevoEventoPage() {
   const router = useRouter();
