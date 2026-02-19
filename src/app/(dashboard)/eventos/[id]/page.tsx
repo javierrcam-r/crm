@@ -58,6 +58,7 @@ export default function EventDetailPage() {
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showParticipantModal, setShowParticipantModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [expandedActivityId, setExpandedActivityId] = useState<string | null>(null);
 
   // Forms
   const [expenseForm, setExpenseForm] = useState({ categoria: '', descripcion: '', proveedor: '', monto: '', fecha: '', estado: 'cotizado' as ExpenseStatus, comprobante: '', num_comprobante: '', num_factura: '', notas: '' });
@@ -494,29 +495,78 @@ export default function EventDetailPage() {
           {/* Activities list */}
           <Card padding="none">
             <table className="w-full text-sm">
-              <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3">Actividad</th><th className="text-left px-4 py-3 hidden md:table-cell">Responsable</th><th className="text-center px-4 py-3">Avance</th><th className="text-center px-4 py-3">Estado</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
-              <tbody className="divide-y">
-                {activities.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-500">Sin actividades</td></tr> : activities.map(a => {
+              <thead><tr className="bg-gray-50 dark:bg-dark-700 border-b dark:border-dark-600"><th className="text-left px-4 py-3">Actividad</th><th className="text-left px-4 py-3 hidden md:table-cell">Responsable</th><th className="text-center px-4 py-3">Avance</th><th className="text-center px-4 py-3">Estado</th><th className="text-center px-4 py-3 w-24">Acción</th></tr></thead>
+              <tbody className="divide-y dark:divide-dark-600">
+                {activities.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-500 dark:text-gray-400">Sin actividades</td></tr> : activities.map(a => {
                   const isOverdue = a.estado !== 'completada' && a.estado !== 'cancelada' && a.fecha_fin && new Date(a.fecha_fin) < new Date();
+                  const isExpanded = expandedActivityId === a.id;
                   return (
-                    <tr key={a.id} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50/50' : ''}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {a.es_hito && <span title="Hito">🔹</span>}
-                          <div>
-                            <p className="font-medium">{a.nombre}</p>
-                            <p className="text-xs text-gray-500">{a.tipo === 'estrategica' ? '⭐ Estratégica' : 'Operativa'} • {a.prioridad} {isOverdue && <span className="text-red-600 font-medium">• RETRASADA</span>}</p>
+                    <>
+                      <tr key={a.id} className={`hover:bg-gray-50 dark:hover:bg-dark-700 ${isOverdue ? 'bg-red-50/50 dark:bg-red-900/20' : ''} ${isExpanded ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {a.es_hito && <span title="Hito">🔹</span>}
+                            <div>
+                              <p className="font-medium dark:text-white">{a.nombre}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{a.tipo === 'estrategica' ? '⭐ Estratégica' : 'Operativa'} • {a.prioridad} {isOverdue && <span className="text-red-600 dark:text-red-400 font-medium">• RETRASADA</span>}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-gray-600 text-xs">{getUserName(a.responsable_id)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="w-16 mx-auto bg-gray-200 rounded-full h-2"><div className="h-2 rounded-full bg-indigo-500" style={{ width: `${a.porcentaje_avance}%` }} /></div>
-                        <span className="text-xs text-gray-500">{a.porcentaje_avance}%</span>
-                      </td>
-                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${a.estado === 'completada' ? 'bg-green-100 text-green-700' : a.estado === 'en_progreso' ? 'bg-blue-100 text-blue-700' : a.estado === 'bloqueada' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{a.estado.replace('_', ' ')}</span></td>
-                      <td className="px-4 py-3 text-center"><div className="flex gap-1 justify-center"><button onClick={() => openActivityModal(a)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button><button onClick={() => removeActivity(a.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button></div></td>
-                    </tr>
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell text-gray-600 dark:text-gray-300 text-xs">{getUserName(a.responsable_id)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="w-16 mx-auto bg-gray-200 dark:bg-dark-600 rounded-full h-2"><div className="h-2 rounded-full bg-indigo-500" style={{ width: `${a.porcentaje_avance}%` }} /></div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{a.porcentaje_avance}%</span>
+                        </td>
+                        <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${a.estado === 'completada' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : a.estado === 'en_progreso' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : a.estado === 'bloqueada' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-300'}`}>{a.estado.replace('_', ' ')}</span></td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex gap-1 justify-center">
+                            <button onClick={() => setExpandedActivityId(isExpanded ? null : a.id)} className={`p-1 rounded transition-colors ${isExpanded ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'hover:bg-blue-50 dark:hover:bg-blue-900/30'}`} title="Ver detalle">
+                              <Eye className={`h-3.5 w-3.5 ${isExpanded ? 'text-indigo-600 dark:text-indigo-400' : 'text-blue-500'}`} />
+                            </button>
+                            <button onClick={() => openActivityModal(a)} className="p-1 hover:bg-gray-100 dark:hover:bg-dark-600 rounded" title="Editar"><Edit className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" /></button>
+                            <button onClick={() => removeActivity(a.id)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Eliminar"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${a.id}-detail`} className="bg-indigo-50/30 dark:bg-indigo-900/10">
+                          <td colSpan={5} className="px-4 py-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Descripción</p>
+                                <p className="text-gray-700 dark:text-gray-200">{a.descripcion || 'Sin descripción'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Fechas</p>
+                                <p className="text-gray-700 dark:text-gray-200">
+                                  <span className="font-medium">Inicio:</span> {format(new Date(a.fecha_inicio), "d MMM yyyy, HH:mm", { locale: es })}
+                                  {a.fecha_fin && (
+                                    <>
+                                      <br />
+                                      <span className="font-medium">Fin:</span> {format(new Date(a.fecha_fin), "d MMM yyyy, HH:mm", { locale: es })}
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Detalles</p>
+                                <p className="text-gray-700 dark:text-gray-200">
+                                  <span className="font-medium">Tipo:</span> {a.tipo === 'estrategica' ? 'Estratégica' : 'Operativa'}<br />
+                                  <span className="font-medium">Prioridad:</span> {a.prioridad}<br />
+                                  <span className="font-medium">Hito:</span> {a.es_hito ? 'Sí' : 'No'}
+                                </p>
+                              </div>
+                              {a.notas && (
+                                <div className="md:col-span-2 lg:col-span-3">
+                                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Notas</p>
+                                  <p className="text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-700 p-2 rounded border border-gray-200 dark:border-dark-600">{a.notas}</p>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
               </tbody>

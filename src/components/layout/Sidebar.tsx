@@ -236,8 +236,8 @@ export default function Sidebar() {
             </Link>
           )}
 
-          {/* Eventos para Marketing */}
-          {userProfile?.rol === 'marketing' && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
+          {/* Eventos para Marketing y Técnico */}
+          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
             <Link
               href="/eventos"
               onClick={() => setMobileOpen(false)}
