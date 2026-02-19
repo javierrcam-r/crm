@@ -231,6 +231,22 @@ export async function getUserEventActivities(userId: string) {
   return data || [];
 }
 
+export async function getAllEventActivitiesForCalendar(userId?: string) {
+  const supabase = getSupabaseClient();
+  const query = supabase
+    .from('event_activities')
+    .select('*, events:event_id(id, nombre, estado)')
+    .order('fecha_inicio');
+  
+  if (userId) {
+    query.eq('responsable_id', userId);
+  }
+  
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as (EventActivity & { events: { id: string; nombre: string; estado: string } | null })[];
+}
+
 export async function createEventActivity(activity: Partial<EventActivity>) {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
