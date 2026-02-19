@@ -488,7 +488,7 @@ export async function getAllUsersForSelection() {
   
   const { data, error } = await supabase
     .from('users_profile')
-    .select('id, nombre_completo, email, rol')
+    .select('id, user_id, nombre_completo, email, rol')
     .eq('activo', true)
     .order('nombre_completo');
   

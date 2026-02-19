@@ -146,7 +146,6 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     loadData();
-    loadUsers();
   }, [currentDate, view, showTecnicoActivities, filterByUser]);
 
   const loadData = async () => {
@@ -187,19 +186,27 @@ export default function CalendarioPage() {
         getAllEventActivitiesForCalendar(eventActUserId).catch(() => [] as EventActivityWithEvent[]),
       ]);
 
+      // Cargar usuarios para mapeo y filtros
+      const allUsers = await getAllUsersForSelection();
+      setUsers(allUsers);
+
       // Filtrar visitas por usuario si hay filtro activo
+      // filterByUser es users_profile.id, pero visit.user_id es auth UUID
       let filteredVisits = visitsData;
+      let filteredPending = pendingData;
       if (filterByUser && isSup) {
-        filteredVisits = visitsData.filter(v => v.user_id === filterByUser);
+        const selectedUser = allUsers.find(u => u.id === filterByUser);
+        const authUid = (selectedUser as any)?.user_id || filterByUser;
+        filteredVisits = visitsData.filter(v => v.user_id === authUid);
+        filteredPending = pendingData.filter(v => v.user_id === authUid);
       }
       
       setVisits(filteredVisits);
-      setPendingVisits(pendingData);
+      setPendingVisits(filteredPending);
       
       // Obtener IDs de técnicos si el filtro está activo
       let tecnicoIds: string[] = [];
       if (showTecnicoActivities) {
-        const allUsers = await getAllUsersForSelection();
         tecnicoIds = allUsers.filter(u => u.rol === 'tecnico').map(u => u.id);
         setTecnicoUserIds(tecnicoIds);
       } else {
