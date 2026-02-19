@@ -236,6 +236,23 @@ export default function Sidebar() {
             </Link>
           )}
 
+          {/* Eventos para Marketing */}
+          {userProfile?.rol === 'marketing' && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
+            <Link
+              href="/eventos"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200 text-sm mb-1',
+                isActive('/eventos')
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+                  : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
+              )}
+            >
+              <Calendar className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/eventos') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
+              <span>Eventos</span>
+            </Link>
+          )}
+
           {/* Actividades Estratégicas - Disponible para TODOS los roles */}
           {userProfile && (
             <>
