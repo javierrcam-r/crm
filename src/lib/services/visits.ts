@@ -1,11 +1,11 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Visit, VisitInsert, VisitUpdate, VisitFilters } from '@/types/database';
-import { getCurrentUserId, isCurrentUserAdmin } from '@/lib/auth/getCurrentUserId';
+import { getCurrentUserId, isCurrentUserAdmin, isCurrentUserSupervisor } from '@/lib/auth/getCurrentUserId';
 
 export async function getVisits(filters?: VisitFilters) {
   const supabase = getSupabaseClient();
   const userId = getCurrentUserId();
-  const isAdmin = isCurrentUserAdmin();
+  const canSeeAll = isCurrentUserAdmin() || isCurrentUserSupervisor();
   
   let query = supabase
     .from('visits')
@@ -16,8 +16,8 @@ export async function getVisits(filters?: VisitFilters) {
     .is('deleted_at', null)
     .order('scheduled_at', { ascending: true });
 
-  // Filtrar por usuario (excepto admin que ve todo)
-  if (!isAdmin && userId) {
+  // Supervisores y admin ven todas las visitas
+  if (!canSeeAll && userId) {
     query = query.eq('user_id', userId);
   }
 
@@ -89,7 +89,7 @@ export async function getTodayVisits() {
 export async function getPendingVisits() {
   const supabase = getSupabaseClient();
   const userId = getCurrentUserId();
-  const isAdmin = isCurrentUserAdmin();
+  const canSeeAll = isCurrentUserAdmin() || isCurrentUserSupervisor();
   const now = new Date().toISOString();
 
   let query = supabase
@@ -103,7 +103,7 @@ export async function getPendingVisits() {
     .lt('scheduled_at', now)
     .order('scheduled_at');
 
-  if (!isAdmin && userId) {
+  if (!canSeeAll && userId) {
     query = query.eq('user_id', userId);
   }
 
@@ -286,9 +286,8 @@ export async function getVisitStats() {
 export async function getVisitsByDate(date: string) {
   const supabase = getSupabaseClient();
   const userId = getCurrentUserId();
-  const isAdmin = isCurrentUserAdmin();
+  const canSeeAll = isCurrentUserAdmin() || isCurrentUserSupervisor();
   
-  // Usar directamente el string de fecha para evitar problemas de zona horaria
   const startOfDay = `${date}T00:00:00`;
   const endOfDay = `${date}T23:59:59`;
 
@@ -303,7 +302,7 @@ export async function getVisitsByDate(date: string) {
     .lte('scheduled_at', endOfDay)
     .order('scheduled_at');
 
-  if (!isAdmin && userId) {
+  if (!canSeeAll && userId) {
     query = query.eq('user_id', userId);
   }
 

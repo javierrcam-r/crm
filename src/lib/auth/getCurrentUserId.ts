@@ -23,3 +23,9 @@ export function isCurrentUserAdmin(): boolean {
   const profile = getCurrentUserProfile();
   return profile?.rol === 'admin';
 }
+
+export function isCurrentUserSupervisor(): boolean {
+  const profile = getCurrentUserProfile();
+  if (!profile) return false;
+  return profile.rol === 'admin' || profile.rol === 'supervisor' || profile.rol === 'supervisor_nivel1' || profile.rol === 'supervisor_vendedor';
+}

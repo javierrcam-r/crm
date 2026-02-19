@@ -45,6 +45,7 @@ import {
   getActivityComments
 } from '@/lib/services/activities';
 import { getAllEventActivitiesForCalendar, type EventActivity } from '@/lib/services/events';
+import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
 import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile, ActivityComment, RecurrenceType } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -124,7 +125,7 @@ export default function CalendarioPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const [editFormData, setEditFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string }>({
+  const [editFormData, setEditFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string; notificar: boolean }>({
     titulo: '',
     descripcion: '',
     tipo: 'tarea',
@@ -139,7 +140,8 @@ export default function CalendarioPage() {
     participantes: [],
     recordatorio_minutos: null,
     recurrencia: 'none',
-    recurrencia_fin: ''
+    recurrencia_fin: '',
+    notificar: true,
   });
 
   useEffect(() => {
@@ -171,28 +173,30 @@ export default function CalendarioPage() {
         dateTo = end.toISOString();
       }
 
-      // Cargar visitas, actividades estratégicas y actividades de eventos
+      const currentId = userProfile?.id;
+      const currentRol = userProfile?.rol;
+      const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor';
+
+      // Supervisores/admin ven todas las actividades de eventos; otros solo las suyas
+      const eventActUserId = isSup ? undefined : currentId;
+
       const [visitsData, pendingData, activitiesData, eventActivitiesData] = await Promise.all([
         getVisits({ date_from: dateFrom, date_to: dateTo }),
         getPendingVisits(),
         getActivities().catch(() => [] as Activity[]),
-        getAllEventActivitiesForCalendar(userProfile?.id).catch(() => [] as EventActivityWithEvent[]),
+        getAllEventActivitiesForCalendar(eventActUserId).catch(() => [] as EventActivityWithEvent[]),
       ]);
 
-      // Si hay filtro por usuario (solo supervisores), filtrar visitas
+      // Filtrar visitas por usuario si hay filtro activo
       let filteredVisits = visitsData;
-      if (filterByUser && (userProfile?.rol === 'admin' || userProfile?.rol?.includes('supervisor'))) {
+      if (filterByUser && isSup) {
         filteredVisits = visitsData.filter(v => v.user_id === filterByUser);
       }
       
       setVisits(filteredVisits);
       setPendingVisits(pendingData);
       
-      // Filtrar actividades según el rol
-      const currentId = userProfile?.id;
-      const currentRol = userProfile?.rol;
-      
-      // Si está activo el filtro de técnico, obtener IDs de usuarios técnicos
+      // Obtener IDs de técnicos si el filtro está activo
       let tecnicoIds: string[] = [];
       if (showTecnicoActivities) {
         const allUsers = await getAllUsersForSelection();
@@ -202,46 +206,40 @@ export default function CalendarioPage() {
         setTecnicoUserIds([]);
       }
       
+      // Filtrar actividades según el rol
       const myActivities = activitiesData.filter(activity => {
         const isCreator = activity.created_by_user_id === currentId;
         const isParticipant = Array.isArray(activity.participants) && 
           activity.participants.some(p => p.user_profile_id === currentId);
         
-        // Si está activo el filtro de técnico, incluir actividades diarias del técnico
         if (showTecnicoActivities && tecnicoIds.includes(activity.created_by_user_id || '')) {
           return true;
         }
         
         if (currentRol === 'admin') return true;
         
-        // Supervisores: ven sus propias + las que tienen participantes + las estratégicas
-        // NO ven tareas/otro personales de OTROS usuarios
+        // Supervisores: ven TODO (diarias, estratégicas, de todos)
         if (currentRol === 'supervisor_nivel1' || currentRol === 'supervisor' || currentRol === 'supervisor_vendedor') {
-          // Siempre ver las propias y donde participa
-          if (isCreator || isParticipant) return true;
-          // Si es tipo estratégico, siempre ver
-          if (activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento') return true;
-          // Si tiene participantes, es colaborativa → ver
-          if (Array.isArray(activity.participants) && activity.participants.length > 0) return true;
-          // Es tarea/otro sin participantes de OTRO usuario → NO ver
-          return false;
+          return true;
         }
         
         // Otros roles: solo sus propias o donde participan
         return isCreator || isParticipant;
       });
       
-      // Si hay filtro por usuario (supervisores), filtrar actividades
+      // Si hay filtro por usuario, filtrar actividades y actividades de eventos
       let finalActivities = myActivities;
-      if (filterByUser && (currentRol === 'admin' || currentRol?.includes('supervisor'))) {
+      let finalEventActivities = eventActivitiesData;
+      if (filterByUser && isSup) {
         finalActivities = myActivities.filter(a => 
           a.created_by_user_id === filterByUser ||
           (Array.isArray(a.participants) && a.participants.some(p => p.user_profile_id === filterByUser))
         );
+        finalEventActivities = eventActivitiesData.filter(ea => ea.responsable_id === filterByUser);
       }
       
       setActivities(finalActivities);
-      setEventActivities(eventActivitiesData);
+      setEventActivities(finalEventActivities);
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
@@ -289,7 +287,8 @@ export default function CalendarioPage() {
       participantes: activity.participants?.map(p => p.user_profile_id) || [],
       recordatorio_minutos: activity.recordatorio_minutos,
       recurrencia: activity.recurrencia || 'none',
-      recurrencia_fin: activity.recurrencia_fin || ''
+      recurrencia_fin: activity.recurrencia_fin || '',
+      notificar: true,
     });
     setIsEditingActivity(true);
   }
@@ -322,6 +321,18 @@ export default function CalendarioPage() {
       await removeAllParticipants(selectedActivity.id);
       if (editFormData.participantes.length > 0) {
         await addMultipleParticipants(selectedActivity.id, editFormData.participantes);
+      }
+
+      if (editFormData.notificar && editFormData.participantes.length > 0) {
+        try {
+          await createNotificationsForUsers(editFormData.participantes, {
+            title: `Actividad actualizada: ${editFormData.titulo}`,
+            body: `La actividad "${editFormData.titulo}" ha sido modificada`,
+            type: 'actividad',
+            reference_id: selectedActivity.id,
+            reference_url: '/calendario',
+          });
+        } catch {}
       }
 
       toast.success('Actividad actualizada exitosamente');
@@ -422,7 +433,7 @@ export default function CalendarioPage() {
   };
 
   // Separar actividades estratégicas de actividades diarias
-  // Diaria: tipo tarea/otro, SIN participantes, creada por el usuario actual
+  // Diaria: tipo tarea/otro, SIN participantes
   // Estratégica: reunion/capacitacion/seguimiento O cualquier actividad con participantes
   const isActivityStrategic = (activity: Activity) => {
     const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
@@ -431,12 +442,7 @@ export default function CalendarioPage() {
     const hasParticipants = activity.participants && activity.participants.length > 0;
     if (hasParticipants) return true;
     
-    // Es "diaria" si es tarea/otro sin participantes y la creó el usuario actual
-    // Si la creó OTRO usuario, se considera estratégica (porque el usuario no debería verla normalmente)
-    const createdByCurrentUser = activity.created_by_user_id === userProfile?.id;
-    if (!createdByCurrentUser) return true; // Si la creó otro usuario, es estratégica
-    
-    return false; // Es diaria: tarea/otro, sin participantes, creada por el usuario actual
+    return false;
   };
 
   const getStrategicActivitiesForDay = (date: Date) => {
@@ -2305,6 +2311,30 @@ export default function CalendarioPage() {
                 placeholder="Notas o recordatorios..."
               />
             </div>
+
+            {/* Notificar */}
+            {editFormData.participantes.length > 0 && (
+              <div className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Notificar cambios</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Avisar a los involucrados</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditFormData({ ...editFormData, notificar: !editFormData.notificar })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    editFormData.notificar ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-dark-500'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform shadow-sm ${
+                    editFormData.notificar ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            )}
 
             {/* Acciones */}
             <div className="flex justify-end gap-3 pt-5 border-t border-gray-200">

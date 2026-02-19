@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { createActivity, addMultipleParticipants, getAllUsersForSelection } from '@/lib/services/activities';
+import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
 import type { ActivityInsert, ActivityType, ActivityPriority, UserProfile, RecurrenceType } from '@/types/database';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -47,7 +48,7 @@ function NuevaActividadContent() {
 
   const [users, setUsers] = useState<Pick<UserProfile, 'id' | 'nombre_completo' | 'email' | 'rol'>[]>([]);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string }>({
+  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string; notificar: boolean }>({
     titulo: '',
     descripcion: '',
     tipo: 'tarea', // Por defecto actividad diaria
@@ -64,7 +65,8 @@ function NuevaActividadContent() {
     participantes: [],
     recordatorio_minutos: null,
     recurrencia: 'none',
-    recurrencia_fin: ''
+    recurrencia_fin: '',
+    notificar: true,
   });
 
   useEffect(() => {
@@ -122,6 +124,21 @@ function NuevaActividadContent() {
         } catch (partError) {
           console.error('Error agregando participantes:', partError);
           toast.error('Actividad creada, pero hubo error al agregar involucrados');
+        }
+      }
+
+      // Notificar a los participantes
+      if (formData.notificar && formData.participantes.length > 0 && newActivity?.id) {
+        try {
+          await createNotificationsForUsers(formData.participantes, {
+            title: `Nueva actividad: ${formData.titulo}`,
+            body: `Has sido asignado a la actividad "${formData.titulo}" programada para ${format(new Date(formData.fecha_inicio), "d MMM yyyy, HH:mm")}`,
+            type: 'actividad',
+            reference_id: newActivity.id,
+            reference_url: '/calendario',
+          });
+        } catch (err) {
+          console.error('Error sending notifications:', err);
         }
       }
 
@@ -426,6 +443,30 @@ function NuevaActividadContent() {
               </div>
             )}
           </div>
+
+          {/* Notificar */}
+          {formData.participantes.length > 0 && (
+            <div className="flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
+              <div className="flex items-center gap-3">
+                <Bell className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Notificar a participantes</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Los involucrados recibirán una notificación</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, notificar: !formData.notificar })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  formData.notificar ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-dark-500'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform shadow-sm ${
+                  formData.notificar ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+          )}
 
           {/* Notas adicionales */}
           <div>

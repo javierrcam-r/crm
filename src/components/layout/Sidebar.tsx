@@ -27,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Badge from '@/components/ui/Badge';
 import toast from 'react-hot-toast';
 import { getSidebarConfig, isMenuVisible, type SidebarConfigItem } from '@/lib/services/sidebarConfig';
+import NotificationBell from './NotificationBell';
 
 // Menú principal para VENDEDORES (único rol con dashboard)
 const vendedorNavigation = [
@@ -399,18 +400,26 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 shadow-md active:scale-95 transition-transform"
-        aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
-      >
-        {mobileOpen ? (
-          <X className="h-5 w-5 text-gray-600 dark:text-white" />
-        ) : (
-          <Menu className="h-5 w-5 text-gray-600 dark:text-white" />
-        )}
-      </button>
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 py-2">
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="p-2.5 rounded-xl bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 shadow-md active:scale-95 transition-transform"
+          aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+        >
+          {mobileOpen ? (
+            <X className="h-5 w-5 text-gray-600 dark:text-white" />
+          ) : (
+            <Menu className="h-5 w-5 text-gray-600 dark:text-white" />
+          )}
+        </button>
+        <NotificationBell />
+      </div>
+
+      {/* Desktop notification bell */}
+      <div className="hidden md:block fixed top-3 right-4 z-50">
+        <NotificationBell />
+      </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (
