@@ -5,15 +5,17 @@ import Link from 'next/link';
 import {
   Plus, Calendar, Users, DollarSign, Target, Search, Filter,
   TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3,
-  MapPin, Video, Globe,
+  MapPin, Video, Globe, LayoutGrid, CalendarDays,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import EventCalendar from '@/components/events/EventCalendar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEvents, getVendorEvents, type Event, type EventStatus, type EventType } from '@/lib/services/events';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 const statusConfig: Record<EventStatus, { label: string; color: string; bg: string }> = {
   planeado: { label: 'Planeado', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-100 dark:bg-blue-900/40' },
@@ -33,11 +35,13 @@ const modalityIcons: Record<string, any> = {
 
 export default function EventosPage() {
   const { userProfile } = useAuth();
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<EventStatus | ''>('');
   const [filterType, setFilterType] = useState<EventType | ''>('');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
   const isVendor = userProfile?.rol === 'vendedor';
@@ -69,6 +73,10 @@ export default function EventosPage() {
     const matchType = !filterType || e.tipo === filterType;
     return matchSearch && matchStatus && matchType;
   });
+
+  const handleEventClick = (event: Event) => {
+    router.push(isSupervisor ? `/eventos/${event.id}` : `/eventos/${event.id}/vendedor`);
+  };
 
   const stats = {
     total: events.length,
@@ -172,10 +180,36 @@ export default function EventosPage() {
             {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <Badge variant="blue">{filtered.length} eventos</Badge>
+          
+          {/* View Toggle */}
+          <div className="flex items-center bg-gray-100 dark:bg-dark-500 rounded-xl p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'list' 
+                  ? 'bg-white dark:bg-dark-600 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+              title="Vista de lista"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'calendar' 
+                  ? 'bg-white dark:bg-dark-600 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+              title="Vista de calendario"
+            >
+              <CalendarDays className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </Card>
 
-      {/* Events Grid */}
+      {/* Events Content */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
@@ -187,7 +221,11 @@ export default function EventosPage() {
           <p className="text-gray-500 dark:text-gray-400 mb-4">{isSupervisor ? 'Crea tu primer evento para empezar' : 'No tienes eventos asignados'}</p>
           {isSupervisor && <Link href="/eventos/nuevo"><Button><Plus className="h-4 w-4 mr-2" />Crear Evento</Button></Link>}
         </Card>
+      ) : viewMode === 'calendar' ? (
+        /* Calendar View */
+        <EventCalendar events={filtered} onEventClick={handleEventClick} />
       ) : (
+        /* List/Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(event => {
             const ModalIcon = modalityIcons[event.modalidad] || Globe;
