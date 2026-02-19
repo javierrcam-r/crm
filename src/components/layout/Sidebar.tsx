@@ -64,7 +64,7 @@ const supervisorN1Navigation = [
 
 // Actividades estratégicas - disponible para todos los roles
 const actividadesEstrategicas = [
-  { key: 'actividades', name: 'Actividades Estratégicas', href: '/actividades', icon: ClipboardList },
+  { key: 'actividades', name: 'Objetivos Estratégicos', href: '/actividades', icon: ClipboardList },
 ];
 
 const quickActions = [
@@ -254,7 +254,7 @@ export default function Sidebar() {
             </Link>
           )}
 
-          {/* Actividades Estratégicas - Disponible para TODOS los roles */}
+          {/* Objetivos Estratégicos - Disponible para TODOS los roles */}
           {userProfile && (
             <>
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">

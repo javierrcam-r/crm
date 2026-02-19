@@ -501,7 +501,7 @@ export default function CalendarioPage() {
         bg: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200 border-l-2 border-purple-500 hover:bg-purple-200 dark:hover:bg-purple-900/60',
         bgLarge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200 border-l-4 border-purple-500 hover:bg-purple-200 dark:hover:bg-purple-900/60',
         icon: '⭐',
-        badge: 'Estratégica',
+        badge: 'Obj. Estratégico',
         badgeClass: 'bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200',
         dotColor: 'bg-purple-500'
       };
@@ -579,7 +579,7 @@ export default function CalendarioPage() {
               { value: 'todos', label: 'Todos', icon: '📅' },
               { value: 'visitas', label: 'Visitas', icon: '🏠' },
               { value: 'diarias', label: 'Diarias', icon: '📋' },
-              { value: 'estrategicas', label: 'Estratégicas', icon: '⭐' },
+              { value: 'estrategicas', label: 'Obj. Estratégicos', icon: '⭐' },
               { value: 'eventos', label: 'Eventos', icon: '🎯' },
             ] as { value: CalendarFilterType; label: string; icon: string }[]).map((f) => (
               <button
@@ -775,7 +775,7 @@ export default function CalendarioPage() {
                         <span className="ml-1 truncate">🎯{ea.nombre}</span>
                       </Link>
                     ))}
-                    {/* Actividades Estratégicas */}
+                    {/* Objetivos Estratégicos */}
                     {strategicActivities.slice(0, dayEventActs.length > 0 ? 1 : 2).map((activity) => {
                       const style = getActivityStyle(activity, true);
                       return (
@@ -1230,7 +1230,7 @@ export default function CalendarioPage() {
                 <EmptyState
                   icon={CalendarIcon}
                   title="No hay elementos para mostrar"
-                  description={calendarFilter !== 'todos' ? `No hay ${calendarFilter === 'visitas' ? 'visitas' : calendarFilter === 'diarias' ? 'actividades diarias' : calendarFilter === 'estrategicas' ? 'actividades estratégicas' : 'actividades de eventos'} programadas` : 'Crea tu primera actividad'}
+                  description={calendarFilter !== 'todos' ? `No hay ${calendarFilter === 'visitas' ? 'visitas' : calendarFilter === 'diarias' ? 'actividades diarias' : calendarFilter === 'estrategicas' ? 'objetivos estratégicos' : 'actividades de eventos'} programadas` : 'Crea tu primera actividad'}
                   action={{
                     label: 'Nueva Actividad Diaria',
                     onClick: () => (window.location.href = '/calendario/nueva-actividad'),
@@ -1432,12 +1432,12 @@ export default function CalendarioPage() {
           </div>
           {canManageDailyActivities ? (
             <>
-              {/* Actividades Estratégicas */}
+              {/* Objetivos Estratégicos */}
               {getStrategicActivitiesForDay(selectedDate).length > 0 && (
                 <div className="mb-4">
                   <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-1">
                     <Star className="h-4 w-4 fill-purple-500" />
-                    Actividades Estratégicas ({getStrategicActivitiesForDay(selectedDate).length})
+                    Objetivos Estratégicos ({getStrategicActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-3">
                     {getStrategicActivitiesForDay(selectedDate).map((activity) => (
@@ -1635,12 +1635,12 @@ export default function CalendarioPage() {
             </>
           ) : (
             <>
-              {/* Actividades Estratégicas para vendedores */}
+              {/* Objetivos Estratégicos para vendedores */}
               {getActivitiesForDay(selectedDate).length > 0 && (
                 <div className="mb-4">
                   <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-1">
                     <Star className="h-4 w-4 fill-purple-500" />
-                    Mis Actividades Estratégicas ({getActivitiesForDay(selectedDate).length})
+                    Mis Objetivos Estratégicos ({getActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-3">
                     {getActivitiesForDay(selectedDate).map((activity) => (
@@ -2066,7 +2066,7 @@ export default function CalendarioPage() {
                 {isStrategicActivity && (
                   <Link href="/actividades">
                     <Button variant="secondary" size="sm">
-                      Ver en Estratégicas
+                      Ver en Objetivos
                     </Button>
                   </Link>
                 )}

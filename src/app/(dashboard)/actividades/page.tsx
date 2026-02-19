@@ -587,7 +587,7 @@ export default function ActividadesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Actividades Estratégicas</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Objetivos Estratégicos</h1>
           <p className="text-gray-500 dark:text-gray-300 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
             {isSupervisorN1
               ? 'Gestiona y supervisa reuniones, capacitaciones y seguimientos del equipo'
@@ -597,7 +597,7 @@ export default function ActividadesPage() {
 
         <Button size="sm" onClick={() => setShowCreateModal(true)} disabled={tableNotExists}>
           <Plus className="h-4 w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Nueva Actividad Estratégica</span>
+          <span className="hidden sm:inline">Nuevo Objetivo Estratégico</span>
           <span className="sm:hidden">Nueva Actividad</span>
         </Button>
       </div>
@@ -986,7 +986,7 @@ export default function ActividadesPage() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => { setShowCreateModal(false); resetForm(); }}
-        title={isEditing ? "Editar Actividad Estratégica" : "Nueva Actividad Estratégica"}
+        title={isEditing ? "Editar Objetivo Estratégico" : "Nuevo Objetivo Estratégico"}
         size="lg"
       >
         <div className="space-y-5">

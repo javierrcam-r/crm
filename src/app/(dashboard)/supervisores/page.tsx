@@ -672,7 +672,7 @@ export default function SupervisoresPage() {
           </div>
         </Card>
 
-        {/* Recordatorio de Actividades Estratégicas */}
+        {/* Recordatorio de Objetivos Estratégicos */}
         {weekActivities.length > 0 && (
           <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
             <div 
@@ -683,7 +683,7 @@ export default function SupervisoresPage() {
                 <Star className="h-5 w-5 text-purple-600 fill-purple-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-purple-900">Actividades Estratégicas</h3>
+                <h3 className="font-semibold text-purple-900">Objetivos Estratégicos</h3>
                 <p className="text-xs text-purple-600">Esta semana y pendientes</p>
               </div>
               <Badge variant="purple">{weekActivities.length}</Badge>

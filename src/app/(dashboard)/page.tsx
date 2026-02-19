@@ -198,7 +198,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recordatorio de Actividades Estratégicas */}
+      {/* Recordatorio de Objetivos Estratégicos */}
       {weekActivities.length > 0 && (
         <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 animate-fade-in">
           <div 
@@ -209,7 +209,7 @@ export default function DashboardPage() {
               <Star className="h-5 w-5 text-purple-600 dark:text-purple-400 fill-purple-600 dark:fill-purple-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-purple-900 dark:text-purple-100">Actividades Estratégicas</h3>
+              <h3 className="font-semibold text-purple-900 dark:text-purple-100">Objetivos Estratégicos</h3>
               <p className="text-xs text-purple-600 dark:text-purple-400">Esta semana y pendientes</p>
             </div>
             <Badge variant="purple">{weekActivities.length}</Badge>
