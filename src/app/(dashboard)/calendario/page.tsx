@@ -467,16 +467,10 @@ export default function CalendarioPage() {
   };
 
   // Separar actividades estratégicas de actividades diarias
-  // Diaria: tipo tarea/otro, SIN participantes
-  // Estratégica: reunion/capacitacion/seguimiento O cualquier actividad con participantes
+  // Diaria: tipo tarea/otro (aunque tenga participantes)
+  // Estratégica: SOLO reunion, capacitacion, seguimiento
   const isActivityStrategic = (activity: Activity) => {
-    const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
-    if (isStrategicType) return true;
-    
-    const hasParticipants = activity.participants && activity.participants.length > 0;
-    if (hasParticipants) return true;
-    
-    return false;
+    return activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
   };
 
   const getStrategicActivitiesForDay = (date: Date) => {
