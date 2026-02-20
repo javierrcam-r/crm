@@ -11,10 +11,12 @@ import Textarea from '@/components/ui/Textarea';
 import { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { createActivity, addMultipleParticipants, getAllUsersForSelection } from '@/lib/services/activities';
 import { isDateBlocked } from '@/lib/services/blockedDays';
+import { getUsersOnVacationOnDate } from '@/lib/services/vacations';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
 import type { ActivityInsert, ActivityType, ActivityPriority, UserProfile, RecurrenceType } from '@/types/database';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const RECURRENCE_OPTIONS = [
   { value: 'none', label: 'No se repite' },
@@ -46,6 +48,7 @@ function NuevaActividadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedDate = searchParams.get('date');
+  const { userProfile } = useAuth();
 
   const [users, setUsers] = useState<Pick<UserProfile, 'id' | 'nombre_completo' | 'email' | 'rol'>[]>([]);
   const [loading, setLoading] = useState(false);
@@ -103,8 +106,17 @@ function NuevaActividadContent() {
         toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
         return;
       }
+      const idsToCheck = [...new Set([userProfile?.id, ...formData.participantes].filter(Boolean) as string[])];
+      if (idsToCheck.length > 0) {
+        const onVacationIds = await getUsersOnVacationOnDate(idsToCheck, formData.fecha_inicio);
+        if (onVacationIds.length > 0) {
+          const names = users.filter(u => onVacationIds.includes(u.id)).map(u => u.nombre_completo).join(', ');
+          toast.error(`No se puede asignar: tienen vacaciones aprobadas ese día: ${names || 'Participante(s)'}`);
+          return;
+        }
+      }
     } catch {
-      // Si falla la consulta de días bloqueados, permitir continuar
+      // Si falla la consulta, permitir continuar
     }
 
     setLoading(true);

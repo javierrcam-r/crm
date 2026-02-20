@@ -47,6 +47,7 @@ import {
 } from '@/lib/services/activities';
 import { getAllEventActivitiesForCalendar, type EventActivity } from '@/lib/services/events';
 import { getBlockedDays, isDateBlocked } from '@/lib/services/blockedDays';
+import { getUsersOnVacationOnDate } from '@/lib/services/vacations';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
 import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile, ActivityComment, RecurrenceType } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
@@ -318,6 +319,15 @@ export default function CalendarioPage() {
       if (blocked) {
         toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
         return;
+      }
+      const idsToCheck = [...new Set([selectedActivity.created_by_user_id, ...editFormData.participantes].filter(Boolean) as string[])];
+      if (idsToCheck.length > 0) {
+        const onVacationIds = await getUsersOnVacationOnDate(idsToCheck, editFormData.fecha_inicio);
+        if (onVacationIds.length > 0) {
+          const names = users.filter(u => onVacationIds.includes(u.id)).map(u => u.nombre_completo).join(', ');
+          toast.error(`No se puede asignar: tienen vacaciones aprobadas ese día: ${names || 'Participante(s)'}`);
+          return;
+        }
       }
     } catch {
       // Si falla la consulta, permitir continuar

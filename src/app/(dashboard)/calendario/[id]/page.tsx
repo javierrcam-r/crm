@@ -32,6 +32,7 @@ import {
   type Visit,
 } from '@/lib/services/visits';
 import { isDateBlocked } from '@/lib/services/blockedDays';
+import { isUserOnVacation } from '@/lib/services/vacations';
 import {
   formatDateTime,
   formatDate,
@@ -40,10 +41,12 @@ import {
 } from '@/lib/utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function VisitaDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { userProfile } = useAuth();
   const [visit, setVisit] = useState<Visit | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -148,6 +151,14 @@ export default function VisitaDetailPage() {
       if (blocked) {
         toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
         return;
+      }
+      const assigneeId = visit?.user_id || userProfile?.id;
+      if (assigneeId) {
+        const onVacation = await isUserOnVacation(assigneeId, new Date(newScheduledAt));
+        if (onVacation) {
+          toast.error('La persona asignada tiene vacaciones aprobadas ese día. No se puede programar.');
+          return;
+        }
       }
     } catch {
       // Si falla la consulta, permitir continuar

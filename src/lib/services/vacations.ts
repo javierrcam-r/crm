@@ -3,6 +3,49 @@ import { getCurrentUserProfile } from '@/lib/auth/getCurrentUserId';
 import type { VacationRequest, VacationRequestInsert, VacationRequestStatus } from '@/types/database';
 
 /**
+ * Verifica si un usuario tiene vacaciones aprobadas en una fecha.
+ * Usado para bloquear visitas/actividades en días de vacaciones.
+ */
+export async function isUserOnVacation(userProfileId: string, date: Date | string): Promise<boolean> {
+  const d = typeof date === 'string' ? date.slice(0, 10) : date.toISOString().slice(0, 10);
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('vacation_requests')
+    .select('id')
+    .eq('user_profile_id', userProfileId)
+    .eq('estado', 'aprobado')
+    .lte('fecha_inicio', d)
+    .gte('fecha_fin', d)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data != null;
+}
+
+/**
+ * Verifica si alguno de los usuarios tiene vacaciones aprobadas en la fecha.
+ * Retorna el nombre del primero que tiene vacaciones, o null si ninguno.
+ */
+export async function getUsersOnVacationOnDate(
+  userProfileIds: string[],
+  date: Date | string
+): Promise<string[]> {
+  if (userProfileIds.length === 0) return [];
+  const d = typeof date === 'string' ? date.slice(0, 10) : date.toISOString().slice(0, 10);
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('vacation_requests')
+    .select('user_profile_id')
+    .in('user_profile_id', userProfileIds)
+    .eq('estado', 'aprobado')
+    .lte('fecha_inicio', d)
+    .gte('fecha_fin', d);
+
+  if (error) throw error;
+  return [...new Set((data ?? []).map((r) => r.user_profile_id))];
+}
+
+/**
  * Obtiene las solicitudes de vacaciones del usuario actual.
  */
 export async function getMyVacationRequests(): Promise<VacationRequest[]> {

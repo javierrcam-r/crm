@@ -12,10 +12,12 @@ import Textarea from '@/components/ui/Textarea';
 import { getCustomers, type Customer } from '@/lib/services/customers';
 import { createVisit } from '@/lib/services/visits';
 import { isDateBlocked } from '@/lib/services/blockedDays';
+import { isUserOnVacation } from '@/lib/services/vacations';
 import { searchCustomers } from '@/lib/search';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import type { VisitInsert } from '@/types/database';
+import { useAuth } from '@/contexts/AuthContext';
 
 function LoadingFallback() {
   return (
@@ -36,6 +38,7 @@ export default function NuevaVisitaPage() {
 function NuevaVisitaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { userProfile } = useAuth();
   const preselectedCustomerId = searchParams.get('customer');
   const preselectedDate = searchParams.get('date');
 
@@ -127,8 +130,15 @@ function NuevaVisitaContent() {
         toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
         return;
       }
+      if (userProfile?.id) {
+        const onVacation = await isUserOnVacation(userProfile.id, scheduledDate);
+        if (onVacation) {
+          toast.error('Tienes vacaciones aprobadas ese día. No se puede programar.');
+          return;
+        }
+      }
     } catch {
-      // Si falla la consulta de días bloqueados, permitir continuar
+      // Si falla la consulta, permitir continuar
     }
 
     setLoading(true);
