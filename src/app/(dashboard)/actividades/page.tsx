@@ -204,13 +204,10 @@ export default function ActividadesPage() {
     const isCreator = activity.created_by_user_id === currentId;
     const isParticipant = Array.isArray(activity.participants) &&
                          activity.participants.some(p => p.user_profile_id === currentId);
+    // Objetivos Estratégicos: SOLO reunión, capacitación y seguimiento.
+    // Las actividades diarias (tarea/otro) se gestionan desde el Calendario, no aquí.
     const isStrategicType = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
-    const hasParticipants = Array.isArray(activity.participants) && activity.participants.length > 0;
-    const isDailyPersonal = !isStrategicType && !hasParticipants;
-
-    // Las actividades diarias (tarea/otro sin participantes) NUNCA se muestran aquí.
-    // Se gestionan exclusivamente desde el Calendario.
-    if (isDailyPersonal) return false;
+    if (!isStrategicType) return false;
 
     // Filtro de visibilidad por rol (solo actividades estratégicas o con participantes)
     let matchesVisibility = true;
