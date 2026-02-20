@@ -92,6 +92,7 @@ export async function getPendingVisits() {
   const canSeeAll = isCurrentUserAdmin() || isCurrentUserSupervisor();
   const now = new Date().toISOString();
 
+  // Solo programada con fecha pasada. Excluye reprogramada, completada, cancelada, no_atendio
   let query = supabase
     .from('visits')
     .select(`
@@ -148,6 +149,35 @@ export async function createVisit(visit: VisitInsert) {
     .insert({
       ...visit,
       user_id: userId
+    })
+    .select(`
+      *,
+      customer:customers(id, nombre, telefono, direccion)
+    `)
+    .single();
+
+  if (error) throw error;
+  return data as Visit;
+}
+
+/**
+ * Crea una nueva visita al reprogramar. La visita original debe marcarse como 'reprogramada'.
+ * Así no aparece en "Visitas Vencidas".
+ */
+export async function createVisitFromReschedule(
+  originalVisit: Visit,
+  newScheduledAt: string
+): Promise<Visit> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('visits')
+    .insert({
+      customer_id: originalVisit.customer_id,
+      user_id: originalVisit.user_id,
+      scheduled_at: newScheduledAt,
+      status: 'programada',
+      objetivo: originalVisit.objetivo || 'Visita reprogramada',
+      location_text: originalVisit.location_text,
     })
     .select(`
       *,

@@ -29,6 +29,7 @@ import {
   updateVisit,
   completeVisit,
   deleteVisit,
+  createVisitFromReschedule,
   type Visit,
 } from '@/lib/services/visits';
 import { isDateBlocked } from '@/lib/services/blockedDays';
@@ -166,13 +167,13 @@ export default function VisitaDetailPage() {
 
     setActionLoading(true);
     try {
-      await updateVisit(visitId, {
-        scheduled_at: new Date(newScheduledAt).toISOString(),
-        status: 'programada',
-      });
+      if (!visit) throw new Error('Visita no encontrada');
+      // Marcar primero como reprogramada para que no siga en Visitas Vencidas aunque falle el insert
+      await updateVisit(visitId, { status: 'reprogramada' });
+      const newVisit = await createVisitFromReschedule(visit, new Date(newScheduledAt).toISOString());
 
       toast.success('Visita reprogramada');
-      loadVisit();
+      router.push(`/calendario/${newVisit.id}`);
     } catch (error) {
       console.error('Error reprogramando:', error);
       toast.error('Error al reprogramar');
