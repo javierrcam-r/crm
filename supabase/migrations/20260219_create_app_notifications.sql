@@ -21,7 +21,7 @@ ALTER TABLE app_notifications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read their own notifications"
   ON app_notifications FOR SELECT
   USING (true);
-
+  
 CREATE POLICY "Authenticated users can insert notifications"
   ON app_notifications FOR INSERT
   WITH CHECK (true);

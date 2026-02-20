@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { createActivity, addMultipleParticipants, getAllUsersForSelection } from '@/lib/services/activities';
+import { isDateBlocked } from '@/lib/services/blockedDays';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
 import type { ActivityInsert, ActivityType, ActivityPriority, UserProfile, RecurrenceType } from '@/types/database';
 import { format } from 'date-fns';
@@ -94,6 +95,16 @@ function NuevaActividadContent() {
     if (!formData.fecha_inicio) {
       toast.error('La fecha y hora de inicio son obligatorias');
       return;
+    }
+
+    try {
+      const blocked = await isDateBlocked(new Date(formData.fecha_inicio));
+      if (blocked) {
+        toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
+        return;
+      }
+    } catch {
+      // Si falla la consulta de días bloqueados, permitir continuar
     }
 
     setLoading(true);

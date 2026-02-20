@@ -11,6 +11,7 @@ import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { getCustomers, type Customer } from '@/lib/services/customers';
 import { createVisit } from '@/lib/services/visits';
+import { isDateBlocked } from '@/lib/services/blockedDays';
 import { searchCustomers } from '@/lib/search';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -117,6 +118,17 @@ function NuevaVisitaContent() {
     if (!formData.scheduled_at) {
       toast.error('La fecha y hora son obligatorias');
       return;
+    }
+
+    const scheduledDate = new Date(formData.scheduled_at);
+    try {
+      const blocked = await isDateBlocked(scheduledDate);
+      if (blocked) {
+        toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
+        return;
+      }
+    } catch {
+      // Si falla la consulta de días bloqueados, permitir continuar
     }
 
     setLoading(true);

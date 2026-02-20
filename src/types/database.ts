@@ -99,6 +99,23 @@ export interface VisitInsert {
 export interface VisitUpdate extends Partial<VisitInsert> {}
 
 // =====================================================
+// CALENDAR BLOCKED DAYS (días no laborables)
+// =====================================================
+export interface CalendarBlockedDay {
+  id: string;
+  fecha: string; // YYYY-MM-DD
+  motivo: string | null;
+  created_by_user_id: string | null;
+  created_at: string;
+}
+
+export interface CalendarBlockedDayInsert {
+  fecha: string;
+  motivo?: string | null;
+  created_by_user_id?: string | null;
+}
+
+// =====================================================
 // PRODUCT
 // =====================================================
 export interface Product {

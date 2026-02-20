@@ -23,6 +23,7 @@ import {
   X,
   Target,
   Filter,
+  CalendarOff,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -45,6 +46,7 @@ import {
   getActivityComments
 } from '@/lib/services/activities';
 import { getAllEventActivitiesForCalendar, type EventActivity } from '@/lib/services/events';
+import { getBlockedDays, isDateBlocked } from '@/lib/services/blockedDays';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
 import type { Activity, ActivityInsert, ActivityStatus, ActivityType, ActivityPriority, UserProfile, ActivityComment, RecurrenceType } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
@@ -115,6 +117,7 @@ export default function CalendarioPage() {
   const [filterByUser, setFilterByUser] = useState<string>('');
   const [selectedDayMobile, setSelectedDayMobile] = useState<Date | null>(null);
   const [calendarFilter, setCalendarFilter] = useState<CalendarFilterType>('todos');
+  const [blockedDaysSet, setBlockedDaysSet] = useState<Set<string>>(new Set());
 
   // Detectar móvil
   useEffect(() => {
@@ -179,12 +182,17 @@ export default function CalendarioPage() {
       // Supervisores/admin ven todas las actividades de eventos; otros solo las suyas
       const eventActUserId = isSup ? undefined : currentId;
 
-      const [visitsData, pendingData, activitiesData, eventActivitiesData] = await Promise.all([
+      const dateFromShort = dateFrom.slice(0, 10);
+      const dateToShort = dateTo.slice(0, 10);
+
+      const [visitsData, pendingData, activitiesData, eventActivitiesData, blockedDaysData] = await Promise.all([
         getVisits({ date_from: dateFrom, date_to: dateTo }),
         getPendingVisits(),
         getActivities().catch(() => [] as Activity[]),
         getAllEventActivitiesForCalendar(eventActUserId).catch(() => [] as EventActivityWithEvent[]),
+        getBlockedDays(dateFromShort, dateToShort).catch(() => []),
       ]);
+      setBlockedDaysSet(new Set(blockedDaysData.map((d) => d.fecha)));
 
       // Cargar usuarios para mapeo y filtros
       const allUsers = await getAllUsersForSelection();
@@ -304,6 +312,15 @@ export default function CalendarioPage() {
     if (!selectedActivity || !editFormData.titulo || !editFormData.fecha_inicio) {
       toast.error('Título y fecha de inicio son requeridos');
       return;
+    }
+    try {
+      const blocked = await isDateBlocked(new Date(editFormData.fecha_inicio));
+      if (blocked) {
+        toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
+        return;
+      }
+    } catch {
+      // Si falla la consulta, permitir continuar
     }
 
     try {
@@ -471,6 +488,8 @@ export default function CalendarioPage() {
       isSameDay(new Date(ea.fecha_inicio), date)
     );
   };
+
+  const isDayBlocked = (date: Date) => blockedDaysSet.has(format(date, 'yyyy-MM-dd'));
 
   const getFilteredVisitsForDay = (date: Date) => {
     if (calendarFilter !== 'todos' && calendarFilter !== 'visitas') return [];
@@ -741,7 +760,7 @@ export default function CalendarioPage() {
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isSelected = selectedDate && isSameDay(day, selectedDate);
               const today = isToday(day);
-              
+              const isBlocked = isDayBlocked(day);
               const totalItems = strategicActivities.length + dailyActivities.length + dayVisits.length + dayEventActs.length;
 
               return (
@@ -752,7 +771,8 @@ export default function CalendarioPage() {
                     'calendar-day min-h-[80px] lg:min-h-[100px] cursor-pointer',
                     !isCurrentMonth && 'calendar-day-other-month',
                     today && 'calendar-day-today',
-                    isSelected && 'ring-2 ring-indigo-500 ring-inset'
+                    isSelected && 'ring-2 ring-indigo-500 ring-inset',
+                    isBlocked && 'bg-amber-50/70 dark:bg-amber-900/20'
                   )}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -764,6 +784,11 @@ export default function CalendarioPage() {
                     >
                       {format(day, 'd')}
                     </span>
+                    {isBlocked && (
+                      <span title="Día no laborable">
+                        <CalendarOff className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      </span>
+                    )}
                     <div className="flex gap-0.5">
                       {strategicActivities.length > 0 && <Star className="h-3 w-3 text-purple-500 fill-purple-500" />}
                       {dayEventActs.length > 0 && <Target className="h-3 w-3 text-rose-500" />}
@@ -860,6 +885,7 @@ export default function CalendarioPage() {
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isSelected = selectedDayMobile && isSameDay(day, selectedDayMobile);
               const today = isToday(day);
+              const isBlocked = isDayBlocked(day);
               const totalItems = strategicActivities.length + dailyActivities.length + dayVisits.length + dayEventActs.length;
               
               const hasTecnicoActivities = dayAllAct.some(a => isActivityFromTecnico(a));
@@ -875,7 +901,8 @@ export default function CalendarioPage() {
                     (index + 1) % 7 === 0 && 'border-r-0',
                     !isCurrentMonth && 'bg-gray-50 dark:bg-dark-700 opacity-50',
                     today && 'bg-indigo-50 dark:bg-indigo-900/30',
-                    isSelected && 'ring-2 ring-indigo-500 ring-inset bg-indigo-100 dark:bg-indigo-900/50'
+                    isSelected && 'ring-2 ring-indigo-500 ring-inset bg-indigo-100 dark:bg-indigo-900/50',
+                    isBlocked && 'bg-amber-50/80 dark:bg-amber-900/20'
                   )}
                 >
                   <div className="flex flex-col items-center">
@@ -885,6 +912,7 @@ export default function CalendarioPage() {
                     )}>
                       {format(day, 'd')}
                     </span>
+                    {isBlocked && <CalendarOff className="h-2.5 w-2.5 text-amber-600 mt-0.5" />}
                     {totalItems > 0 && (
                       <span className="text-[8px] font-medium text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-dark-500 px-1 rounded-full mt-0.5">
                         {totalItems}
@@ -929,6 +957,12 @@ export default function CalendarioPage() {
               </div>
               
               <div className="p-3 max-h-[250px] overflow-y-auto bg-white dark:bg-dark-700">
+                {isDayBlocked(selectedDayMobile) && (
+                  <div className="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 flex items-center gap-2 text-amber-800 dark:text-amber-200 text-sm">
+                    <CalendarOff className="h-4 w-4 flex-shrink-0" />
+                    <span>Día no laborable: no se puede programar.</span>
+                  </div>
+                )}
                 {(() => {
                   const dayVisits = getFilteredVisitsForDay(selectedDayMobile);
                   const dayStrategic = getFilteredStrategicForDay(selectedDayMobile);
@@ -1423,7 +1457,18 @@ export default function CalendarioPage() {
             <h3 className="font-semibold text-gray-900 dark:text-white">
               {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
             </h3>
-            {canManageDailyActivities ? (
+            {isDayBlocked(selectedDate) ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                  <CalendarOff className="h-4 w-4" /> Día no laborable
+                </span>
+                {(userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor') && (
+                  <Link href="/calendario/dias-no-laborables">
+                    <Button variant="ghost" size="sm">Gestionar</Button>
+                  </Link>
+                )}
+              </div>
+            ) : canManageDailyActivities ? (
               <Link href={`/calendario/nueva-actividad?date=${selectedDate.toISOString()}`}>
                 <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />}>
                   Nueva Actividad
@@ -1437,6 +1482,11 @@ export default function CalendarioPage() {
               </Link>
             )}
           </div>
+          {isDayBlocked(selectedDate) && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              En este día no se puede programar visitas ni actividades.
+            </p>
+          )}
           {canManageDailyActivities ? (
             <>
               {/* Objetivos Estratégicos */}

@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
+  CalendarOff,
   Package,
   BarChart3,
   Menu,
@@ -47,6 +48,7 @@ const adminNavigation = [
 // Panel de supervisión - para supervisor y supervisor_nivel1
 const supervisorNavigation = [
   { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
+  { key: 'dias_no_laborables', name: 'Días no laborables', href: '/calendario/dias-no-laborables', icon: CalendarOff },
   { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
@@ -56,6 +58,7 @@ const supervisorNavigation = [
 // Navegación específica para supervisor_nivel1
 const supervisorN1Navigation = [
   { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
+  { key: 'dias_no_laborables', name: 'Días no laborables', href: '/calendario/dias-no-laborables', icon: CalendarOff },
   { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },

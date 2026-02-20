@@ -31,6 +31,7 @@ import {
   deleteVisit,
   type Visit,
 } from '@/lib/services/visits';
+import { isDateBlocked } from '@/lib/services/blockedDays';
 import {
   formatDateTime,
   formatDate,
@@ -141,6 +142,15 @@ export default function VisitaDetailPage() {
     if (!newScheduledAt) {
       toast.error('Selecciona una nueva fecha');
       return;
+    }
+    try {
+      const blocked = await isDateBlocked(new Date(newScheduledAt));
+      if (blocked) {
+        toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
+        return;
+      }
+    } catch {
+      // Si falla la consulta, permitir continuar
     }
 
     setActionLoading(true);
