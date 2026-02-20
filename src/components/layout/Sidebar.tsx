@@ -20,6 +20,7 @@ import {
   TrendingUp,
   ClipboardList,
   UserCheck,
+  Palmtree,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -53,6 +54,7 @@ const supervisorNavigation = [
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
+  { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];
 
 // Navegación específica para supervisor_nivel1
@@ -63,11 +65,13 @@ const supervisorN1Navigation = [
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
+  { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];
 
-// Actividades estratégicas - disponible para todos los roles
+// Actividades estratégicas y vacaciones - disponible para todos los roles
 const actividadesEstrategicas = [
   { key: 'actividades', name: 'Objetivos Estratégicos', href: '/actividades', icon: ClipboardList },
+  { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];
 
 const quickActions = [

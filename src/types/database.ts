@@ -116,6 +116,34 @@ export interface CalendarBlockedDayInsert {
 }
 
 // =====================================================
+// VACATION REQUESTS (vacaciones)
+// =====================================================
+export type VacationRequestStatus = 'pendiente' | 'aprobado' | 'rechazado';
+
+export interface VacationRequest {
+  id: string;
+  user_profile_id: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  motivo: string | null;
+  estado: VacationRequestStatus;
+  aprobado_por: string | null;
+  aprobado_at: string | null;
+  rechazo_motivo: string | null;
+  created_at: string;
+  updated_at: string;
+  user_profile?: Pick<UserProfile, 'id' | 'nombre_completo' | 'email' | 'rol'>;
+  aprobado_por_profile?: Pick<UserProfile, 'id' | 'nombre_completo'>;
+}
+
+export interface VacationRequestInsert {
+  user_profile_id: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  motivo?: string | null;
+}
+
+// =====================================================
 // PRODUCT
 // =====================================================
 export interface Product {
