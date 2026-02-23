@@ -248,11 +248,18 @@ export default function VacacionesPage() {
         </div>
         <div className="flex gap-2">
           {isSupervisor && (
-            <Link href="/vacaciones/calendario">
-              <Button variant="secondary" size="sm" icon={<Calendar className="h-4 w-4" />}>
-                Ver calendario
-              </Button>
-            </Link>
+            <>
+              <Link href="/vacaciones/historial">
+                <Button variant="secondary" size="sm" icon={<Clock className="h-4 w-4" />}>
+                  Historial
+                </Button>
+              </Link>
+              <Link href="/vacaciones/calendario">
+                <Button variant="secondary" size="sm" icon={<Calendar className="h-4 w-4" />}>
+                  Calendario
+                </Button>
+              </Link>
+            </>
           )}
           <Button
             variant="primary"

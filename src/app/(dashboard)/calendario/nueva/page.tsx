@@ -13,10 +13,11 @@ import { getCustomers, type Customer } from '@/lib/services/customers';
 import { createVisit } from '@/lib/services/visits';
 import { isDateBlocked } from '@/lib/services/blockedDays';
 import { isUserOnVacation } from '@/lib/services/vacations';
+import { getStrategicObjectivesForSelection } from '@/lib/services/activities';
 import { searchCustomers } from '@/lib/search';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import type { VisitInsert } from '@/types/database';
+import type { VisitInsert, Activity } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 
 function LoadingFallback() {
@@ -43,6 +44,7 @@ function NuevaVisitaContent() {
   const preselectedDate = searchParams.get('date');
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [strategicObjectives, setStrategicObjectives] = useState<Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +56,7 @@ function NuevaVisitaContent() {
     status: 'programada',
     objetivo: '',
     location_text: '',
+    objetivo_estrategico_id: '',
   });
 
   useEffect(() => {
@@ -80,7 +83,17 @@ function NuevaVisitaContent() {
       }
     };
     tryLoad();
+    loadStrategicObjectives();
   }, []);
+
+  const loadStrategicObjectives = async () => {
+    try {
+      const data = await getStrategicObjectivesForSelection();
+      setStrategicObjectives(data);
+    } catch (error) {
+      console.error('Error cargando objetivos estratégicos:', error);
+    }
+  };
 
   useEffect(() => {
     if (preselectedCustomerId) {
@@ -268,6 +281,30 @@ function NuevaVisitaContent() {
               placeholder="Dirección o punto de referencia"
             />
           </div>
+
+          {/* Vincular a Objetivo Estratégico */}
+          {strategicObjectives.length > 0 && (
+            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-indigo-700">
+                Vincular a Objetivo Estratégico (opcional)
+              </h4>
+              <select
+                value={formData.objetivo_estrategico_id || ''}
+                onChange={(e) => setFormData({ ...formData, objetivo_estrategico_id: e.target.value || null })}
+                className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+              >
+                <option value="">Sin vincular</option>
+                {strategicObjectives.map((obj) => (
+                  <option key={obj.id} value={obj.id}>
+                    {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-indigo-600">
+                Si vinculas esta visita a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
+              </p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">

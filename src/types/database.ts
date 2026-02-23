@@ -77,11 +77,13 @@ export interface Visit {
   observaciones: string | null;
   next_action: string | null;
   next_visit_at: string | null;
+  objetivo_estrategico_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-  // Relación
+  // Relaciones
   customer?: Customer;
+  objetivo_estrategico?: Activity;
 }
 
 export interface VisitInsert {
@@ -94,6 +96,7 @@ export interface VisitInsert {
   observaciones?: string | null;
   next_action?: string | null;
   next_visit_at?: string | null;
+  objetivo_estrategico_id?: string | null;
 }
 
 export interface VisitUpdate extends Partial<VisitInsert> {}
@@ -358,12 +361,14 @@ export interface Activity {
   recurrencia: RecurrenceType | null;
   recurrencia_fin: string | null;
   recurrencia_parent_id: string | null;
+  objetivo_estrategico_id: string | null;
   created_at: string;
   updated_at: string;
   // Relaciones
   participants?: ActivityParticipant[];
   comments?: ActivityComment[];
   creator?: UserProfile;
+  objetivo_estrategico?: Activity;
 }
 
 export interface ActivityInsert {
@@ -382,6 +387,7 @@ export interface ActivityInsert {
   recordatorio_minutos?: number | null;
   recurrencia?: RecurrenceType | null;
   recurrencia_fin?: string | null;
+  objetivo_estrategico_id?: string | null;
 }
 
 export interface ActivityUpdate extends Partial<ActivityInsert> {
@@ -431,4 +437,53 @@ export interface ActivityFilters {
   date_from?: string;
   date_to?: string;
   participant_id?: string;
+}
+
+// =====================================================
+// BRANDS (Marcas)
+// =====================================================
+export interface Brand {
+  id: string;
+  nombre: string;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrandInsert {
+  nombre: string;
+  activo?: boolean;
+}
+
+// =====================================================
+// SALES GOALS (Metas de ventas)
+// =====================================================
+export interface SalesGoal {
+  id: string;
+  user_profile_id: string;
+  brand_id: string;
+  anio: number;
+  mes: number;
+  meta_cantidad: number;
+  meta_valor: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Relaciones
+  user_profile?: UserProfile;
+  brand?: Brand;
+}
+
+export interface SalesGoalInsert {
+  user_profile_id: string;
+  brand_id: string;
+  anio: number;
+  mes: number;
+  meta_cantidad?: number;
+  meta_valor?: number;
+}
+
+export interface SalesGoalUpdate {
+  meta_cantidad?: number;
+  meta_valor?: number;
 }

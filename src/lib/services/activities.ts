@@ -499,3 +499,92 @@ export async function getAllUsersForSelection() {
   
   return data || [];
 }
+
+// =====================================================
+// OBJETIVOS ESTRATÉGICOS - Para vincular actividades/visitas
+// =====================================================
+
+/**
+ * Obtiene los objetivos estratégicos disponibles para selección.
+ * Solo actividades tipo reunion, capacitacion o seguimiento donde el usuario es creador o participante.
+ */
+export async function getStrategicObjectivesForSelection(): Promise<Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>[]> {
+  const supabase = getSupabaseClient();
+  const currentUserId = getCurrentUserId();
+  
+  if (!currentUserId) {
+    return [];
+  }
+
+  // Obtener objetivos donde el usuario es creador
+  const { data: createdByUser, error: error1 } = await supabase
+    .from('activities')
+    .select('id, titulo, tipo, fecha_inicio, estado')
+    .eq('created_by_user_id', currentUserId)
+    .in('tipo', ['reunion', 'capacitacion', 'seguimiento'])
+    .not('estado', 'in', '("realizado","cancelado")');
+
+  if (error1) {
+    console.error('Error fetching strategic objectives (created):', error1);
+  }
+
+  // Obtener objetivos donde el usuario es participante
+  const { data: participantIn, error: error2 } = await supabase
+    .from('activity_participants')
+    .select('activity_id')
+    .eq('user_profile_id', currentUserId);
+
+  if (error2) {
+    console.error('Error fetching participant activities:', error2);
+  }
+
+  const participantActivityIds = participantIn?.map(p => p.activity_id) || [];
+
+  let participantActivities: Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>[] = [];
+  if (participantActivityIds.length > 0) {
+    const { data: partData, error: error3 } = await supabase
+      .from('activities')
+      .select('id, titulo, tipo, fecha_inicio, estado')
+      .in('id', participantActivityIds)
+      .in('tipo', ['reunion', 'capacitacion', 'seguimiento'])
+      .not('estado', 'in', '("realizado","cancelado")');
+
+    if (error3) {
+      console.error('Error fetching strategic objectives (participant):', error3);
+    }
+    participantActivities = partData || [];
+  }
+
+  // Combinar y eliminar duplicados
+  const allActivities = [...(createdByUser || []), ...participantActivities];
+  const uniqueMap = new Map<string, Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>>();
+  allActivities.forEach(a => uniqueMap.set(a.id, a));
+  
+  // Ordenar por fecha
+  return Array.from(uniqueMap.values()).sort((a, b) => 
+    new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
+  );
+}
+
+/**
+ * Obtiene las actividades diarias vinculadas a un objetivo estratégico.
+ */
+export async function getLinkedDailyActivities(objetivoEstrategicoId: string): Promise<Activity[]> {
+  const supabase = getSupabaseClient();
+  
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('objetivo_estrategico_id', objetivoEstrategicoId)
+    .order('fecha_inicio', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching linked activities:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+// Alias for getActivityById
+export const getActivity = getActivityById;

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS vacation_requests (
   fecha_fin DATE NOT NULL,
   motivo TEXT,
   estado VARCHAR(20) NOT NULL DEFAULT 'pendiente'
-    CHECK (estado IN ('pendiente', 'aprobado', 'rechazado')),
+    CHECK (estado IN ('pendiente', 'aprobado', 'rechazado')), 
   aprobado_por UUID REFERENCES users_profile(id) ON DELETE SET NULL,
   aprobado_at TIMESTAMPTZ,
   rechazo_motivo TEXT,

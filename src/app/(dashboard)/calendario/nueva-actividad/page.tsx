@@ -9,11 +9,11 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
-import { createActivity, addMultipleParticipants, getAllUsersForSelection } from '@/lib/services/activities';
+import { createActivity, addMultipleParticipants, getAllUsersForSelection, getStrategicObjectivesForSelection } from '@/lib/services/activities';
 import { isDateBlocked } from '@/lib/services/blockedDays';
 import { getUsersOnVacationOnDate } from '@/lib/services/vacations';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
-import type { ActivityInsert, ActivityType, ActivityPriority, UserProfile, RecurrenceType } from '@/types/database';
+import type { Activity, ActivityInsert, ActivityType, ActivityPriority, UserProfile, RecurrenceType } from '@/types/database';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,8 +51,9 @@ function NuevaActividadContent() {
   const { userProfile } = useAuth();
 
   const [users, setUsers] = useState<Pick<UserProfile, 'id' | 'nombre_completo' | 'email' | 'rol'>[]>([]);
+  const [strategicObjectives, setStrategicObjectives] = useState<Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>[]>([]);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string; notificar: boolean }>({
+  const [formData, setFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string; notificar: boolean; objetivo_estrategico_id: string }>({
     titulo: '',
     descripcion: '',
     tipo: 'tarea', // Por defecto actividad diaria
@@ -71,10 +72,12 @@ function NuevaActividadContent() {
     recurrencia: 'none',
     recurrencia_fin: '',
     notificar: true,
+    objetivo_estrategico_id: '',
   });
 
   useEffect(() => {
     loadUsers();
+    loadStrategicObjectives();
   }, []);
 
   const loadUsers = async () => {
@@ -84,6 +87,15 @@ function NuevaActividadContent() {
     } catch (error) {
       console.error('Error cargando usuarios:', error);
       toast.error('Error al cargar usuarios');
+    }
+  };
+
+  const loadStrategicObjectives = async () => {
+    try {
+      const data = await getStrategicObjectivesForSelection();
+      setStrategicObjectives(data);
+    } catch (error) {
+      console.error('Error cargando objetivos estratégicos:', error);
     }
   };
 
@@ -137,7 +149,8 @@ function NuevaActividadContent() {
         notas: formData.notas || null,
         recordatorio_minutos: formData.recordatorio_minutos,
         recurrencia: formData.recurrencia !== 'none' ? formData.recurrencia : null,
-        recurrencia_fin: formData.recurrencia_fin ? new Date(formData.recurrencia_fin).toISOString() : null
+        recurrencia_fin: formData.recurrencia_fin ? new Date(formData.recurrencia_fin).toISOString() : null,
+        objetivo_estrategico_id: formData.objetivo_estrategico_id || null
       });
 
       // Agregar participantes si hay
@@ -226,6 +239,30 @@ function NuevaActividadContent() {
               rows={3}
             />
           </div>
+
+          {/* Vincular a Objetivo Estratégico */}
+          {strategicObjectives.length > 0 && (
+            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+                Vincular a Objetivo Estratégico (opcional)
+              </h4>
+              <select
+                value={formData.objetivo_estrategico_id}
+                onChange={e => setFormData({ ...formData, objetivo_estrategico_id: e.target.value })}
+                className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+              >
+                <option value="">Sin vincular</option>
+                {strategicObjectives.map(obj => (
+                  <option key={obj.id} value={obj.id}>
+                    {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-indigo-600">
+                Si vinculas esta actividad a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
+              </p>
+            </div>
+          )}
 
           {/* Tipo y Prioridad */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -43,7 +43,8 @@ import {
   removeAllParticipants,
   getAllUsersForSelection,
   addComment,
-  getActivityComments
+  getActivityComments,
+  getStrategicObjectivesForSelection
 } from '@/lib/services/activities';
 import { getAllEventActivitiesForCalendar, type EventActivity } from '@/lib/services/events';
 import { getBlockedDays, isDateBlocked } from '@/lib/services/blockedDays';
@@ -129,7 +130,7 @@ export default function CalendarioPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const [editFormData, setEditFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string; notificar: boolean }>({
+  const [editFormData, setEditFormData] = useState<ActivityInsert & { participantes: string[]; recordatorio_minutos: number | null; recurrencia: RecurrenceType; recurrencia_fin: string; notificar: boolean; objetivo_estrategico_id: string }>({
     titulo: '',
     descripcion: '',
     tipo: 'tarea',
@@ -146,7 +147,9 @@ export default function CalendarioPage() {
     recurrencia: 'none',
     recurrencia_fin: '',
     notificar: true,
+    objetivo_estrategico_id: '',
   });
+  const [strategicObjectives, setStrategicObjectives] = useState<Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>[]>([]);
 
   useEffect(() => {
     loadData();
@@ -196,8 +199,12 @@ export default function CalendarioPage() {
       setBlockedDaysSet(new Set(blockedDaysData.map((d) => d.fecha)));
 
       // Cargar usuarios para mapeo y filtros
-      const allUsers = await getAllUsersForSelection();
+      const [allUsers, stratObjData] = await Promise.all([
+        getAllUsersForSelection(),
+        getStrategicObjectivesForSelection().catch(() => []),
+      ]);
       setUsers(allUsers);
+      setStrategicObjectives(stratObjData);
 
       // Filtrar visitas por usuario si hay filtro activo
       // filterByUser es users_profile.id, pero visit.user_id es auth UUID
@@ -305,6 +312,7 @@ export default function CalendarioPage() {
       recurrencia: activity.recurrencia || 'none',
       recurrencia_fin: activity.recurrencia_fin || '',
       notificar: true,
+      objetivo_estrategico_id: activity.objetivo_estrategico_id || '',
     });
     setIsEditingActivity(true);
   }
@@ -348,7 +356,8 @@ export default function CalendarioPage() {
         notas: editFormData.notas || null,
         recordatorio_minutos: editFormData.recordatorio_minutos,
         recurrencia: editFormData.recurrencia !== 'none' ? editFormData.recurrencia : null,
-        recurrencia_fin: editFormData.recurrencia_fin ? new Date(editFormData.recurrencia_fin).toISOString() : null
+        recurrencia_fin: editFormData.recurrencia_fin ? new Date(editFormData.recurrencia_fin).toISOString() : null,
+        objetivo_estrategico_id: editFormData.objetivo_estrategico_id || null
       };
 
       await updateActivity(selectedActivity.id, activityData);
@@ -2194,6 +2203,30 @@ export default function CalendarioPage() {
                 </select>
               </div>
             </div>
+
+            {/* Vincular a Objetivo Estratégico - solo para actividades diarias (tarea/otro) */}
+            {(editFormData.tipo === 'tarea' || editFormData.tipo === 'otro') && strategicObjectives.length > 0 && (
+              <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
+                <h4 className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+                  Vincular a Objetivo Estratégico (opcional)
+                </h4>
+                <select
+                  value={editFormData.objetivo_estrategico_id}
+                  onChange={e => setEditFormData({ ...editFormData, objetivo_estrategico_id: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                >
+                  <option value="">Sin vincular</option>
+                  {strategicObjectives.map(obj => (
+                    <option key={obj.id} value={obj.id}>
+                      {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-indigo-600">
+                  Si vinculas esta actividad, el supervisor podrá verla al consultar el objetivo estratégico.
+                </p>
+              </div>
+            )}
 
             {/* Fechas */}
             <div className="bg-blue-50 rounded-xl p-4 space-y-4">

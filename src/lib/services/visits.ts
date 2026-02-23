@@ -341,4 +341,28 @@ export async function getVisitsByDate(date: string) {
   return data as Visit[];
 }
 
+/**
+ * Obtiene las visitas vinculadas a un objetivo estratégico.
+ */
+export async function getLinkedVisits(objetivoEstrategicoId: string): Promise<Visit[]> {
+  const supabase = getSupabaseClient();
+  
+  const { data, error } = await supabase
+    .from('visits')
+    .select(`
+      *,
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad)
+    `)
+    .eq('objetivo_estrategico_id', objetivoEstrategicoId)
+    .is('deleted_at', null)
+    .order('scheduled_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching linked visits:', error);
+    return [];
+  }
+  
+  return data as Visit[];
+}
+
 export type { Visit };

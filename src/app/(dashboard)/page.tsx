@@ -22,6 +22,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import SalesGoalsCard from '@/components/dashboard/SalesGoalsCard';
 import { getVisitStats, getTodayVisits, getPendingVisits, getVisitsByDate } from '@/lib/services/visits';
 import { getCustomerStats } from '@/lib/services/customers';
 import { getActivities } from '@/lib/services/activities';
@@ -322,6 +323,9 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      {/* Metas de Ventas */}
+      <SalesGoalsCard />
 
       {/* Resumen del Día con Selector */}
       <Card className="animate-fade-in">

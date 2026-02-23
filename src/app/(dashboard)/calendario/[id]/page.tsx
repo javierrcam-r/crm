@@ -17,6 +17,8 @@ import {
   MessageSquare,
   Plus,
   Send,
+  Target,
+  Edit,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -34,6 +36,8 @@ import {
 } from '@/lib/services/visits';
 import { isDateBlocked } from '@/lib/services/blockedDays';
 import { isUserOnVacation } from '@/lib/services/vacations';
+import { getActivity, getStrategicObjectivesForSelection } from '@/lib/services/activities';
+import type { Activity } from '@/types/database';
 import {
   formatDateTime,
   formatDate,
@@ -49,13 +53,24 @@ export default function VisitaDetailPage() {
   const router = useRouter();
   const { userProfile } = useAuth();
   const [visit, setVisit] = useState<Visit | null>(null);
+  const [linkedStrategicObj, setLinkedStrategicObj] = useState<Activity | null>(null);
+  const [strategicObjectives, setStrategicObjectives] = useState<Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Edit form state
+  const [editFormData, setEditFormData] = useState({
+    scheduled_at: '',
+    objetivo: '',
+    location_text: '',
+    objetivo_estrategico_id: '',
+  });
 
   // Form states
   const [resultado, setResultado] = useState('');
@@ -74,11 +89,33 @@ export default function VisitaDetailPage() {
 
   const loadVisit = async () => {
     try {
-      const data = await getVisit(visitId);
+      const [data, stratObjData] = await Promise.all([
+        getVisit(visitId),
+        getStrategicObjectivesForSelection().catch(() => []),
+      ]);
       setVisit(data);
+      setStrategicObjectives(stratObjData);
+
+      if (data.objetivo_estrategico_id) {
+        try {
+          const obj = await getActivity(data.objetivo_estrategico_id);
+          setLinkedStrategicObj(obj);
+        } catch {
+          setLinkedStrategicObj(null);
+        }
+      } else {
+        setLinkedStrategicObj(null);
+      }
       if (data.scheduled_at) {
         setNewScheduledAt(format(new Date(data.scheduled_at), "yyyy-MM-dd'T'HH:mm"));
       }
+      // Pre-cargar datos para el formulario de edición
+      setEditFormData({
+        scheduled_at: data.scheduled_at ? format(new Date(data.scheduled_at), "yyyy-MM-dd'T'HH:mm") : '',
+        objetivo: data.objetivo || '',
+        location_text: data.location_text || '',
+        objetivo_estrategico_id: data.objetivo_estrategico_id || '',
+      });
       // Pre-cargar observaciones existentes para editarlas
       setNewComment(data.observaciones || '');
     } catch (error) {
@@ -234,6 +271,50 @@ export default function VisitaDetailPage() {
     }
   };
 
+  const handleSaveEdit = async () => {
+    if (!editFormData.scheduled_at) {
+      toast.error('La fecha y hora son obligatorias');
+      return;
+    }
+
+    const scheduledDate = new Date(editFormData.scheduled_at);
+    try {
+      const blocked = await isDateBlocked(scheduledDate);
+      if (blocked) {
+        toast.error('No se puede programar en un día no laborable. Elige otra fecha.');
+        return;
+      }
+      if (userProfile?.id) {
+        const onVacation = await isUserOnVacation(userProfile.id, scheduledDate);
+        if (onVacation) {
+          toast.error('Tienes vacaciones aprobadas ese día. No se puede programar.');
+          return;
+        }
+      }
+    } catch {
+      // Si falla la consulta, permitir continuar
+    }
+
+    setActionLoading(true);
+    try {
+      await updateVisit(visitId, {
+        scheduled_at: new Date(editFormData.scheduled_at).toISOString(),
+        objetivo: editFormData.objetivo || null,
+        location_text: editFormData.location_text || null,
+        objetivo_estrategico_id: editFormData.objetivo_estrategico_id || null,
+      });
+
+      toast.success('Visita actualizada');
+      loadVisit();
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Error actualizando visita:', error);
+      toast.error('Error al actualizar la visita');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -301,6 +382,13 @@ export default function VisitaDetailPage() {
         </h2>
         <div className="flex flex-wrap gap-3">
           <Button 
+            icon={<Edit className="h-4 w-4" />}
+            onClick={() => setShowEditModal(true)}
+          >
+            Editar Visita
+          </Button>
+          <Button 
+            variant="secondary"
             icon={<MessageSquare className="h-4 w-4" />}
             onClick={() => setShowCommentModal(true)}
           >
@@ -361,6 +449,25 @@ export default function VisitaDetailPage() {
               <div className="pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-400 mb-1">Próxima Acción</p>
                 <p className="text-gray-900">{visit.next_action}</p>
+              </div>
+            )}
+
+            {linkedStrategicObj && (
+              <div className="pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                  <Target className="h-3 w-3" />
+                  Objetivo Estratégico Vinculado
+                </p>
+                <Link
+                  href={`/actividades/${linkedStrategicObj.id}`}
+                  className="text-indigo-600 font-medium hover:text-indigo-700"
+                >
+                  {linkedStrategicObj.titulo}
+                </Link>
+                <p className="text-xs text-gray-500 mt-1">
+                  {linkedStrategicObj.tipo === 'reunion' ? 'Reunión' : 
+                   linkedStrategicObj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'}
+                </p>
               </div>
             )}
           </div>
@@ -492,6 +599,70 @@ export default function VisitaDetailPage() {
           </div>
         </Card>
       )}
+
+      {/* Modal para editar visita */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Editar Visita"
+        size="lg"
+      >
+        <div className="p-6 space-y-4">
+          <Input
+            label="Fecha y Hora *"
+            type="datetime-local"
+            value={editFormData.scheduled_at}
+            onChange={(e) => setEditFormData({ ...editFormData, scheduled_at: e.target.value })}
+            required
+          />
+          <Textarea
+            label="Objetivo de la Visita"
+            value={editFormData.objetivo}
+            onChange={(e) => setEditFormData({ ...editFormData, objetivo: e.target.value })}
+            placeholder="¿Cuál es el propósito de esta visita?"
+            rows={3}
+          />
+          <Input
+            label="Ubicación / Dirección"
+            value={editFormData.location_text}
+            onChange={(e) => setEditFormData({ ...editFormData, location_text: e.target.value })}
+            placeholder="Dirección o punto de referencia"
+          />
+
+          {/* Vincular a Objetivo Estratégico */}
+          {strategicObjectives.length > 0 && (
+            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-indigo-700">
+                Vincular a Objetivo Estratégico (opcional)
+              </h4>
+              <select
+                value={editFormData.objetivo_estrategico_id}
+                onChange={(e) => setEditFormData({ ...editFormData, objetivo_estrategico_id: e.target.value })}
+                className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+              >
+                <option value="">Sin vincular</option>
+                {strategicObjectives.map((obj) => (
+                  <option key={obj.id} value={obj.id}>
+                    {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-indigo-600">
+                Si vinculas esta visita a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit} loading={actionLoading} icon={<CheckCircle className="h-4 w-4" />}>
+              Guardar Cambios
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal para agregar/editar comentarios */}
       <Modal

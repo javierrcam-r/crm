@@ -53,6 +53,7 @@ const supervisorNavigation = [
   { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
+  { key: 'metas', name: 'Metas de Ventas', href: '/supervisores/metas', icon: BarChart3 },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
   { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];
@@ -64,6 +65,7 @@ const supervisorN1Navigation = [
   { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
+  { key: 'metas', name: 'Metas de Ventas', href: '/supervisores/metas', icon: BarChart3 },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
   { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];
