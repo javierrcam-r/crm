@@ -5,7 +5,7 @@ import type { Brand, BrandInsert, SalesGoal, SalesGoalInsert, SalesGoalUpdate } 
 const GOALS_SELECT = `
   *,
   user_profile:users_profile!user_profile_id(id, nombre_completo, email, rol),
-  brand:brands(id, nombre)
+  brand:brands(id, nombre, logo_url, orden)
 `;
 
 // =====================================================

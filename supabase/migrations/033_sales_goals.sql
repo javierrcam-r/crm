@@ -5,6 +5,7 @@
 CREATE TABLE IF NOT EXISTS brands (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre VARCHAR(100) NOT NULL UNIQUE,
+  logo_url TEXT,
   orden INTEGER DEFAULT 0,
   activo BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),

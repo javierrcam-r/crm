@@ -445,6 +445,8 @@ export interface ActivityFilters {
 export interface Brand {
   id: string;
   nombre: string;
+  logo_url: string | null;
+  orden: number;
   activo: boolean;
   created_at: string;
   updated_at: string;
@@ -452,6 +454,8 @@ export interface Brand {
 
 export interface BrandInsert {
   nombre: string;
+  logo_url?: string | null;
+  orden?: number;
   activo?: boolean;
 }
 

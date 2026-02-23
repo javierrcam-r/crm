@@ -235,8 +235,11 @@ export default function CalendarioPage() {
         const isParticipant = Array.isArray(activity.participants) && 
           activity.participants.some(p => p.user_profile_id === currentId);
         
-        if (showTecnicoActivities && tecnicoIds.includes(activity.created_by_user_id || '')) {
-          return true;
+        if (showTecnicoActivities) {
+          const createdByTecnico = tecnicoIds.includes(activity.created_by_user_id || '');
+          const involvesTecnico = Array.isArray(activity.participants) &&
+            activity.participants.some(p => tecnicoIds.includes(p.user_profile_id));
+          if (createdByTecnico || involvesTecnico) return true;
         }
         
         if (currentRol === 'admin') return true;
@@ -490,9 +493,12 @@ export default function CalendarioPage() {
     return getActivitiesForDay(date).filter(activity => !isActivityStrategic(activity));
   };
 
-  // Verificar si una actividad es de un técnico
   const isActivityFromTecnico = (activity: Activity) => {
-    return showTecnicoActivities && tecnicoUserIds.includes(activity.created_by_user_id || '');
+    if (!showTecnicoActivities) return false;
+    const createdByTecnico = tecnicoUserIds.includes(activity.created_by_user_id || '');
+    const involvesTecnico = Array.isArray(activity.participants) &&
+      activity.participants.some(p => tecnicoUserIds.includes(p.user_profile_id));
+    return createdByTecnico || involvesTecnico;
   };
 
   const getEventActivitiesForDay = (date: Date) => {

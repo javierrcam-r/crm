@@ -96,7 +96,11 @@ export default function SalesGoalsCard() {
               className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg"
             >
               <div className="flex items-center gap-3">
-                <div className="w-2 h-8 rounded-full bg-emerald-500" />
+                {goal.brand?.logo_url ? (
+                  <img src={goal.brand.logo_url} alt={goal.brand.nombre} className="h-7 w-7 object-contain rounded" />
+                ) : (
+                  <div className="w-2 h-8 rounded-full bg-emerald-500" />
+                )}
                 <p className="font-medium text-gray-900 dark:text-white">
                   {goal.brand?.nombre || 'Marca'}
                 </p>

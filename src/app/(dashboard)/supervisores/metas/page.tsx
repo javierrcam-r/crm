@@ -51,6 +51,7 @@ export default function MetasPage() {
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [brandName, setBrandName] = useState('');
+  const [brandLogoUrl, setBrandLogoUrl] = useState('');
 
   // Formulario de metas (solo valor)
   const [goalsForm, setGoalsForm] = useState<Record<string, Record<string, number>>>({});
@@ -118,15 +119,17 @@ export default function MetasPage() {
     }
 
     try {
+      const brandData = { nombre: brandName, logo_url: brandLogoUrl || null };
       if (editingBrand) {
-        await updateBrand(editingBrand.id, { nombre: brandName });
+        await updateBrand(editingBrand.id, brandData);
         toast.success('Marca actualizada');
       } else {
-        await createBrand({ nombre: brandName });
+        await createBrand(brandData);
         toast.success('Marca creada');
       }
       setShowBrandModal(false);
       setBrandName('');
+      setBrandLogoUrl('');
       setEditingBrand(null);
       loadData();
     } catch (error: any) {
@@ -254,6 +257,7 @@ export default function MetasPage() {
             onClick={() => {
               setEditingBrand(null);
               setBrandName('');
+              setBrandLogoUrl('');
               setShowBrandModal(true);
             }}
           >
@@ -271,6 +275,9 @@ export default function MetasPage() {
                   : 'bg-gray-100 border-gray-200 dark:bg-dark-700 dark:border-dark-600 opacity-50'
               }`}
             >
+              {brand.logo_url && (
+                <img src={brand.logo_url} alt={brand.nombre} className="h-5 w-5 object-contain rounded" />
+              )}
               <span className={`font-medium ${brand.activo ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500'}`}>
                 {brand.nombre}
               </span>
@@ -278,6 +285,7 @@ export default function MetasPage() {
                 onClick={() => {
                   setEditingBrand(brand);
                   setBrandName(brand.nombre);
+                  setBrandLogoUrl(brand.logo_url || '');
                   setShowBrandModal(true);
                 }}
                 className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors"
@@ -333,7 +341,12 @@ export default function MetasPage() {
                     </th>
                     {brands.map(brand => (
                       <th key={brand.id} className="text-center py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        {brand.nombre}
+                        <div className="flex flex-col items-center gap-1">
+                          {brand.logo_url && (
+                            <img src={brand.logo_url} alt={brand.nombre} className="h-8 w-auto object-contain" />
+                          )}
+                          <span>{brand.nombre}</span>
+                        </div>
                       </th>
                     ))}
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -437,6 +450,7 @@ export default function MetasPage() {
         onClose={() => {
           setShowBrandModal(false);
           setBrandName('');
+          setBrandLogoUrl('');
           setEditingBrand(null);
         }}
         title={editingBrand ? 'Editar Marca' : 'Nueva Marca'}
@@ -447,9 +461,26 @@ export default function MetasPage() {
             label="Nombre de la marca"
             value={brandName}
             onChange={(e) => setBrandName(e.target.value)}
-            placeholder="Ej: Marca Premium"
+            placeholder="Ej: Schwarzkopf"
             autoFocus
           />
+          <Input
+            label="URL del logo (opcional)"
+            value={brandLogoUrl}
+            onChange={(e) => setBrandLogoUrl(e.target.value)}
+            placeholder="https://ejemplo.com/logo.png"
+          />
+          {brandLogoUrl && (
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+              <img
+                src={brandLogoUrl}
+                alt="Vista previa"
+                className="h-10 w-auto object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              <span className="text-xs text-gray-500 dark:text-gray-400">Vista previa del logo</span>
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-600">
             <Button variant="secondary" onClick={() => setShowBrandModal(false)}>
               Cancelar
