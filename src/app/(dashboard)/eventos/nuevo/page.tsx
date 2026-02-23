@@ -7,7 +7,7 @@ import { ArrowLeft, Calendar } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { createEvent, getActiveUsers, type EventType, type EventModality } from '@/lib/services/events';
+import { createEvent, createEventActivity, getActiveUsers, type EventType, type EventModality } from '@/lib/services/events';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { CheckCircle } from 'lucide-react';
@@ -51,6 +51,23 @@ export default function NuevoEventoPage() {
         cupo_maximo: Number(form.cupo_maximo) || 0,
         precio_por_persona: Number(form.precio_por_persona) || 0,
       });
+
+      const eventDate = form.fecha_fin || form.fecha_inicio;
+      await createEventActivity({
+        event_id: event.id,
+        nombre: form.nombre.toUpperCase(),
+        descripcion: null,
+        tipo: 'operativa',
+        responsable_id: form.responsable_id,
+        fecha_inicio: new Date(eventDate).toISOString(),
+        fecha_fin: null,
+        prioridad: 'alta',
+        estado: 'pendiente',
+        porcentaje_avance: 0,
+        es_hito: true,
+        notas: null,
+      });
+
       toast.success('Evento creado exitosamente');
       router.push(`/eventos/${event.id}`);
     } catch (err: any) {

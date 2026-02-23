@@ -1348,15 +1348,18 @@ export default function CalendarioPage() {
                 )}
                 {activities.map((activity) => {
                   const isStrategic = isActivityStrategic(activity);
+                  const isTecAct = isActivityFromTecnico(activity);
                   return (
                     <div
                       key={activity.id}
                       onClick={() => openActivityDetail(activity)}
                       className={cn(
                         'flex items-center justify-between p-3 sm:p-4 rounded-lg transition-colors cursor-pointer',
-                        isStrategic 
-                          ? 'bg-purple-50 dark:bg-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border-l-4 border-purple-500' 
-                          : 'bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border-l-4 border-blue-500'
+                        isTecAct
+                          ? 'bg-amber-50 dark:bg-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border-l-4 border-amber-500'
+                          : isStrategic 
+                            ? 'bg-purple-50 dark:bg-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border-l-4 border-purple-500' 
+                            : 'bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border-l-4 border-blue-500'
                       )}
                     >
                       <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
@@ -1374,12 +1377,14 @@ export default function CalendarioPage() {
                         <div className="border-l border-gray-200 dark:border-dark-500 pl-2 sm:pl-4 flex-1 min-w-0">
                           <p className={cn(
                             'text-xs sm:text-sm font-semibold',
+                            isTecAct ? 'text-amber-600 dark:text-amber-300' :
                             isStrategic ? 'text-purple-600 dark:text-purple-300' : 'text-blue-600 dark:text-blue-300'
                           )}>
                             {format(new Date(activity.fecha_inicio), 'HH:mm', { locale: es })}
                           </p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1 truncate">
-                            {isStrategic && <Star className="h-3 w-3 text-purple-500 fill-purple-500 flex-shrink-0" />}
+                            {isStrategic && !isTecAct && <Star className="h-3 w-3 text-purple-500 fill-purple-500 flex-shrink-0" />}
+                            {isTecAct && <span className="text-amber-500 flex-shrink-0">🔧</span>}
                             {activity.titulo}
                           </p>
                           <div className="hidden sm:flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -1516,24 +1521,34 @@ export default function CalendarioPage() {
                     Objetivos Estratégicos ({getStrategicActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-3">
-                    {getStrategicActivitiesForDay(selectedDate).map((activity) => (
+                    {getStrategicActivitiesForDay(selectedDate).map((activity) => {
+                      const isTec = isActivityFromTecnico(activity);
+                      return (
                       <div
                         key={activity.id}
                         onClick={() => openActivityDetail(activity)}
-                        className="block p-4 rounded-lg bg-purple-50 dark:bg-purple-900/40 border-l-4 border-purple-500 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors"
+                        className={`block p-4 rounded-lg cursor-pointer transition-colors ${
+                          isTec
+                            ? 'bg-amber-50 dark:bg-amber-900/40 border-l-4 border-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+                            : 'bg-purple-50 dark:bg-purple-900/40 border-l-4 border-purple-500 hover:bg-purple-100 dark:hover:bg-purple-900/60'
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-purple-700 dark:text-purple-300">
+                              <p className={`font-semibold ${isTec ? 'text-amber-700 dark:text-amber-300' : 'text-purple-700 dark:text-purple-300'}`}>
                                 {format(new Date(activity.fecha_inicio), 'HH:mm')}
                               </p>
                               {activity.fecha_fin && (
-                                <span className="text-xs text-purple-600 dark:text-purple-400">
+                                <span className={`text-xs ${isTec ? 'text-amber-600 dark:text-amber-400' : 'text-purple-600 dark:text-purple-400'}`}>
                                   - {format(new Date(activity.fecha_fin), 'HH:mm')}
                                 </span>
                               )}
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 font-medium">Estratégica</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                isTec
+                                  ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200'
+                                  : 'bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200'
+                              }`}>{isTec ? 'Técnico' : 'Estratégica'}</span>
                             </div>
                             <p className="font-medium text-gray-900 dark:text-white mb-1">{activity.titulo}</p>
                             {activity.descripcion && (
@@ -1592,7 +1607,8 @@ export default function CalendarioPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
               )}
@@ -1603,24 +1619,34 @@ export default function CalendarioPage() {
                     📋 Actividades Diarias ({getDailyActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-3">
-                    {getDailyActivitiesForDay(selectedDate).map((activity) => (
+                    {getDailyActivitiesForDay(selectedDate).map((activity) => {
+                      const isTec = isActivityFromTecnico(activity);
+                      return (
                       <div
                         key={activity.id}
                         onClick={() => openActivityDetail(activity)}
-                        className="block p-4 rounded-lg bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
+                        className={`block p-4 rounded-lg cursor-pointer transition-colors ${
+                          isTec
+                            ? 'bg-amber-50 dark:bg-amber-900/40 border-l-4 border-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+                            : 'bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/60'
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-blue-700 dark:text-blue-300">
+                              <p className={`font-semibold ${isTec ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-blue-300'}`}>
                                 {format(new Date(activity.fecha_inicio), 'HH:mm')}
                               </p>
                               {activity.fecha_fin && (
-                                <span className="text-xs text-blue-600 dark:text-blue-400">
+                                <span className={`text-xs ${isTec ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                   - {format(new Date(activity.fecha_fin), 'HH:mm')}
                                 </span>
                               )}
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 font-medium">Diaria</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                isTec
+                                  ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200'
+                                  : 'bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200'
+                              }`}>{isTec ? 'Técnico' : 'Diaria'}</span>
                             </div>
                             <p className="font-medium text-gray-900 dark:text-white mb-1">{activity.titulo}</p>
                             {activity.descripcion && (
@@ -1679,7 +1705,8 @@ export default function CalendarioPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
               )}
