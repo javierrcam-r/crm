@@ -144,10 +144,15 @@ export async function createVisit(visit: VisitInsert) {
     throw new Error('No se encontró el usuario actual');
   }
 
+  const cleanVisit = { ...visit };
+  if (!cleanVisit.objetivo_estrategico_id) {
+    delete cleanVisit.objetivo_estrategico_id;
+  }
+
   const { data, error } = await supabase
     .from('visits')
     .insert({
-      ...visit,
+      ...cleanVisit,
       user_id: userId
     })
     .select(`
