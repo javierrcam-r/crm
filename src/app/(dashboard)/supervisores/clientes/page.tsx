@@ -120,20 +120,24 @@ export default function SupervisorClientesPage() {
   const saveAssignment = async (customerId: string) => {
     setSavingId(customerId);
     try {
-      // Guardar asignaciones de vendedores
-      await assignVendorsToCustomer(customerId, assignments[customerId] || []);
+      const vendorIdsToAssign = assignments[customerId] || [];
       
-      // Reasignar dueño si cambió
-      const customer = customers.find(c => c.id === customerId);
-      if (customer && editingOwnerId && editingOwnerId !== customer.user_id) {
-        await reassignCustomerOwner(customerId, editingOwnerId);
+      // Guardar asignaciones de vendedores
+      await assignVendorsToCustomer(customerId, vendorIdsToAssign);
+      
+      // Asignar automáticamente el primer vendedor como dueño del cliente
+      if (vendorIdsToAssign.length > 0) {
+        const firstVendor = vendors.find(v => v.id === vendorIdsToAssign[0]);
+        if (firstVendor?.user_id) {
+          await reassignCustomerOwner(customerId, firstVendor.user_id);
+        }
       }
       
       toast.success('Cliente actualizado correctamente');
       setEditingCustomerId(null);
-      loadData(); // Recargar para ver los cambios de dueño
+      loadData();
     } catch (error: any) {
-      console.error('Error guardando:', error);
+      console.error('Error guardando asignación:', error);
       toast.error(error?.message || 'Error al guardar cambios');
     } finally {
       setSavingId(null);
@@ -227,25 +231,39 @@ export default function SupervisorClientesPage() {
     }
 
     try {
-      // Obtener el user_id del admin (DISFERO) para que sea el dueño
       const adminUserId = await getAdminUserId();
-      if (!adminUserId) {
-        errors.push('No se encontró el usuario administrador (DISFERO). Los clientes se asignarán al usuario actual.');
+
+      // Group customers by assigned vendor for proper ownership
+      const vendorAssignmentMap = new Map<number, string>();
+      for (const va of vendorAssignments) {
+        vendorAssignmentMap.set(va.index, va.vendorId);
       }
 
-      // Import customers in batches of 200
+      // Build a map: vendorId (profile.id) -> vendor's auth user_id
+      const vendorAuthIds = new Map<string, string>();
+      for (const v of vendors) {
+        if (v.user_id) vendorAuthIds.set(v.id, v.user_id);
+      }
+
+      // Import customers in batches, setting user_id to the vendor's auth ID when assigned
       const batchSize = 200;
       let imported = 0;
       const allCreatedCustomers: any[] = [];
 
       for (let i = 0; i < validCustomers.length; i += batchSize) {
         const batch = validCustomers.slice(i, i + batchSize);
-        const created = await bulkCreateCustomers(batch, adminUserId || undefined);
+        const batchWithOwners = batch.map((c, batchIdx) => {
+          const globalIdx = i + batchIdx;
+          const vendorProfileId = vendorAssignmentMap.get(globalIdx);
+          const ownerAuthId = vendorProfileId ? vendorAuthIds.get(vendorProfileId) : null;
+          return { ...c, user_id: ownerAuthId || adminUserId || undefined };
+        });
+        const created = await bulkCreateCustomers(batchWithOwners as any);
         allCreatedCustomers.push(...created);
         imported += batch.length;
       }
 
-      // Bulk create vendor assignments in one call
+      // Also create vendor assignments for cross-reference
       let assignedCount = 0;
       if (vendorAssignments.length > 0) {
         const assignmentRows: { customer_id: string; vendor_user_id: string }[] = [];
@@ -260,7 +278,7 @@ export default function SupervisorClientesPage() {
             await bulkCreateAssignments(assignmentRows);
             assignedCount = assignmentRows.length;
           } catch (err) {
-            errors.push('Error al asignar vendedores en lote');
+            errors.push('Error al asignar vendedores en lote (los clientes ya fueron importados)');
           }
         }
       }
@@ -386,15 +404,23 @@ export default function SupervisorClientesPage() {
           <div className="p-4">
             <p className="text-sm font-medium text-green-600">Con Asignación</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
-              {customers.filter(c => (assignments[c.id] || []).length > 0).length}
+              {customers.filter(c => {
+                const hasAssignment = (assignments[c.id] || []).length > 0;
+                const hasVendorOwner = vendors.some(v => v.user_id === c.user_id);
+                return hasAssignment || hasVendorOwner;
+              }).length}
             </p>
           </div>
         </Card>
         <Card className="bg-amber-50 border border-amber-200">
           <div className="p-4">
-            <p className="text-sm font-medium text-amber-600">Sin Asignación Extra</p>
+            <p className="text-sm font-medium text-amber-600">Sin Asignación</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
-              {customers.filter(c => (assignments[c.id] || []).length === 0).length}
+              {customers.filter(c => {
+                const hasAssignment = (assignments[c.id] || []).length > 0;
+                const hasVendorOwner = vendors.some(v => v.user_id === c.user_id);
+                return !hasAssignment && !hasVendorOwner;
+              }).length}
             </p>
           </div>
         </Card>
@@ -460,7 +486,6 @@ export default function SupervisorClientesPage() {
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Cliente</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Contacto</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Ciudad / Zona</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Dueño</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Vendedores Asignados</th>
                   <th className="text-center px-4 py-3 font-semibold text-gray-600 w-24">Acción</th>
                 </tr>
@@ -468,7 +493,7 @@ export default function SupervisorClientesPage() {
               <tbody className="divide-y divide-gray-100">
                 {filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-gray-500">
+                    <td colSpan={5} className="text-center py-12 text-gray-500">
                       No se encontraron clientes
                     </td>
                   </tr>
@@ -518,51 +543,25 @@ export default function SupervisorClientesPage() {
                           <p className="text-xs text-gray-500">{customer.zona || ''}</p>
                         </td>
 
-                        {/* Dueño */}
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <select
-                              value={editingOwnerId}
-                              onChange={e => setEditingOwnerId(e.target.value)}
-                              className="text-xs px-2 py-1.5 border border-indigo-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full max-w-[160px]"
-                            >
-                              <option value="">Sin asignar</option>
-                              {vendors.map(v => (
-                                <option key={v.id} value={v.user_id}>{v.nombre_completo}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 font-medium">
-                              {ownerVendor?.nombre_completo || 'Sin asignar'}
-                            </span>
-                          )}
-                        </td>
-
                         {/* Vendedores asignados */}
                         <td className="px-4 py-3">
                           {isEditing ? (
                             <div className="space-y-2">
                               <div className="flex flex-wrap gap-1.5 max-w-xs">
                                 {vendors.map(v => {
-                                  const isOwner = v.id === ownerProfileId;
-                                  const isAssigned = extraAssignedIds.includes(v.id);
+                                  const isAssigned = (assignments[customer.id] || []).includes(v.id);
                                   return (
                                     <button
                                       key={v.id}
-                                      onClick={() => { if (!isOwner) toggleVendor(customer.id, v.id); }}
-                                      disabled={isOwner}
+                                      onClick={() => toggleVendor(customer.id, v.id)}
                                       className={`text-xs px-2 py-1 rounded-full border transition-all ${
-                                        isOwner
-                                          ? 'bg-indigo-200 text-indigo-800 border-indigo-400 font-semibold cursor-default'
-                                          : isAssigned
+                                        isAssigned
                                           ? 'bg-indigo-100 text-indigo-700 border-indigo-300 font-medium'
                                           : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
                                       }`}
-                                      title={isOwner ? 'Dueño (siempre asignado)' : ''}
                                     >
-                                      {(isOwner || isAssigned) && <CheckCircle className="h-3 w-3 inline mr-1" />}
+                                      {isAssigned && <CheckCircle className="h-3 w-3 inline mr-1" />}
                                       {v.nombre_completo}
-                                      {isOwner && ' (dueño)'}
                                     </button>
                                   );
                                 })}
@@ -576,13 +575,8 @@ export default function SupervisorClientesPage() {
                                 <>
                                   {allAssignedIds.slice(0, isExpanded ? undefined : 3).map(vid => {
                                     const v = getVendorById(vid);
-                                    const isOwner = vid === ownerProfileId;
                                     return (
-                                      <span key={vid} className={`text-xs px-2 py-0.5 rounded-full ${
-                                        isOwner 
-                                          ? 'bg-indigo-100 text-indigo-700 font-medium' 
-                                          : 'bg-green-100 text-green-700'
-                                      }`}>
+                                      <span key={vid} className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
                                         {v?.nombre_completo || 'Desconocido'}
                                       </span>
                                     );
@@ -638,6 +632,12 @@ export default function SupervisorClientesPage() {
                               onClick={() => {
                                 setEditingCustomerId(customer.id);
                                 setEditingOwnerId(customer.user_id);
+                                if (ownerProfileId && !(assignments[customer.id] || []).includes(ownerProfileId)) {
+                                  setAssignments(prev => ({
+                                    ...prev,
+                                    [customer.id]: [ownerProfileId, ...(prev[customer.id] || [])]
+                                  }));
+                                }
                               }}
                             >
                               Asignar

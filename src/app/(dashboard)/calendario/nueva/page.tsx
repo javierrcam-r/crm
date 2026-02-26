@@ -283,28 +283,32 @@ function NuevaVisitaContent() {
           </div>
 
           {/* Vincular a Objetivo Estratégico */}
-          {strategicObjectives.length > 0 && (
-            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-              <h4 className="text-sm font-semibold text-indigo-700">
-                Vincular a Objetivo Estratégico (opcional)
-              </h4>
-              <select
-                value={formData.objetivo_estrategico_id || ''}
-                onChange={(e) => setFormData({ ...formData, objetivo_estrategico_id: e.target.value || null })}
-                className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
-              >
-                <option value="">Sin vincular</option>
-                {strategicObjectives.map((obj) => (
-                  <option key={obj.id} value={obj.id}>
-                    {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-indigo-600">
-                Si vinculas esta visita a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
-              </p>
-            </div>
-          )}
+          <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-indigo-700">
+              Vincular a Objetivo Estratégico (opcional)
+            </h4>
+            {strategicObjectives.length > 0 ? (
+              <>
+                <select
+                  value={formData.objetivo_estrategico_id || ''}
+                  onChange={(e) => setFormData({ ...formData, objetivo_estrategico_id: e.target.value || null })}
+                  className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                >
+                  <option value="">Sin vincular</option>
+                  {strategicObjectives.map((obj) => (
+                    <option key={obj.id} value={obj.id}>
+                      {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-indigo-600">
+                  Si vinculas esta visita a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-indigo-500">No hay objetivos estratégicos activos disponibles.</p>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">

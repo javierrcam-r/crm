@@ -244,10 +244,15 @@ export async function assignVendorsToCustomer(customerId: string, vendorIds: str
   const profile = getCurrentUserProfile();
   
   // Eliminar asignaciones existentes
-  await supabase
+  const { error: delError } = await supabase
     .from('customer_vendor_assignments')
     .delete()
     .eq('customer_id', customerId);
+  
+  if (delError) {
+    console.error('Error eliminando asignaciones:', delError);
+    throw new Error(`Error eliminando asignaciones: ${delError.message}`);
+  }
   
   // Insertar nuevas asignaciones
   if (vendorIds.length > 0) {
@@ -261,7 +266,10 @@ export async function assignVendorsToCustomer(customerId: string, vendorIds: str
       .from('customer_vendor_assignments')
       .insert(rows);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error insertando asignaciones:', error);
+      throw new Error(`Error insertando asignaciones: ${error.message}`);
+    }
   }
 }
 
@@ -332,15 +340,15 @@ export async function getAdminUserId() {
   return data?.user_id || null;
 }
 
-export async function bulkCreateCustomers(customers: CustomerInsert[], ownerUserId?: string) {
+export async function bulkCreateCustomers(customers: (CustomerInsert & { user_id?: string })[], ownerUserId?: string) {
   const supabase = getSupabaseClient();
-  const userId = ownerUserId || getCurrentUserId();
+  const fallbackUserId = ownerUserId || getCurrentUserId();
   
-  if (!userId) throw new Error('No se encontró el usuario actual');
+  if (!fallbackUserId) throw new Error('No se encontró el usuario actual');
   
   const rows = customers.map(c => ({
     ...c,
-    user_id: userId
+    user_id: c.user_id || fallbackUserId
   }));
   
   const { data, error } = await supabase

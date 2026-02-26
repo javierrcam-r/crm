@@ -510,9 +510,10 @@ export async function getAllUsersForSelection() {
  */
 export async function getStrategicObjectivesForSelection(): Promise<Pick<Activity, 'id' | 'titulo' | 'tipo' | 'fecha_inicio' | 'estado'>[]> {
   const supabase = getSupabaseClient();
-  const currentUserId = getCurrentUserId();
+  const profile = getCurrentUserProfile();
+  const profileId = profile?.id;
   
-  if (!currentUserId) {
+  if (!profileId) {
     return [];
   }
 
@@ -520,7 +521,7 @@ export async function getStrategicObjectivesForSelection(): Promise<Pick<Activit
   const { data: createdByUser, error: error1 } = await supabase
     .from('activities')
     .select('id, titulo, tipo, fecha_inicio, estado')
-    .eq('created_by_user_id', currentUserId)
+    .eq('created_by_user_id', profileId)
     .in('tipo', ['reunion', 'capacitacion', 'seguimiento'])
     .not('estado', 'in', '("realizado","cancelado")');
 
@@ -532,7 +533,7 @@ export async function getStrategicObjectivesForSelection(): Promise<Pick<Activit
   const { data: participantIn, error: error2 } = await supabase
     .from('activity_participants')
     .select('activity_id')
-    .eq('user_profile_id', currentUserId);
+    .eq('user_profile_id', profileId);
 
   if (error2) {
     console.error('Error fetching participant activities:', error2);
