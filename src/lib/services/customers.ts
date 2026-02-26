@@ -70,24 +70,36 @@ export async function getCustomers(filters?: CustomerFilters) {
     return allCustomers;
   }
 
-  // Admin y supervisores ven TODOS los clientes
-  let query = supabase
-    .from('customers')
-    .select('*')
-    .is('deleted_at', null)
-    .order('nombre');
+  // Admin y supervisores ven TODOS los clientes (paginado para superar límite de 1000)
+  const allData: Customer[] = [];
+  const pageSize = 1000;
+  let from = 0;
 
-  if (filters?.tipo) query = query.eq('tipo', filters.tipo);
-  if (filters?.etapa_embudo) query = query.eq('etapa_embudo', filters.etapa_embudo);
-  if (filters?.ciudad) query = query.eq('ciudad', filters.ciudad);
-  if (filters?.zona) query = query.eq('zona', filters.zona);
-  if (filters?.search) {
-    query = query.or(`nombre.ilike.%${filters.search}%,telefono.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+  while (true) {
+    let query = supabase
+      .from('customers')
+      .select('*')
+      .is('deleted_at', null)
+      .order('nombre')
+      .range(from, from + pageSize - 1);
+
+    if (filters?.tipo) query = query.eq('tipo', filters.tipo);
+    if (filters?.etapa_embudo) query = query.eq('etapa_embudo', filters.etapa_embudo);
+    if (filters?.ciudad) query = query.eq('ciudad', filters.ciudad);
+    if (filters?.zona) query = query.eq('zona', filters.zona);
+    if (filters?.search) {
+      query = query.or(`nombre.ilike.%${filters.search}%,telefono.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData.push(...(data as Customer[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as Customer[];
+  return allData;
 }
 
 export async function getCustomer(id: string) {
@@ -217,26 +229,48 @@ export async function getZones() {
 
 export async function getAllCustomersForSupervisor() {
   const supabase = getSupabaseClient();
-  
-  const { data, error } = await supabase
-    .from('customers')
-    .select('*')
-    .is('deleted_at', null)
-    .order('nombre');
+  const allData: Customer[] = [];
+  const pageSize = 1000;
+  let from = 0;
 
-  if (error) throw error;
-  return data as Customer[];
+  while (true) {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .is('deleted_at', null)
+      .order('nombre')
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData.push(...(data as Customer[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return allData;
 }
 
 export async function getCustomerVendorAssignments() {
   const supabase = getSupabaseClient();
-  
-  const { data, error } = await supabase
-    .from('customer_vendor_assignments')
-    .select('customer_id, vendor_user_id');
+  const allData: any[] = [];
+  const pageSize = 1000;
+  let from = 0;
 
-  if (error) throw error;
-  return data || [];
+  while (true) {
+    const { data, error } = await supabase
+      .from('customer_vendor_assignments')
+      .select('customer_id, vendor_user_id')
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData.push(...data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return allData;
 }
 
 export async function assignVendorsToCustomer(customerId: string, vendorIds: string[]) {
