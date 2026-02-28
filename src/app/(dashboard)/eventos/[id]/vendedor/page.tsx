@@ -216,7 +216,7 @@ export default function VendorEventPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
         {[
           { id: 'resumen' as const, label: 'Resumen', icon: Eye },
           { id: 'participantes' as const, label: 'Participantes', icon: Users, count: participants.length },
@@ -224,8 +224,8 @@ export default function VendorEventPage() {
         ].map(t => {
           const Icon = t.icon;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${tab === t.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
-              <Icon className="h-4 w-4" /> {t.label}
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center ${tab === t.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
+              <Icon className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">{t.label}</span><span className="sm:hidden">{t.label === 'Mis Actividades' ? 'Actividades' : t.label}</span>
               {t.count !== undefined && <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-indigo-100' : 'bg-gray-200'}`}>{t.count}</span>}
             </button>
           );
@@ -308,52 +308,92 @@ export default function VendorEventPage() {
             </Button>
           </div>
 
-          <Card padding="none">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-gray-50 border-b">
-                <th className="text-left px-4 py-3">Nombre</th>
-                <th className="text-left px-4 py-3 hidden md:table-cell">Contacto</th>
-                <th className="text-center px-4 py-3">Inscripción</th>
-                <th className="text-center px-4 py-3">Pago</th>
-                <th className="text-right px-4 py-3">Pagado</th>
-                <th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th>
-                <th className="text-center px-4 py-3 w-20">Acción</th>
-              </tr></thead>
-              <tbody className="divide-y">
-                {participants.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-8 text-gray-500">Sin participantes aún</td></tr>
-                ) : participants.map(p => {
-                  const isMine = isMyParticipant(p);
-                  return (
-                    <tr key={p.id} className={`hover:bg-gray-50 ${isMine ? 'bg-indigo-50/30' : ''}`}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium">{p.nombre}</p>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}
+          {/* Mobile card layout */}
+          <div className="md:hidden space-y-2">
+            {participants.length === 0 ? (
+              <Card><p className="text-center py-4 text-gray-500 text-sm">Sin participantes aún</p></Card>
+            ) : participants.map(p => {
+              const isMine = isMyParticipant(p);
+              return (
+                <Card key={p.id} className={isMine ? 'border-indigo-200 bg-indigo-50/20' : ''} padding="none">
+                  <div className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{p.nombre}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                           {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
                           {isMine && <span className="text-[10px] text-indigo-600 font-medium">Mi inscrito</span>}
+                          {p.empresa && <span className="text-[10px] text-gray-400">{p.empresa}</span>}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
-                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
-                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span></td>
-                      <td className="px-4 py-3 text-right font-semibold">${Number(p.monto_pagado).toLocaleString()}</td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
-                      <td className="px-4 py-3 text-center">
-                        {isMine ? (
-                          <div className="flex gap-1 justify-center">
-                            <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
-                            <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                      </div>
+                      {isMine && (
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button onClick={() => openEditParticipant(p)} className="p-1.5 hover:bg-gray-100 rounded-lg"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
+                          <button onClick={() => handleRemoveParticipant(p.id)} className="p-1.5 hover:bg-red-50 rounded-lg"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span>
+                      <span className="text-xs font-semibold ml-auto">${Number(p.monto_pagado).toLocaleString()}</span>
+                    </div>
+                    {p.registered_by && <p className="text-[10px] text-gray-400 mt-1">Por: {getUserName(p.registered_by)}</p>}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <Card padding="none" className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="bg-gray-50 border-b">
+                  <th className="text-left px-4 py-3">Nombre</th>
+                  <th className="text-left px-4 py-3">Contacto</th>
+                  <th className="text-center px-4 py-3">Inscripción</th>
+                  <th className="text-center px-4 py-3">Pago</th>
+                  <th className="text-right px-4 py-3">Pagado</th>
+                  <th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th>
+                  <th className="text-center px-4 py-3 w-20">Acción</th>
+                </tr></thead>
+                <tbody className="divide-y">
+                  {participants.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center py-8 text-gray-500">Sin participantes aún</td></tr>
+                  ) : participants.map(p => {
+                    const isMine = isMyParticipant(p);
+                    return (
+                      <tr key={p.id} className={`hover:bg-gray-50 ${isMine ? 'bg-indigo-50/30' : ''}`}>
+                        <td className="px-4 py-3">
+                          <p className="font-medium">{p.nombre}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}
+                            {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
+                            {isMine && <span className="text-[10px] text-indigo-600 font-medium">Mi inscrito</span>}
                           </div>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
+                        <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
+                        <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span></td>
+                        <td className="px-4 py-3 text-right font-semibold">${Number(p.monto_pagado).toLocaleString()}</td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-center">
+                          {isMine ? (
+                            <div className="flex gap-1 justify-center">
+                              <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
+                              <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </div>
       )}
@@ -396,6 +436,7 @@ export default function VendorEventPage() {
           )}
 
           <Card padding="none">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-gray-50 border-b">
                 <th className="text-left px-4 py-3">Actividad</th>
@@ -429,6 +470,7 @@ export default function VendorEventPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </Card>
         </div>
       )}
@@ -467,15 +509,15 @@ export default function VendorEventPage() {
                   <Button variant="ghost" size="sm" onClick={() => setSelectedCustomer(null)}>Cambiar</Button>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Nombre *" value={partForm.nombre} onChange={e => setPartForm(p => ({ ...p, nombre: e.target.value }))} />
                 <Input label="Email" value={partForm.email} onChange={e => setPartForm(p => ({ ...p, email: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Teléfono" value={partForm.telefono} onChange={e => setPartForm(p => ({ ...p, telefono: e.target.value }))} />
                 <Input label="Empresa" value={partForm.empresa} onChange={e => setPartForm(p => ({ ...p, empresa: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
                 <Input label="Cupos adicionales (ayudantes)" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
               </div>
@@ -506,15 +548,15 @@ export default function VendorEventPage() {
       {/* EDIT PARTICIPANT MODAL */}
       <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Editar Participante">
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Nombre *" value={partForm.nombre} onChange={e => setPartForm(p => ({ ...p, nombre: e.target.value }))} />
             <Input label="Email" value={partForm.email} onChange={e => setPartForm(p => ({ ...p, email: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Teléfono" value={partForm.telefono} onChange={e => setPartForm(p => ({ ...p, telefono: e.target.value }))} />
             <Input label="Empresa" value={partForm.empresa} onChange={e => setPartForm(p => ({ ...p, empresa: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
             <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
           </div>

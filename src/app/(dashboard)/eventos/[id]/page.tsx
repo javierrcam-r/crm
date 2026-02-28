@@ -436,6 +436,7 @@ export default function EventDetailPage() {
           </Card>
           {/* Expenses table */}
           <Card padding="none">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3">Categoría</th><th className="text-left px-4 py-3 hidden md:table-cell">Proveedor</th><th className="text-right px-4 py-3">Monto</th><th className="text-center px-4 py-3 hidden lg:table-cell">Comprobante</th><th className="text-center px-4 py-3">Estado</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
               <tbody className="divide-y">
@@ -455,6 +456,7 @@ export default function EventDetailPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </Card>
         </div>
       )}
@@ -503,6 +505,7 @@ export default function EventDetailPage() {
 
           {/* Activities list */}
           <Card padding="none">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-gray-50 dark:bg-dark-700 border-b dark:border-dark-600"><th className="text-left px-4 py-3">Actividad</th><th className="text-left px-4 py-3 hidden md:table-cell">Responsable</th><th className="text-center px-4 py-3">Avance</th><th className="text-center px-4 py-3">Estado</th><th className="text-center px-4 py-3 w-24">Acción</th></tr></thead>
               <tbody className="divide-y dark:divide-dark-600">
@@ -580,6 +583,7 @@ export default function EventDetailPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </Card>
         </div>
       )}
@@ -655,30 +659,69 @@ export default function EventDetailPage() {
             </Card>
           )}
 
-          <Card padding="none">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3">Nombre</th><th className="text-left px-4 py-3 hidden md:table-cell">Contacto</th><th className="text-center px-4 py-3">Inscripción</th><th className="text-center px-4 py-3">Pago</th><th className="text-center px-4 py-3">Asist.</th><th className="text-center px-4 py-3">Cert.</th><th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
-              <tbody className="divide-y">
-                {participants.length === 0 ? <tr><td colSpan={8} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3"><p className="font-medium">{p.nombre}</p><div className="flex items-center gap-1.5">{p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}{p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}</div></td>
-                    <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
-                    <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
-                    <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span></td>
-                    <td className="px-4 py-3 text-center"><button onClick={() => toggleAttendance(p)} className={`p-1 rounded ${p.asistencia ? 'text-green-600' : 'text-gray-300'}`}><CheckCircle className="h-5 w-5" /></button></td>
-                    <td className="px-4 py-3 text-center"><button onClick={() => toggleCertificate(p)} className={`p-1 rounded ${p.certificado_emitido ? 'text-purple-600' : 'text-gray-300'}`}><Award className="h-5 w-5" /></button></td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-3 text-center">
-                      {canEditParticipant(p) ? (
-                        <div className="flex gap-1 justify-center"><button onClick={() => openParticipantModal(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button><button onClick={() => removeParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button></div>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
+          {/* Mobile card layout */}
+          <div className="md:hidden space-y-2">
+            {participants.length === 0 ? (
+              <Card><p className="text-center py-4 text-gray-500 text-sm">Sin participantes</p></Card>
+            ) : participants.map(p => (
+              <Card key={p.id} padding="none">
+                <div className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{p.nombre}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
+                        {p.empresa && <span className="text-[10px] text-gray-400">{p.empresa}</span>}
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0 items-center">
+                      <button onClick={() => toggleAttendance(p)} className={`p-1 rounded ${p.asistencia ? 'text-green-600' : 'text-gray-300'}`}><CheckCircle className="h-4 w-4" /></button>
+                      <button onClick={() => toggleCertificate(p)} className={`p-1 rounded ${p.certificado_emitido ? 'text-purple-600' : 'text-gray-300'}`}><Award className="h-4 w-4" /></button>
+                      {canEditParticipant(p) && (
+                        <>
+                          <button onClick={() => openParticipantModal(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
+                          <button onClick={() => removeParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                        </>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span>
+                    {p.registered_by && <span className="text-[10px] text-gray-400">Por: {getUserName(p.registered_by)}</span>}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <Card padding="none" className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3">Nombre</th><th className="text-left px-4 py-3">Contacto</th><th className="text-center px-4 py-3">Inscripción</th><th className="text-center px-4 py-3">Pago</th><th className="text-center px-4 py-3">Asist.</th><th className="text-center px-4 py-3">Cert.</th><th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
+                <tbody className="divide-y">
+                  {participants.length === 0 ? <tr><td colSpan={8} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
+                    <tr key={p.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3"><p className="font-medium">{p.nombre}</p><div className="flex items-center gap-1.5">{p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}{p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}</div></td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
+                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
+                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span></td>
+                      <td className="px-4 py-3 text-center"><button onClick={() => toggleAttendance(p)} className={`p-1 rounded ${p.asistencia ? 'text-green-600' : 'text-gray-300'}`}><CheckCircle className="h-5 w-5" /></button></td>
+                      <td className="px-4 py-3 text-center"><button onClick={() => toggleCertificate(p)} className={`p-1 rounded ${p.certificado_emitido ? 'text-purple-600' : 'text-gray-300'}`}><Award className="h-5 w-5" /></button></td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
+                      <td className="px-4 py-3 text-center">
+                        {canEditParticipant(p) ? (
+                          <div className="flex gap-1 justify-center"><button onClick={() => openParticipantModal(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button><button onClick={() => removeParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button></div>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </div>
       )}
@@ -747,7 +790,7 @@ export default function EventDetailPage() {
           const compLabel = d.comprobante === 'transferencia' ? 'Transferencia' : d.comprobante === 'tarjeta_credito' ? 'Tarjeta de crédito' : d.comprobante === 'efectivo' ? 'Efectivo' : null;
           return (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Categoría</p>
                   <p className="text-gray-900 font-medium">{d.categoria}</p>
@@ -765,7 +808,7 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Proveedor</p>
                   <p className="text-gray-900 font-medium">{d.proveedor || '—'}</p>
@@ -776,7 +819,7 @@ export default function EventDetailPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className={`rounded-xl p-4 ${d.estado === 'pagado' ? 'bg-green-50' : d.estado === 'aprobado' ? 'bg-blue-50' : d.estado === 'cancelado' ? 'bg-red-50' : 'bg-gray-50'}`}>
                   <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Estado</p>
                   <span className={`text-sm px-3 py-1 rounded-full font-medium ${d.estado === 'pagado' ? 'bg-green-100 text-green-700' : d.estado === 'aprobado' ? 'bg-blue-100 text-blue-700' : d.estado === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{d.estado.charAt(0).toUpperCase() + d.estado.slice(1)}</span>
@@ -787,7 +830,7 @@ export default function EventDetailPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase mb-1">N° de comprobante</p>
                   <p className="text-gray-900 font-medium">{d.num_comprobante || '—'}</p>
@@ -821,11 +864,11 @@ export default function EventDetailPage() {
         <div className="space-y-4">
           <Input label="Categoría *" value={expenseForm.categoria} onChange={e => setExpenseForm(p => ({ ...p, categoria: e.target.value }))} placeholder="Ej: Salón, Catering, Material" />
           <Input label="Descripción" value={expenseForm.descripcion} onChange={e => setExpenseForm(p => ({ ...p, descripcion: e.target.value }))} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Monto ($) *" type="number" step="0.01" value={expenseForm.monto} onChange={e => setExpenseForm(p => ({ ...p, monto: e.target.value }))} />
             <Input label="Fecha" type="date" value={expenseForm.fecha} onChange={e => setExpenseForm(p => ({ ...p, fecha: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Proveedor" value={expenseForm.proveedor} onChange={e => setExpenseForm(p => ({ ...p, proveedor: e.target.value }))} />
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Estado</label><select value={expenseForm.estado} onChange={e => setExpenseForm(p => ({ ...p, estado: e.target.value as ExpenseStatus }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="cotizado">Cotizado</option><option value="aprobado">Aprobado</option><option value="pagado">Pagado</option><option value="cancelado">Cancelado</option></select></div>
           </div>
@@ -838,7 +881,7 @@ export default function EventDetailPage() {
               <option value="efectivo">Efectivo</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="N° de comprobante" value={expenseForm.num_comprobante} onChange={e => setExpenseForm(p => ({ ...p, num_comprobante: e.target.value }))} placeholder="Ej: 001-0012345" />
             <Input label="N° de factura" value={expenseForm.num_factura} onChange={e => setExpenseForm(p => ({ ...p, num_factura: e.target.value }))} placeholder="Ej: FAC-0001" />
           </div>
@@ -851,16 +894,16 @@ export default function EventDetailPage() {
         <div className="space-y-4">
           <Input label="Nombre *" value={activityForm.nombre} onChange={e => setActivityForm(p => ({ ...p, nombre: e.target.value }))} placeholder="Nombre de la actividad" />
           <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label><textarea value={activityForm.descripcion} onChange={e => setActivityForm(p => ({ ...p, descripcion: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label><select value={activityForm.tipo} onChange={e => setActivityForm(p => ({ ...p, tipo: e.target.value as EventActivityType }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="operativa">Operativa</option><option value="estrategica">Estratégica</option></select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Prioridad</label><select value={activityForm.prioridad} onChange={e => setActivityForm(p => ({ ...p, prioridad: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Responsable *</label><select value={activityForm.responsable_id} onChange={e => setActivityForm(p => ({ ...p, responsable_id: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="">Seleccionar...</option>{users.map(u => <option key={u.id} value={u.id}>{u.nombre_completo}</option>)}</select></div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Fecha inicio *" type="datetime-local" value={activityForm.fecha_inicio} onChange={e => setActivityForm(p => ({ ...p, fecha_inicio: e.target.value }))} />
             <Input label="Fecha fin" type="datetime-local" value={activityForm.fecha_fin} onChange={e => setActivityForm(p => ({ ...p, fecha_fin: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Estado</label><select value={activityForm.estado} onChange={e => { const newEstado = e.target.value as EventActivityStatus; setActivityForm(p => ({ ...p, estado: newEstado, porcentaje_avance: newEstado === 'completada' ? 100 : p.porcentaje_avance })); }} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="pendiente">Pendiente</option><option value="en_progreso">En Progreso</option><option value="bloqueada">Bloqueada</option><option value="completada">Completada</option><option value="cancelada">Cancelada</option></select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Avance (%): {activityForm.porcentaje_avance}%</label><input type="range" min="0" max="100" step="5" value={activityForm.porcentaje_avance} onChange={e => setActivityForm(p => ({ ...p, porcentaje_avance: Number(e.target.value) }))} className="w-full mt-2" /></div>
           </div>
@@ -873,16 +916,16 @@ export default function EventDetailPage() {
       <Modal isOpen={showParticipantModal} onClose={() => setShowParticipantModal(false)} title={editingItem ? 'Editar Participante' : 'Nuevo Participante'}>
         <div className="space-y-4">
           <Input label="Nombre *" value={participantForm.nombre} onChange={e => setParticipantForm(p => ({ ...p, nombre: e.target.value }))} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Email" type="email" value={participantForm.email} onChange={e => setParticipantForm(p => ({ ...p, email: e.target.value }))} />
             <Input label="Teléfono" value={participantForm.telefono} onChange={e => setParticipantForm(p => ({ ...p, telefono: e.target.value }))} />
           </div>
           <Input label="Empresa" value={participantForm.empresa} onChange={e => setParticipantForm(p => ({ ...p, empresa: e.target.value }))} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Inscripción</label><select value={participantForm.estado_inscripcion} onChange={e => setParticipantForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="pre_inscrito">Pre-inscrito</option><option value="confirmado">Confirmado</option><option value="cancelado">Cancelado</option><option value="lista_espera">Lista de espera</option></select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Pago</label><select value={participantForm.estado_pago} onChange={e => setParticipantForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="pendiente">Pendiente</option><option value="parcial">Parcial</option><option value="pagado">Pagado</option><option value="reembolsado">Reembolsado</option><option value="exento">Exento</option></select></div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Monto pagado ($)" type="number" step="0.01" value={participantForm.monto_pagado} onChange={e => setParticipantForm(p => ({ ...p, monto_pagado: e.target.value }))} />
             {(event?.categorias_participantes || []).length > 0 && (
               <div>
@@ -909,7 +952,7 @@ export default function EventDetailPage() {
             <Input label="Nombre *" value={editEventForm.nombre || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, nombre: e.target.value }))} />
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label><textarea value={editEventForm.descripcion || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, descripcion: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Objetivo</label><textarea value={editEventForm.objetivo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, objetivo: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none" /></div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label><select value={editEventForm.tipo || 'curso'} onChange={e => setEditEventForm((p: any) => ({ ...p, tipo: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="curso">Curso</option><option value="taller">Taller</option><option value="conferencia">Conferencia</option><option value="evento_corporativo">Evento Corp.</option><option value="seminario">Seminario</option><option value="otro">Otro</option></select></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Modalidad</label><select value={editEventForm.modalidad || 'presencial'} onChange={e => setEditEventForm((p: any) => ({ ...p, modalidad: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="presencial">Presencial</option><option value="virtual">Virtual</option><option value="hibrido">Híbrido</option></select></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Responsable</label><select value={editEventForm.responsable_id || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, responsable_id: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">{users.map(u => <option key={u.id} value={u.id}>{u.nombre_completo}</option>)}</select></div>
@@ -934,11 +977,11 @@ export default function EventDetailPage() {
           {/* Fechas */}
           <div className="bg-blue-50 rounded-xl p-4 space-y-4">
             <h4 className="text-xs font-semibold text-blue-600 uppercase">Fechas y Ubicación</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Fecha inicio *" type="datetime-local" value={editEventForm.fecha_inicio || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, fecha_inicio: e.target.value }))} />
               <Input label="Fecha fin" type="datetime-local" value={editEventForm.fecha_fin || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, fecha_fin: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Ubicación" value={editEventForm.ubicacion || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, ubicacion: e.target.value }))} />
               <Input label="Plataforma" value={editEventForm.plataforma || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, plataforma: e.target.value }))} />
             </div>
@@ -947,7 +990,7 @@ export default function EventDetailPage() {
           {/* Presupuesto */}
           <div className="bg-green-50 rounded-xl p-4 space-y-4">
             <h4 className="text-xs font-semibold text-green-600 uppercase">Presupuesto y Costeo</h4>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <Input label="Presupuesto total ($)" type="number" step="0.01" value={editEventForm.presupuesto_total || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, presupuesto_total: e.target.value }))} />
               <Input label="Margen objetivo (%)" type="number" step="0.01" value={editEventForm.margen_objetivo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, margen_objetivo: e.target.value }))} />
               <Input label="Costo fijo total ($)" type="number" step="0.01" value={editEventForm.costo_fijo_total || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, costo_fijo_total: e.target.value }))} />
@@ -959,7 +1002,7 @@ export default function EventDetailPage() {
           {/* Cupos */}
           <div className="bg-purple-50 rounded-xl p-4 space-y-4">
             <h4 className="text-xs font-semibold text-purple-600 uppercase">Cupos</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Cupo mínimo" type="number" value={editEventForm.cupo_minimo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, cupo_minimo: e.target.value }))} />
               <Input label="Cupo máximo" type="number" value={editEventForm.cupo_maximo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, cupo_maximo: e.target.value }))} />
             </div>
@@ -971,44 +1014,46 @@ export default function EventDetailPage() {
             <p className="text-xs text-teal-700">Define categorías (ej: Diamante, Gold, Silver) con cupo opcional y color.</p>
             <div className="space-y-3">
               {(editEventForm.categorias_participantes || []).map((cat: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-teal-200">
-                  <div className="flex gap-1 flex-shrink-0">
+                <div key={idx} className="bg-white rounded-lg p-2 border border-teal-200 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={cat.nombre}
+                      onChange={e => {
+                        const cats = [...editEventForm.categorias_participantes];
+                        cats[idx] = { ...cats[idx], nombre: e.target.value };
+                        setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
+                      }}
+                      placeholder="Nombre categoría"
+                      className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 min-w-0"
+                    />
+                    <input
+                      type="number"
+                      value={cat.cupo ?? ''}
+                      onChange={e => {
+                        const cats = [...editEventForm.categorias_participantes];
+                        cats[idx] = { ...cats[idx], cupo: e.target.value ? Number(e.target.value) : null };
+                        setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
+                      }}
+                      placeholder="Cupo"
+                      className="w-20 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cats = editEventForm.categorias_participantes.filter((_: any, i: number) => i !== idx);
+                        setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
+                      }}
+                      className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 transition-colors flex-shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
                     {['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#6b7280'].map(c => (
-                      <button key={c} type="button" onClick={() => { const cats = [...editEventForm.categorias_participantes]; cats[idx] = { ...cats[idx], color: c }; setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats })); }} className={`w-5 h-5 rounded-full border-2 transition-all ${cat.color === c ? 'border-gray-900 scale-110' : 'border-transparent hover:border-gray-300'}`} style={{ backgroundColor: c }} />
+                      <button key={c} type="button" onClick={() => { const cats = [...editEventForm.categorias_participantes]; cats[idx] = { ...cats[idx], color: c }; setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats })); }} className={`w-6 h-6 rounded-full border-2 transition-all ${cat.color === c ? 'border-gray-900 scale-110 ring-2 ring-offset-1 ring-gray-400' : 'border-transparent hover:border-gray-300'}`} style={{ backgroundColor: c }} />
                     ))}
                   </div>
-                  <input
-                    type="text"
-                    value={cat.nombre}
-                    onChange={e => {
-                      const cats = [...editEventForm.categorias_participantes];
-                      cats[idx] = { ...cats[idx], nombre: e.target.value };
-                      setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
-                    }}
-                    placeholder="Nombre categoría"
-                    className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500"
-                  />
-                  <input
-                    type="number"
-                    value={cat.cupo ?? ''}
-                    onChange={e => {
-                      const cats = [...editEventForm.categorias_participantes];
-                      cats[idx] = { ...cats[idx], cupo: e.target.value ? Number(e.target.value) : null };
-                      setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
-                    }}
-                    placeholder="Cupo"
-                    className="w-20 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cats = editEventForm.categorias_participantes.filter((_: any, i: number) => i !== idx);
-                      setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
-                    }}
-                    className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
                 </div>
               ))}
             </div>
