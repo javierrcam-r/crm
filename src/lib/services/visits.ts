@@ -241,15 +241,22 @@ export async function completeVisit(
 
   // Si hay siguiente visita programada, crearla automáticamente
   if (nextVisitAt && visit) {
-    await supabase
+    const { error: nextError } = await supabase
       .from('visits')
       .insert({
         customer_id: visit.customer_id,
+        user_id: visit.user_id,
         scheduled_at: nextVisitAt,
         status: 'programada',
         objetivo: nextAction || 'Seguimiento de visita anterior',
         location_text: visit.location_text,
+        objetivo_estrategico_id: visit.objetivo_estrategico_id || null,
       });
+
+    if (nextError) {
+      console.error('Error creando siguiente visita:', nextError);
+      throw new Error('Visita completada, pero falló la creación de la siguiente visita: ' + nextError.message);
+    }
   }
 
   return visit as Visit;

@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   getEvent, getEventActivities, getEventParticipants,
   createParticipant, updateParticipant, deleteParticipant,
-  computeEventKPIs, getEventExpenses,
+  computeEventKPIs, getEventExpenses, getActiveUsers,
   type Event, type EventActivity, type EventParticipant,
 } from '@/lib/services/events';
 import { getCustomers, type Customer } from '@/lib/services/customers';
@@ -34,6 +34,7 @@ export default function VendorEventPage() {
   const [allActivities, setAllActivities] = useState<EventActivity[]>([]);
   const [participants, setParticipants] = useState<EventParticipant[]>([]);
   const [myCustomers, setMyCustomers] = useState<Customer[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'resumen' | 'participantes' | 'actividades'>('resumen');
 
@@ -43,7 +44,7 @@ export default function VendorEventPage() {
   const [editingParticipant, setEditingParticipant] = useState<EventParticipant | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', notas: '' });
+  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '' });
 
   useEffect(() => { loadData(); }, [eventId, userProfile]);
 
@@ -51,23 +52,32 @@ export default function VendorEventPage() {
     if (!userProfile) return;
     setLoading(true);
     try {
-      const [ev, acts, parts, customers] = await Promise.all([
+      const [ev, acts, parts, customers, usrs] = await Promise.all([
         getEvent(eventId),
         getEventActivities(eventId),
         getEventParticipants(eventId),
         getCustomers().catch(() => []),
+        getActiveUsers().catch(() => []),
       ]);
       setEvent(ev);
       setAllActivities(acts);
       setMyActivities(acts.filter(a => a.responsable_id === userProfile.id));
       setParticipants(parts);
       setMyCustomers(customers);
+      setAllUsers(usrs);
     } catch (e) { console.error(e); toast.error('Error cargando evento'); }
     finally { setLoading(false); }
   };
 
-  // My participants (registered by me)
-  const myParticipants = participants.filter(p => (p as any).registered_by === userProfile?.id);
+  const getUserName = (id: string) => allUsers.find((u: any) => u.id === id)?.nombre_completo || 'Desconocido';
+  const isMyParticipant = (p: EventParticipant) => p.registered_by === userProfile?.id;
+  const getCatColor = (catName: string | null) => {
+    if (!catName || !event) return null;
+    const cat = (event.categorias_participantes || []).find((c: any) => c.nombre === catName);
+    return cat?.color || null;
+  };
+  const myParticipants = participants.filter(p => isMyParticipant(p));
+  const othersParticipants = participants.filter(p => !isMyParticipant(p));
 
   const filteredCustomers = customerSearch.trim()
     ? myCustomers.filter(c => c.nombre.toLowerCase().includes(customerSearch.toLowerCase()) || c.telefono?.includes(customerSearch))
@@ -82,6 +92,7 @@ export default function VendorEventPage() {
       empresa: '',
       monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0',
       cupos_adicionales: '0',
+      categoria: '',
       notas: '',
     });
     setCustomerSearch('');
@@ -100,13 +111,14 @@ export default function VendorEventPage() {
         estado_pago: Number(partForm.monto_pagado) > 0 ? 'pagado' : 'pendiente',
         monto_pagado: Number(partForm.monto_pagado) || 0,
         cupos_adicionales: Number(partForm.cupos_adicionales) || 0,
+        categoria: partForm.categoria || null,
         registered_by: userProfile?.id,
         notas: partForm.notas || null,
       } as any);
       toast.success('Participante registrado');
       setShowAddModal(false);
       setSelectedCustomer(null);
-      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', notas: '' });
+      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '' });
       const parts = await getEventParticipants(eventId);
       setParticipants(parts);
     } catch (err: any) { toast.error(err?.message || 'Error al registrar'); }
@@ -121,6 +133,7 @@ export default function VendorEventPage() {
       empresa: p.empresa || '',
       monto_pagado: String(p.monto_pagado || 0),
       cupos_adicionales: String((p as any).cupos_adicionales || 0),
+      categoria: p.categoria || '',
       notas: p.notas || '',
     });
     setShowEditModal(true);
@@ -137,6 +150,7 @@ export default function VendorEventPage() {
         monto_pagado: Number(partForm.monto_pagado) || 0,
         estado_pago: Number(partForm.monto_pagado) > 0 ? 'pagado' : 'pendiente',
         cupos_adicionales: Number(partForm.cupos_adicionales) || 0,
+        categoria: partForm.categoria || null,
         notas: partForm.notas || null,
       } as any);
       toast.success('Participante actualizado');
@@ -205,7 +219,7 @@ export default function VendorEventPage() {
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
         {[
           { id: 'resumen' as const, label: 'Resumen', icon: Eye },
-          { id: 'participantes' as const, label: 'Mis Inscritos', icon: Users, count: myParticipants.length },
+          { id: 'participantes' as const, label: 'Participantes', icon: Users, count: participants.length },
           { id: 'actividades' as const, label: 'Mis Actividades', icon: Target, count: myActivities.length },
         ].map(t => {
           const Icon = t.icon;
@@ -244,9 +258,52 @@ export default function VendorEventPage() {
       {/* TAB: PARTICIPANTES */}
       {tab === 'participantes' && (
         <div className="space-y-4">
+          {/* Resumen por categorías */}
+          {(event.categorias_participantes || []).length > 0 && (
+            <Card className="bg-teal-50/50 border-teal-200">
+              <h4 className="text-xs font-semibold text-teal-700 uppercase mb-3">🏅 Resumen por Categoría</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(event.categorias_participantes || []).map((cat: any) => {
+                  const catParticipants = participants.filter(p => p.categoria === cat.nombre);
+                  const preInscritos = catParticipants.filter(p => p.estado_inscripcion === 'pre_inscrito').length;
+                  const confirmados = catParticipants.filter(p => p.estado_inscripcion === 'confirmado').length;
+                  const cancelados = catParticipants.filter(p => p.estado_inscripcion === 'cancelado').length;
+                  const listaEspera = catParticipants.filter(p => p.estado_inscripcion === 'lista_espera').length;
+                  const activos = preInscritos + confirmados + listaEspera;
+                  return (
+                    <div key={cat.nombre} className="bg-white rounded-xl p-3 border border-teal-200 overflow-hidden relative">
+                      {cat.color && <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: cat.color }} />}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-gray-900 flex items-center gap-1.5">{cat.color && <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: cat.color }} />}{cat.nombre}</span>
+                        {cat.cupo ? (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activos >= cat.cupo ? 'bg-red-100 text-red-700' : activos >= cat.cupo * 0.8 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                            {activos}/{cat.cupo}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">{catParticipants.length} inscritos</span>
+                        )}
+                      </div>
+                      {cat.cupo && (
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                          <div className={`h-1.5 rounded-full transition-all ${activos >= cat.cupo ? 'bg-red-500' : activos >= cat.cupo * 0.8 ? 'bg-amber-500' : 'bg-teal-500'}`} style={{ width: `${Math.min((activos / cat.cupo) * 100, 100)}%` }} />
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
+                        <span className="text-gray-500">Pre-inscr: <strong>{preInscritos}</strong></span>
+                        <span className="text-green-600">Confirm: <strong>{confirmados}</strong></span>
+                        <span className="text-amber-600">Espera: <strong>{listaEspera}</strong></span>
+                        <span className="text-red-500">Cancel: <strong>{cancelados}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
           <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-gray-900">Mis Inscritos ({myParticipants.length})</h3>
-            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', notas: '' }); }}>
+            <h3 className="font-semibold text-gray-900">Todos los Participantes ({participants.length})</h3>
+            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '' }); }}>
               <Plus className="h-4 w-4 mr-1" />Inscribir Cliente
             </Button>
           </div>
@@ -256,29 +313,45 @@ export default function VendorEventPage() {
               <thead><tr className="bg-gray-50 border-b">
                 <th className="text-left px-4 py-3">Nombre</th>
                 <th className="text-left px-4 py-3 hidden md:table-cell">Contacto</th>
-                <th className="text-right px-4 py-3">Pagado</th>
-                <th className="text-center px-4 py-3">Cupos+</th>
+                <th className="text-center px-4 py-3">Inscripción</th>
                 <th className="text-center px-4 py-3">Pago</th>
+                <th className="text-right px-4 py-3">Pagado</th>
+                <th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th>
                 <th className="text-center px-4 py-3 w-20">Acción</th>
               </tr></thead>
               <tbody className="divide-y">
-                {myParticipants.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-gray-500">No has inscrito participantes aún</td></tr>
-                ) : myParticipants.map(p => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{p.nombre}{p.empresa && <span className="text-xs text-gray-500 block">{p.empresa}</span>}</td>
-                    <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
-                    <td className="px-4 py-3 text-right font-semibold">${Number(p.monto_pagado).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-center">{(p as any).cupos_adicionales || 0}</td>
-                    <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{p.estado_pago}</span></td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex gap-1 justify-center">
-                        <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
-                        <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {participants.length === 0 ? (
+                  <tr><td colSpan={7} className="text-center py-8 text-gray-500">Sin participantes aún</td></tr>
+                ) : participants.map(p => {
+                  const isMine = isMyParticipant(p);
+                  return (
+                    <tr key={p.id} className={`hover:bg-gray-50 ${isMine ? 'bg-indigo-50/30' : ''}`}>
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{p.nombre}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}
+                          {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
+                          {isMine && <span className="text-[10px] text-indigo-600 font-medium">Mi inscrito</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
+                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
+                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span></td>
+                      <td className="px-4 py-3 text-right font-semibold">${Number(p.monto_pagado).toLocaleString()}</td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
+                      <td className="px-4 py-3 text-center">
+                        {isMine ? (
+                          <div className="flex gap-1 justify-center">
+                            <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
+                            <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </Card>
@@ -406,6 +479,17 @@ export default function VendorEventPage() {
                 <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
                 <Input label="Cupos adicionales (ayudantes)" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
               </div>
+              {(event?.categorias_participantes || []).length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
+                  <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                    <option value="">Sin categoría</option>
+                    {(event?.categorias_participantes || []).map((cat: any) => (
+                      <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Notas</label>
                 <textarea value={partForm.notas} onChange={e => setPartForm(p => ({ ...p, notas: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none text-sm" placeholder="Observaciones..." />
@@ -434,6 +518,17 @@ export default function VendorEventPage() {
             <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
             <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
           </div>
+          {(event?.categorias_participantes || []).length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
+              <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                <option value="">Sin categoría</option>
+                {(event?.categorias_participantes || []).map((cat: any) => (
+                  <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancelar</Button>
             <Button onClick={handleEditParticipant}>Guardar</Button>

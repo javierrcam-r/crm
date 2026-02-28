@@ -2127,18 +2127,18 @@ export default function CalendarioPage() {
                   <button
                     key={status}
                     onClick={() => handleStatusChange(selectedActivity.id, status)}
-                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1)}
+                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                       selectedActivity.estado === status
                         ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-300 ring-2 ring-offset-1 ring-indigo-200'
-                        : (status === 'realizado' && !isSupervisorN1)
+                        : (status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                         : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                     }`}
-                    title={status === 'realizado' && !isSupervisorN1 ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
+                    title={status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
                   >
                     {estadoLabels[status]}
-                    {status === 'realizado' && !isSupervisorN1 && ' 🔒'}
+                    {status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && ' 🔒'}
                   </button>
                 ))}
               </div>

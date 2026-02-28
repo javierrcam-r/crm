@@ -38,9 +38,16 @@ export interface Event {
   lecciones_aprendidas: string | null;
   recomendaciones: string | null;
   satisfaccion_promedio: number | null;
+  categorias_participantes: EventParticipantCategory[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface EventParticipantCategory {
+  nombre: string;
+  cupo: number | null;
+  color: string | null;
 }
 
 export interface EventExpense {
@@ -88,6 +95,7 @@ export interface EventParticipant {
   asistencia: boolean;
   certificado_emitido: boolean;
   cupos_adicionales: number;
+  categoria: string | null;
   registered_by: string | null;
   notas: string | null;
   created_at: string;

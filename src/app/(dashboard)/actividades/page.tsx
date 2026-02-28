@@ -1491,25 +1491,25 @@ export default function ActividadesPage() {
                   <button
                     key={status}
                     onClick={() => handleStatusChange(selectedActivity.id, status)}
-                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1)}
+                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                       selectedActivity.estado === status
                         ? `${estadoColors[status].bg} ${estadoColors[status].text} border-2 ${estadoColors[status].border} ring-2 ring-offset-1 ring-current/20`
-                        : (status === 'realizado' && !isSupervisorN1)
+                        : (status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                         : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                     }`}
-                    title={status === 'realizado' && !isSupervisorN1 ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
+                    title={status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
                   >
                     {estadoLabels[status]}
-                    {status === 'realizado' && !isSupervisorN1 && ' 🔒'}
+                    {status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && ' 🔒'}
                   </button>
                 ))}
               </div>
-              {!isSupervisorN1 && (
+              {!isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && (
                 <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  Solo Supervisores Nivel 1 pueden marcar actividades como Realizado
+                  Solo Supervisores Nivel 1 pueden marcar objetivos estratégicos como Realizado
                 </p>
               )}
             </div>

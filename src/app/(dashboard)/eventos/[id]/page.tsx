@@ -63,7 +63,7 @@ export default function EventDetailPage() {
   // Forms
   const [expenseForm, setExpenseForm] = useState({ categoria: '', descripcion: '', proveedor: '', monto: '', fecha: '', estado: 'cotizado' as ExpenseStatus, comprobante: '', num_comprobante: '', num_factura: '', notas: '' });
   const [activityForm, setActivityForm] = useState({ nombre: '', descripcion: '', tipo: 'operativa' as EventActivityType, responsable_id: '', fecha_inicio: '', fecha_fin: '', prioridad: 'media', estado: 'pendiente' as EventActivityStatus, porcentaje_avance: 0, es_hito: false, notas: '' });
-  const [participantForm, setParticipantForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito' as any, estado_pago: 'pendiente' as any, monto_pagado: '', notas: '' });
+  const [participantForm, setParticipantForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito' as any, estado_pago: 'pendiente' as any, monto_pagado: '', categoria: '', notas: '' });
 
   useEffect(() => { loadAll(); }, [eventId]);
 
@@ -80,6 +80,13 @@ export default function EventDetailPage() {
   };
 
   const getUserName = (id: string) => users.find(u => u.id === id)?.nombre_completo || 'Sin asignar';
+  const isSupervisorOrAdmin = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
+  const canEditParticipant = (p: EventParticipant) => isSupervisorOrAdmin || p.registered_by === userProfile?.id;
+  const getCatColor = (catName: string | null) => {
+    if (!catName || !event) return null;
+    const cat = (event.categorias_participantes || []).find((c: any) => c.nombre === catName);
+    return cat?.color || null;
+  };
 
   const handleStatusChange = async (newStatus: EventStatus) => {
     if (!event) return;
@@ -115,6 +122,7 @@ export default function EventDetailPage() {
       recomendaciones: event.recomendaciones || '',
       satisfaccion_promedio: String(event.satisfaccion_promedio || ''),
       marcas: event.marcas || [],
+      categorias_participantes: event.categorias_participantes || [],
     });
     setShowEditEvent(true);
   };
@@ -146,6 +154,7 @@ export default function EventDetailPage() {
         lecciones_aprendidas: editEventForm.lecciones_aprendidas || null,
         recomendaciones: editEventForm.recomendaciones || null,
         satisfaccion_promedio: editEventForm.satisfaccion_promedio ? Number(editEventForm.satisfaccion_promedio) : null,
+        categorias_participantes: editEventForm.categorias_participantes || [],
       });
       toast.success('Evento actualizado');
       setShowEditEvent(false);
@@ -216,10 +225,10 @@ export default function EventDetailPage() {
   const openParticipantModal = (item?: EventParticipant) => {
     if (item) {
       setEditingItem(item);
-      setParticipantForm({ nombre: item.nombre, email: item.email || '', telefono: item.telefono || '', empresa: item.empresa || '', estado_inscripcion: item.estado_inscripcion, estado_pago: item.estado_pago, monto_pagado: String(item.monto_pagado || 0), notas: item.notas || '' });
+      setParticipantForm({ nombre: item.nombre, email: item.email || '', telefono: item.telefono || '', empresa: item.empresa || '', estado_inscripcion: item.estado_inscripcion, estado_pago: item.estado_pago, monto_pagado: String(item.monto_pagado || 0), categoria: item.categoria || '', notas: item.notas || '' });
     } else {
       setEditingItem(null);
-      setParticipantForm({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', monto_pagado: '0', notas: '' });
+      setParticipantForm({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', monto_pagado: '0', categoria: '', notas: '' });
     }
     setShowParticipantModal(true);
   };
@@ -227,8 +236,8 @@ export default function EventDetailPage() {
   const saveParticipant = async () => {
     if (!participantForm.nombre) { toast.error('Nombre requerido'); return; }
     try {
-      const data = { event_id: eventId, nombre: participantForm.nombre, email: participantForm.email || null, telefono: participantForm.telefono || null, empresa: participantForm.empresa || null, estado_inscripcion: participantForm.estado_inscripcion, estado_pago: participantForm.estado_pago, monto_pagado: Number(participantForm.monto_pagado) || 0, notas: participantForm.notas || null };
-      if (editingItem) { await updateParticipant(editingItem.id, data); } else { await createParticipant(data); }
+      const data: any = { event_id: eventId, nombre: participantForm.nombre, email: participantForm.email || null, telefono: participantForm.telefono || null, empresa: participantForm.empresa || null, estado_inscripcion: participantForm.estado_inscripcion, estado_pago: participantForm.estado_pago, monto_pagado: Number(participantForm.monto_pagado) || 0, categoria: participantForm.categoria || null, notas: participantForm.notas || null };
+      if (editingItem) { await updateParticipant(editingItem.id, data); } else { data.registered_by = userProfile?.id || null; await createParticipant(data); }
       toast.success(editingItem ? 'Participante actualizado' : 'Participante agregado');
       setShowParticipantModal(false);
       const part = await getEventParticipants(eventId); setParticipants(part);
@@ -582,19 +591,90 @@ export default function EventDetailPage() {
             <h3 className="font-semibold text-gray-900">Participantes ({participants.length})</h3>
             <Button size="sm" onClick={() => openParticipantModal()}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
           </div>
+
+          {/* Resumen por categorías */}
+          {(event.categorias_participantes || []).length > 0 && (
+            <Card className="bg-teal-50/50 border-teal-200">
+              <h4 className="text-xs font-semibold text-teal-700 uppercase mb-3">🏅 Resumen por Categoría</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(event.categorias_participantes || []).map((cat: any) => {
+                  const catParticipants = participants.filter(p => p.categoria === cat.nombre);
+                  const preInscritos = catParticipants.filter(p => p.estado_inscripcion === 'pre_inscrito').length;
+                  const confirmados = catParticipants.filter(p => p.estado_inscripcion === 'confirmado').length;
+                  const cancelados = catParticipants.filter(p => p.estado_inscripcion === 'cancelado').length;
+                  const listaEspera = catParticipants.filter(p => p.estado_inscripcion === 'lista_espera').length;
+                  const total = catParticipants.length;
+                  const activos = preInscritos + confirmados + listaEspera;
+                  return (
+                    <div key={cat.nombre} className="bg-white rounded-xl p-3 border border-teal-200 overflow-hidden relative">
+                      {cat.color && <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: cat.color }} />}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-gray-900 flex items-center gap-1.5">{cat.color && <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: cat.color }} />}{cat.nombre}</span>
+                        {cat.cupo ? (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activos >= cat.cupo ? 'bg-red-100 text-red-700' : activos >= cat.cupo * 0.8 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                            {activos}/{cat.cupo}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">{total} inscritos</span>
+                        )}
+                      </div>
+                      {cat.cupo && (
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                          <div className={`h-1.5 rounded-full transition-all ${activos >= cat.cupo ? 'bg-red-500' : activos >= cat.cupo * 0.8 ? 'bg-amber-500' : 'bg-teal-500'}`} style={{ width: `${Math.min((activos / cat.cupo) * 100, 100)}%` }} />
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
+                        <span className="text-gray-500">Pre-inscr: <strong>{preInscritos}</strong></span>
+                        <span className="text-green-600">Confirm: <strong>{confirmados}</strong></span>
+                        <span className="text-amber-600">Espera: <strong>{listaEspera}</strong></span>
+                        <span className="text-red-500">Cancel: <strong>{cancelados}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Sin categoría */}
+                {(() => {
+                  const sinCat = participants.filter(p => !p.categoria);
+                  if (sinCat.length === 0) return null;
+                  return (
+                    <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-gray-500">Sin categoría</span>
+                        <span className="text-xs text-gray-400">{sinCat.length} inscritos</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
+                        <span className="text-gray-500">Pre-inscr: <strong>{sinCat.filter(p => p.estado_inscripcion === 'pre_inscrito').length}</strong></span>
+                        <span className="text-green-600">Confirm: <strong>{sinCat.filter(p => p.estado_inscripcion === 'confirmado').length}</strong></span>
+                        <span className="text-amber-600">Espera: <strong>{sinCat.filter(p => p.estado_inscripcion === 'lista_espera').length}</strong></span>
+                        <span className="text-red-500">Cancel: <strong>{sinCat.filter(p => p.estado_inscripcion === 'cancelado').length}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </Card>
+          )}
+
           <Card padding="none">
             <table className="w-full text-sm">
-              <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3">Nombre</th><th className="text-left px-4 py-3 hidden md:table-cell">Contacto</th><th className="text-center px-4 py-3">Inscripción</th><th className="text-center px-4 py-3">Pago</th><th className="text-center px-4 py-3">Asist.</th><th className="text-center px-4 py-3">Cert.</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
+              <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3">Nombre</th><th className="text-left px-4 py-3 hidden md:table-cell">Contacto</th><th className="text-center px-4 py-3">Inscripción</th><th className="text-center px-4 py-3">Pago</th><th className="text-center px-4 py-3">Asist.</th><th className="text-center px-4 py-3">Cert.</th><th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
               <tbody className="divide-y">
-                {participants.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
+                {participants.length === 0 ? <tr><td colSpan={8} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3"><p className="font-medium">{p.nombre}</p>{p.empresa && <p className="text-xs text-gray-500">{p.empresa}</p>}</td>
+                    <td className="px-4 py-3"><p className="font-medium">{p.nombre}</p><div className="flex items-center gap-1.5">{p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}{p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}</div></td>
                     <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
                     <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
                     <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span></td>
                     <td className="px-4 py-3 text-center"><button onClick={() => toggleAttendance(p)} className={`p-1 rounded ${p.asistencia ? 'text-green-600' : 'text-gray-300'}`}><CheckCircle className="h-5 w-5" /></button></td>
                     <td className="px-4 py-3 text-center"><button onClick={() => toggleCertificate(p)} className={`p-1 rounded ${p.certificado_emitido ? 'text-purple-600' : 'text-gray-300'}`}><Award className="h-5 w-5" /></button></td>
-                    <td className="px-4 py-3 text-center"><div className="flex gap-1 justify-center"><button onClick={() => openParticipantModal(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button><button onClick={() => removeParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button></div></td>
+                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-center">
+                      {canEditParticipant(p) ? (
+                        <div className="flex gap-1 justify-center"><button onClick={() => openParticipantModal(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button><button onClick={() => removeParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button></div>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -802,7 +882,20 @@ export default function EventDetailPage() {
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Inscripción</label><select value={participantForm.estado_inscripcion} onChange={e => setParticipantForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="pre_inscrito">Pre-inscrito</option><option value="confirmado">Confirmado</option><option value="cancelado">Cancelado</option><option value="lista_espera">Lista de espera</option></select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Pago</label><select value={participantForm.estado_pago} onChange={e => setParticipantForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="pendiente">Pendiente</option><option value="parcial">Parcial</option><option value="pagado">Pagado</option><option value="reembolsado">Reembolsado</option><option value="exento">Exento</option></select></div>
           </div>
-          <Input label="Monto pagado ($)" type="number" step="0.01" value={participantForm.monto_pagado} onChange={e => setParticipantForm(p => ({ ...p, monto_pagado: e.target.value }))} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Monto pagado ($)" type="number" step="0.01" value={participantForm.monto_pagado} onChange={e => setParticipantForm(p => ({ ...p, monto_pagado: e.target.value }))} />
+            {(event?.categorias_participantes || []).length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
+                <select value={participantForm.categoria} onChange={e => setParticipantForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                  <option value="">Sin categoría</option>
+                  {(event?.categorias_participantes || []).map((cat: any) => (
+                    <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
           <div className="flex justify-end gap-3 pt-4 border-t"><Button variant="secondary" onClick={() => setShowParticipantModal(false)}>Cancelar</Button><Button onClick={saveParticipant}>Guardar</Button></div>
         </div>
       </Modal>
@@ -870,6 +963,62 @@ export default function EventDetailPage() {
               <Input label="Cupo mínimo" type="number" value={editEventForm.cupo_minimo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, cupo_minimo: e.target.value }))} />
               <Input label="Cupo máximo" type="number" value={editEventForm.cupo_maximo || ''} onChange={e => setEditEventForm((p: any) => ({ ...p, cupo_maximo: e.target.value }))} />
             </div>
+          </div>
+
+          {/* Categorías de Participantes */}
+          <div className="bg-teal-50 rounded-xl p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-teal-600 uppercase">🏅 Categorías de Participantes</h4>
+            <p className="text-xs text-teal-700">Define categorías (ej: Diamante, Gold, Silver) con cupo opcional y color.</p>
+            <div className="space-y-3">
+              {(editEventForm.categorias_participantes || []).map((cat: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-teal-200">
+                  <div className="flex gap-1 flex-shrink-0">
+                    {['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#6b7280'].map(c => (
+                      <button key={c} type="button" onClick={() => { const cats = [...editEventForm.categorias_participantes]; cats[idx] = { ...cats[idx], color: c }; setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats })); }} className={`w-5 h-5 rounded-full border-2 transition-all ${cat.color === c ? 'border-gray-900 scale-110' : 'border-transparent hover:border-gray-300'}`} style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={cat.nombre}
+                    onChange={e => {
+                      const cats = [...editEventForm.categorias_participantes];
+                      cats[idx] = { ...cats[idx], nombre: e.target.value };
+                      setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
+                    }}
+                    placeholder="Nombre categoría"
+                    className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500"
+                  />
+                  <input
+                    type="number"
+                    value={cat.cupo ?? ''}
+                    onChange={e => {
+                      const cats = [...editEventForm.categorias_participantes];
+                      cats[idx] = { ...cats[idx], cupo: e.target.value ? Number(e.target.value) : null };
+                      setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
+                    }}
+                    placeholder="Cupo"
+                    className="w-20 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cats = editEventForm.categorias_participantes.filter((_: any, i: number) => i !== idx);
+                      setEditEventForm((p: any) => ({ ...p, categorias_participantes: cats }));
+                    }}
+                    className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditEventForm((p: any) => ({ ...p, categorias_participantes: [...(p.categorias_participantes || []), { nombre: '', cupo: null, color: '#3b82f6' }] }))}
+              className="text-sm text-teal-700 hover:text-teal-900 font-medium flex items-center gap-1"
+            >
+              <Plus className="h-4 w-4" /> Agregar categoría
+            </button>
           </div>
 
           {/* Cierre (si finalizado) */}
