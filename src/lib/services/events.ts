@@ -239,20 +239,45 @@ export async function getUserEventActivities(userId: string) {
   return data || [];
 }
 
-export async function getAllEventActivitiesForCalendar(userId?: string) {
+export async function getAllEventActivitiesForCalendar(userId?: string, assignedEventIds?: string[]) {
   const supabase = getSupabaseClient();
-  const query = supabase
+
+  if (!userId) {
+    const { data, error } = await supabase
+      .from('event_activities')
+      .select('*, events:event_id(id, nombre, estado)')
+      .order('fecha_inicio');
+    if (error) throw error;
+    return (data || []) as (EventActivity & { events: { id: string; nombre: string; estado: string } | null })[];
+  }
+
+  const results: (EventActivity & { events: { id: string; nombre: string; estado: string } | null })[] = [];
+  const seen = new Set<string>();
+
+  const { data: ownData, error: ownErr } = await supabase
     .from('event_activities')
     .select('*, events:event_id(id, nombre, estado)')
+    .eq('responsable_id', userId)
     .order('fecha_inicio');
-  
-  if (userId) {
-    query.eq('responsable_id', userId);
+  if (ownErr) throw ownErr;
+  for (const item of (ownData || [])) {
+    if (!seen.has(item.id)) { seen.add(item.id); results.push(item); }
   }
-  
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data || []) as (EventActivity & { events: { id: string; nombre: string; estado: string } | null })[];
+
+  if (assignedEventIds && assignedEventIds.length > 0) {
+    const { data: assignedData, error: assignedErr } = await supabase
+      .from('event_activities')
+      .select('*, events:event_id(id, nombre, estado)')
+      .in('event_id', assignedEventIds)
+      .order('fecha_inicio');
+    if (assignedErr) throw assignedErr;
+    for (const item of (assignedData || [])) {
+      if (!seen.has(item.id)) { seen.add(item.id); results.push(item); }
+    }
+  }
+
+  results.sort((a, b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime());
+  return results;
 }
 
 export async function createEventActivity(activity: Partial<EventActivity>) {

@@ -46,7 +46,7 @@ import {
   getActivityComments,
   getStrategicObjectivesForSelection
 } from '@/lib/services/activities';
-import { getAllEventActivitiesForCalendar, type EventActivity } from '@/lib/services/events';
+import { getAllEventActivitiesForCalendar, getVendorEvents, type EventActivity } from '@/lib/services/events';
 import { getBlockedDays, isDateBlocked } from '@/lib/services/blockedDays';
 import { getUsersOnVacationOnDate } from '@/lib/services/vacations';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
@@ -183,8 +183,14 @@ export default function CalendarioPage() {
       const currentRol = userProfile?.rol;
       const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor';
 
-      // Supervisores/admin ven todas las actividades de eventos; otros solo las suyas
+      // Supervisores/admin ven todas las actividades de eventos; otros ven las suyas + las de eventos asignados
       const eventActUserId = isSup ? undefined : currentId;
+
+      let assignedEventIds: string[] | undefined;
+      if (!isSup && currentId) {
+        const vendorEvents = await getVendorEvents(currentId).catch(() => []);
+        assignedEventIds = vendorEvents.map((e: any) => e.id);
+      }
 
       const dateFromShort = dateFrom.slice(0, 10);
       const dateToShort = dateTo.slice(0, 10);
@@ -193,7 +199,7 @@ export default function CalendarioPage() {
         getVisits({ date_from: dateFrom, date_to: dateTo }),
         getPendingVisits(),
         getActivities().catch(() => [] as Activity[]),
-        getAllEventActivitiesForCalendar(eventActUserId).catch(() => [] as EventActivityWithEvent[]),
+        getAllEventActivitiesForCalendar(eventActUserId, assignedEventIds).catch(() => [] as EventActivityWithEvent[]),
         getBlockedDays(dateFromShort, dateToShort).catch(() => []),
       ]);
       setBlockedDaysSet(new Set(blockedDaysData.map((d) => d.fecha)));
@@ -1730,7 +1736,28 @@ export default function CalendarioPage() {
                   </div>
                 </div>
               )}
-              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && (
+              {/* Actividades de Eventos */}
+              {getEventActivitiesForDay(selectedDate).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2 flex items-center gap-1">
+                    <Target className="h-4 w-4" />
+                    Actividades de Eventos ({getEventActivitiesForDay(selectedDate).length})
+                  </h4>
+                  <div className="space-y-2">
+                    {getEventActivitiesForDay(selectedDate).map((ea) => (
+                      <Link key={`det-evt-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
+                        </div>
+                        <p className="font-medium">{ea.nombre}</p>
+                        {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && getEventActivitiesForDay(selectedDate).length === 0 && (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-4">
                   No hay actividades para este día
                 </p>
@@ -1852,7 +1879,28 @@ export default function CalendarioPage() {
                   </div>
                 </div>
               )}
-              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && (
+              {/* Actividades de Eventos */}
+              {getEventActivitiesForDay(selectedDate).length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-3 flex items-center gap-1">
+                    <Target className="h-4 w-4" />
+                    Actividades de Eventos ({getEventActivitiesForDay(selectedDate).length})
+                  </h4>
+                  <div className="space-y-2">
+                    {getEventActivitiesForDay(selectedDate).map((ea) => (
+                      <Link key={`vdet-evt-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
+                        </div>
+                        <p className="font-medium">{ea.nombre}</p>
+                        {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && getEventActivitiesForDay(selectedDate).length === 0 && (
                 <p className="text-center text-gray-500 py-4">
                   No hay actividades ni visitas para este día
                 </p>

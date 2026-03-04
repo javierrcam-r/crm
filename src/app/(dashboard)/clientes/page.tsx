@@ -137,7 +137,7 @@ export default function ClientesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">Clientes y Prospectos</h1>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">Clientes</h1>
           <p className="text-gray-500 dark:text-gray-300 text-sm md:text-base mt-1">
             Gestiona tu cartera de clientes
           </p>
