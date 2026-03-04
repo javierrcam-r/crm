@@ -115,6 +115,8 @@ export default function CalendarioPage() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [showTecnicoActivities, setShowTecnicoActivities] = useState(false);
   const [tecnicoUserIds, setTecnicoUserIds] = useState<string[]>([]);
+  const [tecnicoAuthIds, setTecnicoAuthIds] = useState<string[]>([]);
+  const [tecnicoEventIds, setTecnicoEventIds] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [filterByUser, setFilterByUser] = useState<string>('');
   const [selectedDayMobile, setSelectedDayMobile] = useState<Date | null>(null);
@@ -184,10 +186,11 @@ export default function CalendarioPage() {
       const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor';
 
       // Supervisores/admin ven todas las actividades de eventos; otros ven las suyas + las de eventos asignados
-      const eventActUserId = isSup ? undefined : currentId;
+      // Si Ver Técnico está activo, cargar todas para poder mostrar las del técnico
+      const eventActUserId = (isSup || showTecnicoActivities) ? undefined : currentId;
 
       let assignedEventIds: string[] | undefined;
-      if (!isSup && currentId) {
+      if (!isSup && !showTecnicoActivities && currentId) {
         const vendorEvents = await getVendorEvents(currentId).catch(() => []);
         assignedEventIds = vendorEvents.map((e: any) => e.id);
       }
@@ -228,11 +231,40 @@ export default function CalendarioPage() {
       
       // Obtener IDs de técnicos si el filtro está activo
       let tecnicoIds: string[] = [];
+      let tecnicoAuths: string[] = [];
       if (showTecnicoActivities) {
-        tecnicoIds = allUsers.filter(u => u.rol === 'tecnico').map(u => u.id);
+        const tecUsers = allUsers.filter(u => u.rol === 'tecnico');
+        tecnicoIds = tecUsers.map(u => u.id);
+        tecnicoAuths = tecUsers.map(u => (u as any).user_id).filter(Boolean);
         setTecnicoUserIds(tecnicoIds);
+        setTecnicoAuthIds(tecnicoAuths);
+        // Obtener eventos asignados a técnicos
+        const tecEventPromises = tecnicoIds.map(tid => getVendorEvents(tid).catch(() => []));
+        const tecEventResults = await Promise.all(tecEventPromises);
+        const allTecEventIds = new Set<string>();
+        for (const evts of tecEventResults) {
+          for (const evt of evts) allTecEventIds.add(evt.id);
+        }
+        setTecnicoEventIds(Array.from(allTecEventIds));
+        // Incluir visitas del técnico en las visitas mostradas
+        const tecnicoVisits = visitsData.filter(v => tecnicoAuths.includes(v.user_id));
+        for (const tv of tecnicoVisits) {
+          if (!filteredVisits.some(fv => fv.id === tv.id)) {
+            filteredVisits.push(tv);
+          }
+        }
+        const tecnicoPending = pendingData.filter(v => tecnicoAuths.includes(v.user_id));
+        for (const tp of tecnicoPending) {
+          if (!filteredPending.some(fp => fp.id === tp.id)) {
+            filteredPending.push(tp);
+          }
+        }
+        setVisits(filteredVisits);
+        setPendingVisits(filteredPending);
       } else {
         setTecnicoUserIds([]);
+        setTecnicoAuthIds([]);
+        setTecnicoEventIds([]);
       }
       
       // Filtrar actividades según el rol
@@ -505,6 +537,16 @@ export default function CalendarioPage() {
     const involvesTecnico = Array.isArray(activity.participants) &&
       activity.participants.some(p => tecnicoUserIds.includes(p.user_profile_id));
     return createdByTecnico || involvesTecnico;
+  };
+
+  const isEventActivityFromTecnico = (ea: EventActivityWithEvent) => {
+    if (!showTecnicoActivities) return false;
+    return tecnicoUserIds.includes(ea.responsable_id) || tecnicoEventIds.includes(ea.event_id);
+  };
+
+  const isVisitFromTecnico = (visit: Visit) => {
+    if (!showTecnicoActivities) return false;
+    return tecnicoAuthIds.includes(visit.user_id);
   };
 
   const getEventActivitiesForDay = (date: Date) => {
@@ -821,17 +863,20 @@ export default function CalendarioPage() {
                   </div>
                   <div className="space-y-1">
                     {/* Actividades de Eventos */}
-                    {dayEventActs.slice(0, 1).map((ea) => (
+                    {dayEventActs.slice(0, 1).map((ea) => {
+                      const isTecEvt = isEventActivityFromTecnico(ea);
+                      return (
                       <Link
                         key={`evt-${ea.id}`}
                         href={`/eventos/${ea.event_id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="calendar-event block cursor-pointer bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200 border-l-2 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60"
+                        className={`calendar-event block cursor-pointer border-l-2 ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}
                       >
                         <span className="font-medium">{format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
-                        <span className="ml-1 truncate">🎯{ea.nombre}</span>
+                        <span className="ml-1 truncate">{isTecEvt ? '👷' : '🎯'}{ea.nombre}</span>
                       </Link>
-                    ))}
+                      );
+                    })}
                     {/* Objetivos Estratégicos */}
                     {strategicActivities.slice(0, dayEventActs.length > 0 ? 1 : 2).map((activity) => {
                       const style = getActivityStyle(activity, true);
@@ -861,19 +906,23 @@ export default function CalendarioPage() {
                       );
                     })}
                     {/* Visitas */}
-                    {dayVisits.slice(0, (strategicActivities.length + dailyActivities.length + dayEventActs.length) > 0 ? 0 : 2).map((visit) => (
+                    {dayVisits.slice(0, (strategicActivities.length + dailyActivities.length + dayEventActs.length) > 0 ? 0 : 2).map((visit) => {
+                      const isTecV = isVisitFromTecnico(visit);
+                      return (
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
                         onClick={(e) => e.stopPropagation()}
                         className={cn(
-                          'calendar-event block bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-l-2 border-gray-400'
+                          'calendar-event block border-l-2',
+                          isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-500' : 'bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-gray-400'
                         )}
                       >
                         <span className="font-medium">{formatTime(visit.scheduled_at)}</span>
-                        <span className="ml-1 truncate">{visit.customer?.nombre}</span>
+                        <span className="ml-1 truncate">{isTecV ? '👷' : ''}{visit.customer?.nombre}</span>
                       </Link>
-                    ))}
+                      );
+                    })}
                     {totalItems > 3 && (
                       <p className="text-xs text-gray-400 pl-1">
                         +{totalItems - 3} más
@@ -944,7 +993,8 @@ export default function CalendarioPage() {
                       </span>
                     )}
                     <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                      {dayEventActs.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
+                      {dayEventActs.some(ea => isEventActivityFromTecnico(ea)) && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
+                      {dayEventActs.some(ea => !isEventActivityFromTecnico(ea)) && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
                       {hasTecnicoActivities && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
                       {hasNonTecnicoStrategic && <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>}
                       {hasNonTecnicoDaily && <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>}
@@ -1006,16 +1056,19 @@ export default function CalendarioPage() {
 
                   return (
                     <div className="space-y-2">
-                      {dayEventActs.map((ea) => (
-                        <Link key={`me-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60 active:opacity-80">
+                      {dayEventActs.map((ea) => {
+                        const isTecEvt = isEventActivityFromTecnico(ea);
+                        return (
+                        <Link key={`me-${ea.id}`} href={`/eventos/${ea.event_id}`} className={`block p-3 rounded-lg border-l-4 active:opacity-80 ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}>
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
+                            <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
                           </div>
                           <p className="font-medium">{ea.nombre}</p>
                           {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
                         </Link>
-                      ))}
+                        );
+                      })}
                       {dayStrategic.map((activity) => {
                         const style = getActivityStyle(activity, true);
                         return (
@@ -1040,9 +1093,11 @@ export default function CalendarioPage() {
                           </div>
                         );
                       })}
-                      {dayVisits.map((visit) => (
-                        <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 dark:bg-dark-600 border-l-4 border-gray-400">
-                          <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{formatTime(visit.scheduled_at)}</span>
+                      {dayVisits.map((visit) => {
+                        const isTecV = isVisitFromTecnico(visit);
+                        return (
+                        <Link key={visit.id} href={`/calendario/${visit.id}`} className={`block p-3 rounded-lg border-l-4 ${isTecV ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-500' : 'bg-gray-50 dark:bg-dark-600 border-gray-400'}`}>
+                          <span className={`text-xs font-bold ${isTecV ? 'text-amber-600 dark:text-amber-300' : 'text-gray-600 dark:text-gray-300'}`}>{isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}</span>
                           <p className="font-medium text-gray-900 dark:text-white">{visit.customer?.nombre}</p>
                           {visit.customer?.direccion && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
@@ -1051,7 +1106,8 @@ export default function CalendarioPage() {
                             </p>
                           )}
                         </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 })()}
@@ -1083,16 +1139,19 @@ export default function CalendarioPage() {
                     </p>
                   </div>
                   <div className="p-2 space-y-2">
-                    {dayEventActs.map((ea) => (
-                      <Link key={`wevt-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-2 rounded-lg text-sm bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60 transition-colors">
+                    {dayEventActs.map((ea) => {
+                      const isTecEvt = isEventActivityFromTecnico(ea);
+                      return (
+                      <Link key={`wevt-${ea.id}`} href={`/eventos/${ea.event_id}`} className={`block p-2 rounded-lg text-sm border-l-4 transition-colors ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}>
                         <div className="flex items-center justify-between mb-0.5">
-                          <p className="font-semibold flex items-center gap-1">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</p>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
+                          <p className="font-semibold flex items-center gap-1">{isTecEvt ? '👷' : '🎯'} {format(new Date(ea.fecha_inicio), 'HH:mm')}</p>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
                         </div>
                         <p className="truncate font-medium">{ea.nombre}</p>
                         {ea.events && <p className="text-[10px] opacity-70 truncate">{ea.events.nombre}</p>}
                       </Link>
-                    ))}
+                      );
+                    })}
                     {getFilteredStrategicForDay(day).map((activity) => {
                       const style = getActivityStyle(activity, true);
                       return (
@@ -1117,12 +1176,15 @@ export default function CalendarioPage() {
                         </div>
                       );
                     })}
-                    {dayVisits.map((visit) => (
-                      <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-2 rounded-lg text-sm bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-l-4 border-gray-400">
-                        <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                    {dayVisits.map((visit) => {
+                      const isTecV = isVisitFromTecnico(visit);
+                      return (
+                      <Link key={visit.id} href={`/calendario/${visit.id}`} className={`block p-2 rounded-lg text-sm border-l-4 ${isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-500' : 'bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-gray-400'}`}>
+                        <p className="font-semibold">{isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}</p>
                         <p className="truncate">{visit.customer?.nombre}</p>
                       </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -1230,16 +1292,19 @@ export default function CalendarioPage() {
 
                     return (
                       <div className="space-y-2">
-                        {dayEventActs.map((ea) => (
-                          <Link key={`wme-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60 active:opacity-80">
+                        {dayEventActs.map((ea) => {
+                          const isTecEvt = isEventActivityFromTecnico(ea);
+                          return (
+                          <Link key={`wme-${ea.id}`} href={`/eventos/${ea.event_id}`} className={`block p-3 rounded-lg border-l-4 active:opacity-80 ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
+                              <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
                             </div>
                             <p className="font-medium">{ea.nombre}</p>
                             {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
                           </Link>
-                        ))}
+                          );
+                        })}
                         {dayStrategic.map((activity) => {
                           const style = getActivityStyle(activity, true);
                           return (
@@ -1264,12 +1329,15 @@ export default function CalendarioPage() {
                             </div>
                           );
                         })}
-                        {dayVisits.map((visit) => (
-                          <Link key={visit.id} href={`/calendario/${visit.id}`} className="block p-3 rounded-lg bg-gray-50 dark:bg-dark-600 border-l-4 border-gray-400">
-                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{formatTime(visit.scheduled_at)}</span>
+                        {dayVisits.map((visit) => {
+                          const isTecV = isVisitFromTecnico(visit);
+                          return (
+                          <Link key={visit.id} href={`/calendario/${visit.id}`} className={`block p-3 rounded-lg border-l-4 ${isTecV ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-500' : 'bg-gray-50 dark:bg-dark-600 border-gray-400'}`}>
+                            <span className={`text-xs font-bold ${isTecV ? 'text-amber-600 dark:text-amber-300' : 'text-gray-600 dark:text-gray-300'}`}>{isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}</span>
                             <p className="font-medium text-gray-900 dark:text-white">{visit.customer?.nombre}</p>
                           </Link>
-                        ))}
+                          );
+                        })}
                       </div>
                     );
                   })()}
@@ -1314,11 +1382,13 @@ export default function CalendarioPage() {
                       <Target className="h-4 w-4" />
                       Actividades de Eventos ({filteredEventActsList.length})
                     </h3>
-                    {filteredEventActsList.map((ea) => (
+                    {filteredEventActsList.map((ea) => {
+                      const isTecEvt = isEventActivityFromTecnico(ea);
+                      return (
                       <Link
                         key={`list-evt-${ea.id}`}
                         href={`/eventos/${ea.event_id}`}
-                        className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 border-l-4 border-rose-500 transition-colors"
+                        className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-l-4 transition-colors ${isTecEvt ? 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-500' : 'bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 border-rose-500'}`}
                       >
                         <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                           <div className="text-center min-w-[40px] sm:min-w-[60px]">
@@ -1333,11 +1403,11 @@ export default function CalendarioPage() {
                             </p>
                           </div>
                           <div className="border-l border-gray-200 dark:border-dark-500 pl-2 sm:pl-4 flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-300">
+                            <p className={`text-xs sm:text-sm font-semibold ${isTecEvt ? 'text-amber-600 dark:text-amber-300' : 'text-rose-600 dark:text-rose-300'}`}>
                               {format(new Date(ea.fecha_inicio), 'HH:mm')}
                             </p>
                             <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1 truncate">
-                              <Target className="h-3 w-3 text-rose-500 flex-shrink-0" />
+                              <Target className={`h-3 w-3 flex-shrink-0 ${isTecEvt ? 'text-amber-500' : 'text-rose-500'}`} />
                               {ea.nombre}
                             </p>
                             {ea.events && (
@@ -1349,7 +1419,8 @@ export default function CalendarioPage() {
                           {ea.estado.replace('_', ' ')}
                         </Badge>
                       </Link>
-                    ))}
+                      );
+                    })}
                   </>
                 )}
                 {activities.map((activity) => {
@@ -1429,11 +1500,13 @@ export default function CalendarioPage() {
                       <CalendarIcon className="h-4 w-4" />
                       Visitas ({filteredVisitsList.length})
                     </h3>
-                    {filteredVisitsList.map((visit) => (
+                    {filteredVisitsList.map((visit) => {
+                      const isTecV = isVisitFromTecnico(visit);
+                      return (
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
-                        className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-dark-600 hover:bg-gray-100 dark:hover:bg-dark-500 transition-colors"
+                        className={`flex items-center justify-between p-3 sm:p-4 rounded-lg transition-colors ${isTecV ? 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-l-4 border-amber-500' : 'bg-gray-50 dark:bg-dark-600 hover:bg-gray-100 dark:hover:bg-dark-500'}`}
                       >
                         <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                           <div className="text-center min-w-[40px] sm:min-w-[60px]">
@@ -1448,8 +1521,8 @@ export default function CalendarioPage() {
                             </p>
                           </div>
                           <div className="border-l border-gray-200 dark:border-dark-500 pl-2 sm:pl-4 flex-1 min-w-0">
-                            <p className="font-semibold text-indigo-600 dark:text-indigo-400">
-                              {formatTime(visit.scheduled_at)}
+                            <p className={`font-semibold ${isTecV ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                              {isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}
                             </p>
                             <p className="font-medium text-gray-900 dark:text-white truncate">
                               {visit.customer?.nombre}
@@ -1471,7 +1544,8 @@ export default function CalendarioPage() {
                           {visitStatusLabels[visit.status]}
                         </Badge>
                       </Link>
-                    ))}
+                      );
+                    })}
                   </>
                 )}
               </div>
@@ -1721,18 +1795,21 @@ export default function CalendarioPage() {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Visitas</h4>
                   <div className="space-y-2">
-                    {getVisitsForDay(selectedDate).map((visit) => (
+                    {getVisitsForDay(selectedDate).map((visit) => {
+                      const isTecV = isVisitFromTecnico(visit);
+                      return (
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
-                        className="flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-300"
+                        className={`flex items-center justify-between p-3 rounded-lg ${isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-l-4 border-amber-500' : 'bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-300'}`}
                       >
                         <div>
-                          <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                          <p className="font-semibold">{isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}</p>
                           <p>{visit.customer?.nombre}</p>
                         </div>
                       </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1744,16 +1821,19 @@ export default function CalendarioPage() {
                     Actividades de Eventos ({getEventActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-2">
-                    {getEventActivitiesForDay(selectedDate).map((ea) => (
-                      <Link key={`det-evt-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60">
+                    {getEventActivitiesForDay(selectedDate).map((ea) => {
+                      const isTecEvt = isEventActivityFromTecnico(ea);
+                      return (
+                      <Link key={`det-evt-${ea.id}`} href={`/eventos/${ea.event_id}`} className={`block p-3 rounded-lg border-l-4 ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
+                          <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
                         </div>
                         <p className="font-medium">{ea.nombre}</p>
                         {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
                       </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1853,17 +1933,19 @@ export default function CalendarioPage() {
                     Mis Visitas ({getVisitsForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-2">
-                    {getVisitsForDay(selectedDate).map((visit) => (
+                    {getVisitsForDay(selectedDate).map((visit) => {
+                      const isTecV = isVisitFromTecnico(visit);
+                      return (
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
                         className={cn(
                           'flex items-center justify-between p-3 rounded-lg',
-                          getStatusColor(visit.status)
+                          isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-l-4 border-amber-500' : getStatusColor(visit.status)
                         )}
                       >
                         <div>
-                          <p className="font-semibold">{formatTime(visit.scheduled_at)}</p>
+                          <p className="font-semibold">{isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}</p>
                           <p>{visit.customer?.nombre}</p>
                         </div>
                         <Badge
@@ -1875,7 +1957,8 @@ export default function CalendarioPage() {
                           {visitStatusLabels[visit.status]}
                         </Badge>
                       </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1887,16 +1970,19 @@ export default function CalendarioPage() {
                     Actividades de Eventos ({getEventActivitiesForDay(selectedDate).length})
                   </h4>
                   <div className="space-y-2">
-                    {getEventActivitiesForDay(selectedDate).map((ea) => (
-                      <Link key={`vdet-evt-${ea.id}`} href={`/eventos/${ea.event_id}`} className="block p-3 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-l-4 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60">
+                    {getEventActivitiesForDay(selectedDate).map((ea) => {
+                      const isTecEvt = isEventActivityFromTecnico(ea);
+                      return (
+                      <Link key={`vdet-evt-${ea.id}`} href={`/eventos/${ea.event_id}`} className={`block p-3 rounded-lg border-l-4 ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold">🎯 {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">Evento</span>
+                          <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
                         </div>
                         <p className="font-medium">{ea.nombre}</p>
                         {ea.events && <p className="text-xs opacity-70 mt-0.5">{ea.events.nombre}</p>}
                       </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -65,7 +65,16 @@ export default function EventDetailPage() {
   const [activityForm, setActivityForm] = useState({ nombre: '', descripcion: '', tipo: 'operativa' as EventActivityType, responsable_id: '', fecha_inicio: '', fecha_fin: '', prioridad: 'media', estado: 'pendiente' as EventActivityStatus, porcentaje_avance: 0, es_hito: false, notas: '' });
   const [participantForm, setParticipantForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito' as any, estado_pago: 'pendiente' as any, monto_pagado: '', categoria: '', notas: '' });
 
-  useEffect(() => { loadAll(); }, [eventId]);
+  useEffect(() => {
+    if (userProfile) {
+      const isSup = userProfile.rol === 'admin' || userProfile.rol === 'supervisor' || userProfile.rol === 'supervisor_nivel1' || userProfile.rol === 'supervisor_vendedor';
+      if (!isSup) {
+        router.replace(`/eventos/${eventId}/vendedor`);
+        return;
+      }
+    }
+    loadAll();
+  }, [eventId, userProfile]);
 
   const loadAll = async () => {
     setLoading(true);
