@@ -44,7 +44,7 @@ export default function VendorEventPage() {
   const [editingParticipant, setEditingParticipant] = useState<EventParticipant | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '' });
+  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito' });
 
   useEffect(() => { loadData(); }, [eventId, userProfile]);
 
@@ -94,6 +94,7 @@ export default function VendorEventPage() {
       cupos_adicionales: '0',
       categoria: '',
       notas: '',
+      estado_inscripcion: 'pre_inscrito',
     });
     setCustomerSearch('');
   };
@@ -107,7 +108,7 @@ export default function VendorEventPage() {
         email: partForm.email || null,
         telefono: partForm.telefono || null,
         empresa: partForm.empresa || null,
-        estado_inscripcion: 'confirmado',
+        estado_inscripcion: partForm.estado_inscripcion,
         estado_pago: Number(partForm.monto_pagado) > 0 ? 'pagado' : 'pendiente',
         monto_pagado: Number(partForm.monto_pagado) || 0,
         cupos_adicionales: Number(partForm.cupos_adicionales) || 0,
@@ -118,7 +119,7 @@ export default function VendorEventPage() {
       toast.success('Participante registrado');
       setShowAddModal(false);
       setSelectedCustomer(null);
-      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '' });
+      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito' });
       const parts = await getEventParticipants(eventId);
       setParticipants(parts);
     } catch (err: any) { toast.error(err?.message || 'Error al registrar'); }
@@ -135,6 +136,7 @@ export default function VendorEventPage() {
       cupos_adicionales: String((p as any).cupos_adicionales || 0),
       categoria: p.categoria || '',
       notas: p.notas || '',
+      estado_inscripcion: p.estado_inscripcion || 'pre_inscrito',
     });
     setShowEditModal(true);
   };
@@ -148,6 +150,7 @@ export default function VendorEventPage() {
         telefono: partForm.telefono || null,
         empresa: partForm.empresa || null,
         monto_pagado: Number(partForm.monto_pagado) || 0,
+        estado_inscripcion: partForm.estado_inscripcion,
         estado_pago: Number(partForm.monto_pagado) > 0 ? 'pagado' : 'pendiente',
         cupos_adicionales: Number(partForm.cupos_adicionales) || 0,
         categoria: partForm.categoria || null,
@@ -303,7 +306,7 @@ export default function VendorEventPage() {
 
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-gray-900">Todos los Participantes ({participants.length})</h3>
-            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '' }); }}>
+            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito' }); }}>
               <Plus className="h-4 w-4 mr-1" />Inscribir Cliente
             </Button>
           </div>
@@ -521,17 +524,24 @@ export default function VendorEventPage() {
                 <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
                 <Input label="Cupos adicionales (ayudantes)" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
               </div>
-              {(event?.categorias_participantes || []).length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
-                  <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                    <option value="">Sin categoría</option>
-                    {(event?.categorias_participantes || []).map((cat: any) => (
-                      <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
+                <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                  <option value="pre_inscrito">Pre-inscrito</option>
+                  <option value="confirmado">Confirmado</option>
+                  <option value="lista_espera">Lista de espera</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
+                <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                  <option value="">Sin categoría</option>
+                  {(event?.categorias_participantes || []).map((cat: any) => (
+                    <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Notas</label>
                 <textarea value={partForm.notas} onChange={e => setPartForm(p => ({ ...p, notas: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none text-sm" placeholder="Observaciones..." />
@@ -560,17 +570,24 @@ export default function VendorEventPage() {
             <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
             <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
           </div>
-          {(event?.categorias_participantes || []).length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
-              <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                <option value="">Sin categoría</option>
-                {(event?.categorias_participantes || []).map((cat: any) => (
-                  <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
+            <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+              <option value="pre_inscrito">Pre-inscrito</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="lista_espera">Lista de espera</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
+            <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+              <option value="">Sin categoría</option>
+              {(event?.categorias_participantes || []).map((cat: any) => (
+                <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancelar</Button>
             <Button onClick={handleEditParticipant}>Guardar</Button>
