@@ -11,6 +11,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import { InvitationDownloadButton } from '@/components/events/InvitationPDF';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getEvent, getEventParticipants, updateParticipant, getActiveUsers,
@@ -562,6 +563,17 @@ function ParticipantDetail({
           <Award className="h-4 w-4" />
           {p.certificado_emitido ? 'Certificado Emitido' : 'Emitir Certificado'}
         </button>
+
+        {/* Download invitation */}
+        <InvitationDownloadButton
+          participant={p}
+          event={event}
+          getCatColor={getCatColor}
+          baseUrl={typeof window !== 'undefined' ? window.location.origin : ''}
+          className="w-full py-2.5 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 border bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
+        >
+          <FileText className="h-4 w-4" /> Descargar Invitación PDF
+        </InvitationDownloadButton>
       </div>
     </Card>
   );

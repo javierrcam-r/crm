@@ -5,9 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Users, Target, CheckCircle, Clock,
-  Plus, Trash2, Edit, AlertTriangle, DollarSign, X, Eye, QrCode, Download
+  Plus, Trash2, Edit, AlertTriangle, DollarSign, X, Eye, QrCode, Download, FileText
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
+import { InvitationDownloadButton } from '@/components/events/InvitationPDF';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -365,6 +366,11 @@ export default function VendorEventPage() {
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         <button onClick={() => setQrParticipant(p)} className="p-1.5 hover:bg-indigo-50 rounded-lg" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
+                        {event && (
+                          <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1.5 hover:bg-purple-50 rounded-lg">
+                            <FileText className="h-3.5 w-3.5 text-purple-500" />
+                          </InvitationDownloadButton>
+                        )}
                         {isMine && (
                           <>
                             <button onClick={() => openEditParticipant(p)} className="p-1.5 hover:bg-gray-100 rounded-lg"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
@@ -423,6 +429,11 @@ export default function VendorEventPage() {
                         <td className="px-4 py-3 text-center">
                           <div className="flex gap-1 justify-center">
                             <button onClick={() => setQrParticipant(p)} className="p-1 hover:bg-indigo-50 rounded" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
+                            {event && (
+                              <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1 hover:bg-purple-50 rounded">
+                                <FileText className="h-3.5 w-3.5 text-purple-500" />
+                              </InvitationDownloadButton>
+                            )}
                             {isMine && (
                               <>
                                 <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
@@ -670,9 +681,22 @@ export default function VendorEventPage() {
                 }}
               />
             </div>
-            <Button onClick={() => downloadQR(qrParticipant.nombre)}>
-              <Download className="h-4 w-4 mr-1" /> Descargar QR
-            </Button>
+            <div className="flex gap-2 w-full">
+              <Button onClick={() => downloadQR(qrParticipant.nombre)} variant="secondary" className="flex-1">
+                <Download className="h-4 w-4 mr-1" /> QR
+              </Button>
+              {event && (
+                <InvitationDownloadButton
+                  participant={qrParticipant}
+                  event={event}
+                  getCatColor={getCatColor}
+                  baseUrl={typeof window !== 'undefined' ? window.location.origin : ''}
+                  className="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2.5 bg-indigo-500 text-white rounded-xl font-medium text-sm hover:bg-indigo-600 transition-colors"
+                >
+                  <FileText className="h-4 w-4" /> Invitación PDF
+                </InvitationDownloadButton>
+              )}
+            </div>
           </div>
         )}
       </Modal>
