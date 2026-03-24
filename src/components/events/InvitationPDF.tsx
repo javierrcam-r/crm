@@ -127,8 +127,10 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
           <span style={{ fontSize: '8px', fontWeight: 700, color: `${GOLD}60`, letterSpacing: '4px' }}>ESCANEA TU ENTRADA</span>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 2, background: '#fff', borderRadius: '14px', padding: '14px', boxShadow: `0 0 30px ${GOLD}12, 0 4px 20px rgba(0,0,0,0.3)`, border: `2px solid ${GOLD}25` }}>
-          <QRCodeCanvas value={qrValue} size={260} level="H" bgColor="#ffffff" fgColor="#111111" imageSettings={{ src: '/logo-disfero.png', x: undefined, y: undefined, height: 48, width: 48, excavate: true }} />
+        <div style={{ position: 'relative', zIndex: 2, background: '#fff', borderRadius: '14px', padding: '14px', boxShadow: `0 0 30px ${GOLD}12, 0 4px 20px rgba(0,0,0,0.3)`, border: `2px solid ${GOLD}25`, width: '288px', height: '288px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '260px', height: '260px', overflow: 'hidden' }}>
+            <QRCodeCanvas value={qrValue} size={780} level="H" bgColor="#ffffff" fgColor="#111111" style={{ width: '260px', height: '260px' }} imageSettings={{ src: '/logo-disfero.png', x: undefined, y: undefined, height: 144, width: 144, excavate: true }} />
+          </div>
         </div>
 
         <div style={{ position: 'relative', zIndex: 2, marginTop: '14px', textAlign: 'center' }}>
@@ -189,7 +191,7 @@ async function captureTicket(sourceEl: HTMLElement): Promise<string> {
   try {
     // First call warms up font/image loading, second produces clean result
     await toPng(clone, { width: W, height: H, pixelRatio: 1, skipAutoScale: true }).catch(() => {});
-    const dataUrl = await toPng(clone, { width: W, height: H, pixelRatio: 3, skipAutoScale: true });
+    const dataUrl = await toPng(clone, { width: W, height: H, pixelRatio: 4, skipAutoScale: true });
     return dataUrl;
   } finally {
     document.body.removeChild(clone);
