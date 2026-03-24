@@ -19,6 +19,9 @@ const H = 460;
 
 function fmtDate(dateStr: string) {
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return { day: '--', shortMonth: '---', year: '----', time: '--:--' };
+  }
   const short = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
   return {
     day: String(d.getDate()).padStart(2, '0'),
@@ -79,7 +82,7 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
             <img src={logoSrc} alt="" style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px' }} />
             <span style={{ fontSize: '9px', fontWeight: 600, color: `${GOLD}90`, letterSpacing: '3px' }}>DISFERO PRESENTA</span>
           </div>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: `${GOLD}50`, letterSpacing: '2.5px' }}>N° {p.id.substring(0, 8).toUpperCase()}</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: `${GOLD}50`, letterSpacing: '2.5px' }}>N° {(p.id || '').substring(0, 8).toUpperCase()}</span>
         </div>
 
         <div style={{ position: 'relative', zIndex: 2 }}>
@@ -181,55 +184,8 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
   );
 }
 
-/* =========================================================
-   Capture helper — clones the visible ticket, replaces
-   <canvas> with <img> (pure data URL), then uses
-   html-to-image (SVG-based) to generate a PNG.
-   ========================================================= */
-async function captureTicket(sourceEl: HTMLElement): Promise<string> {
-  const { toPng } = await import('html-to-image');
-
-  const clone = sourceEl.cloneNode(true) as HTMLElement;
-
-  const srcCanvases = sourceEl.querySelectorAll('canvas');
-  const cloneCanvases = clone.querySelectorAll('canvas');
-  cloneCanvases.forEach((cc, i) => {
-    const orig = srcCanvases[i];
-    if (!orig || orig.width === 0 || orig.height === 0) return;
-    try {
-      const img = document.createElement('img');
-      img.src = orig.toDataURL('image/png');
-      img.width = orig.width;
-      img.height = orig.height;
-      img.style.width = `${orig.offsetWidth}px`;
-      img.style.height = `${orig.offsetHeight}px`;
-      img.style.display = 'block';
-      cc.parentNode?.replaceChild(img, cc);
-    } catch (e) {
-      console.warn('Canvas toDataURL failed (tainted?):', e);
-    }
-  });
-
-  clone.style.position = 'fixed';
-  clone.style.top = '0';
-  clone.style.left = '0';
-  clone.style.width = `${W}px`;
-  clone.style.height = `${H}px`;
-  clone.style.zIndex = '99999';
-  clone.style.transform = 'none';
-  clone.style.pointerEvents = 'none';
-  document.body.appendChild(clone);
-
-  await new Promise(r => setTimeout(r, 300));
-
-  try {
-    await toPng(clone, { width: W, height: H, pixelRatio: 1, skipAutoScale: true }).catch(() => {});
-    const dataUrl = await toPng(clone, { width: W, height: H, pixelRatio: 4, skipAutoScale: true });
-    return dataUrl;
-  } finally {
-    document.body.removeChild(clone);
-  }
-}
+/* No clone needed — QR canvas is clean (no imageSettings taint).
+   html-to-image handles <canvas> elements natively. */
 
 /* =========================================================
    PREVIEW MODAL + DOWNLOAD
@@ -245,9 +201,9 @@ export function InvitationDownloadButton({
   const logoSrc = useLogoDataUrl();
 
   const catColor = getCatColor(participant.categoria) || DEFAULT_CAT;
-  const eventDate = event.fecha_fin || event.fecha_inicio;
+  const eventDate = event.fecha_fin || event.fecha_inicio || new Date().toISOString();
   const date = fmtDate(eventDate);
-  const qrValue = `${baseUrl}/eventos/${event.id}/checkin/${participant.id}`;
+  const qrValue = `${baseUrl || ''}/eventos/${event.id}/checkin/${participant.id}`;
 
   useEffect(() => {
     if (showPreview) document.body.style.overflow = 'hidden';
@@ -273,14 +229,33 @@ export function InvitationDownloadButton({
     if (downloading || !ticketRef.current) return;
     setDownloading(true);
     try {
-      const imgData = await captureTicket(ticketRef.current);
+      const html2canvas = (await import('html2canvas')).default;
       const { default: jsPDF } = await import('jspdf');
+
+      const el = ticketRef.current;
+
+      const canvas = await html2canvas(el, {
+        width: W,
+        height: H,
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#1a1a1a',
+        logging: false,
+      });
+
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error('La captura de imagen falló');
+      }
 
       const pdfW = 280;
       const pdfH = Math.round(pdfW * (H / W));
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pdfH, pdfW], compress: false });
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH, undefined, 'NONE');
-      pdf.save(`Invitacion-${participant.nombre.replace(/\s+/g, '_')}.pdf`);
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pdfH, pdfW], compress: true });
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage({ imageData: imgData, format: 'PNG', x: 0, y: 0, width: pdfW, height: pdfH, compression: 'FAST' });
+
+      const safeName = (participant.nombre || 'Invitado').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+      pdf.save(`Invitacion-${safeName}.pdf`);
     } catch (err: unknown) {
       console.error('PDF generation error:', err);
       const msg = err instanceof Error ? err.message : String(err);
