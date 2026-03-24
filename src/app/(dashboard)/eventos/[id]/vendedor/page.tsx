@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Users, Target, CheckCircle, Clock,
-  Plus, Trash2, Edit, AlertTriangle, DollarSign, X, Eye
+  Plus, Trash2, Edit, AlertTriangle, DollarSign, X, Eye, QrCode, Download
 } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -26,6 +27,7 @@ import toast from 'react-hot-toast';
 
 export default function VendorEventPage() {
   const params = useParams();
+  const router = useRouter();
   const { userProfile } = useAuth();
   const eventId = params.id as string;
 
@@ -45,8 +47,15 @@ export default function VendorEventPage() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito' });
+  const [qrParticipant, setQrParticipant] = useState<EventParticipant | null>(null);
 
-  useEffect(() => { loadData(); }, [eventId, userProfile]);
+  useEffect(() => {
+    if (userProfile?.rol === 'event_assistant') {
+      router.replace(`/eventos/${eventId}/asistencia`);
+      return;
+    }
+    loadData();
+  }, [eventId, userProfile]);
 
   const loadData = async () => {
     if (!userProfile) return;
@@ -168,6 +177,16 @@ export default function VendorEventPage() {
     if (!confirm('¿Eliminar este participante?')) return;
     try { await deleteParticipant(id); setParticipants(participants.filter(p => p.id !== id)); toast.success('Eliminado'); }
     catch { toast.error('Error'); }
+  };
+
+  const downloadQR = (participantName: string) => {
+    const canvas = document.querySelector('#qr-canvas canvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `QR-${participantName.replace(/\s+/g, '_')}.png`;
+    a.click();
   };
 
   if (loading || !event) return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>;
@@ -329,12 +348,15 @@ export default function VendorEventPage() {
                           {p.empresa && <span className="text-[10px] text-gray-400">{p.empresa}</span>}
                         </div>
                       </div>
-                      {isMine && (
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button onClick={() => openEditParticipant(p)} className="p-1.5 hover:bg-gray-100 rounded-lg"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
-                          <button onClick={() => handleRemoveParticipant(p.id)} className="p-1.5 hover:bg-red-50 rounded-lg"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
-                        </div>
-                      )}
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={() => setQrParticipant(p)} className="p-1.5 hover:bg-indigo-50 rounded-lg" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
+                        {isMine && (
+                          <>
+                            <button onClick={() => openEditParticipant(p)} className="p-1.5 hover:bg-gray-100 rounded-lg"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
+                            <button onClick={() => handleRemoveParticipant(p.id)} className="p-1.5 hover:bg-red-50 rounded-lg"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span>
@@ -382,14 +404,15 @@ export default function VendorEventPage() {
                         <td className="px-4 py-3 text-right font-semibold">${Number(p.monto_pagado).toLocaleString()}</td>
                         <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-center">
-                          {isMine ? (
-                            <div className="flex gap-1 justify-center">
-                              <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
-                              <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-300">—</span>
-                          )}
+                          <div className="flex gap-1 justify-center">
+                            <button onClick={() => setQrParticipant(p)} className="p-1 hover:bg-indigo-50 rounded" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
+                            {isMine && (
+                              <>
+                                <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
+                                <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -593,6 +616,45 @@ export default function VendorEventPage() {
             <Button onClick={handleEditParticipant}>Guardar</Button>
           </div>
         </div>
+      </Modal>
+
+      {/* QR Modal */}
+      <Modal isOpen={!!qrParticipant} onClose={() => setQrParticipant(null)} title="QR del Participante">
+        {qrParticipant && (
+          <div className="flex flex-col items-center space-y-4">
+            <div className="text-center">
+              <p className="font-semibold text-lg text-gray-900">{qrParticipant.nombre}</p>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                {qrParticipant.categoria && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(qrParticipant.categoria) || '#0d9488' }}>
+                    {qrParticipant.categoria}
+                  </span>
+                )}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${qrParticipant.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : qrParticipant.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                  {qrParticipant.estado_inscripcion.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+            <div id="qr-canvas" className="bg-white p-4 rounded-2xl shadow-inner border">
+              <QRCodeCanvas
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/eventos/${eventId}/checkin/${qrParticipant.id}`}
+                size={240}
+                level="H"
+                imageSettings={{
+                  src: '/logo-disfero.png',
+                  x: undefined,
+                  y: undefined,
+                  height: 48,
+                  width: 48,
+                  excavate: true,
+                }}
+              />
+            </div>
+            <Button onClick={() => downloadQR(qrParticipant.nombre)}>
+              <Download className="h-4 w-4 mr-1" /> Descargar QR
+            </Button>
+          </div>
+        )}
       </Modal>
     </div>
   );

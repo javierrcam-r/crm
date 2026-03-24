@@ -47,7 +47,7 @@ export default function EventosPage() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'resumen'>('list');
 
   const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
-  const isVendor = userProfile?.rol === 'vendedor' || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico';
+  const isVendor = userProfile?.rol === 'vendedor' || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant';
   const canView = isSupervisor || isVendor;
 
   useEffect(() => {

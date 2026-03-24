@@ -246,8 +246,8 @@ export default function Sidebar() {
             </Link>
           )}
 
-          {/* Eventos para Marketing y Técnico */}
-          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
+          {/* Eventos para Marketing, Técnico y Event Assistant */}
+          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
             <Link
               href="/eventos"
               onClick={() => setMobileOpen(false)}
@@ -263,8 +263,8 @@ export default function Sidebar() {
             </Link>
           )}
 
-          {/* Objetivos Estratégicos - Disponible para TODOS los roles */}
-          {userProfile && (
+          {/* Objetivos Estratégicos - Disponible para todos los roles excepto event_assistant */}
+          {userProfile && userProfile.rol !== 'event_assistant' && (
             <>
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
                 {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
