@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import { X, Download, ZoomIn } from 'lucide-react';
 import type { Event, EventParticipant } from '@/lib/services/events';
 
@@ -56,9 +56,7 @@ function useLogoDataUrl() {
 
 /* =========================================================
    TICKET DESIGN (pure inline styles)
-   Logo is passed as data URL prop so it works in PDF capture.
-   QR has NO imageSettings — logo is overlaid via CSS to
-   avoid tainting the canvas (which breaks toDataURL on mobile).
+   QR uses SVG (not Canvas) for reliable PDF capture.
    ========================================================= */
 function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, logoSrc }: {
   participant: EventParticipant; event: Event; catColor: string;
@@ -156,11 +154,9 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
           <span style={{ fontSize: '8px', fontWeight: 700, color: `${GOLD}60`, letterSpacing: '4px' }}>ESCANEA TU ENTRADA</span>
         </div>
 
-        {/* QR container — logo overlaid via CSS, NOT drawn into canvas (avoids taint) */}
         <div style={{ position: 'relative', zIndex: 2, background: '#fff', borderRadius: '14px', padding: '14px', boxShadow: `0 0 30px ${GOLD}12, 0 4px 20px rgba(0,0,0,0.3)`, border: `2px solid ${GOLD}25`, width: '288px', height: '288px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ position: 'relative', width: '260px', height: '260px' }}>
-            <QRCodeCanvas value={qrValue} size={780} level="H" bgColor="#ffffff" fgColor="#111111" style={{ width: '260px', height: '260px', display: 'block' }} />
-            {/* Logo overlay — separate from canvas so canvas stays clean for toDataURL */}
+            <QRCodeSVG value={qrValue} size={260} level="H" bgColor="#ffffff" fgColor="#111111" style={{ width: '260px', height: '260px', display: 'block' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={logoSrc}
@@ -183,9 +179,6 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
     </div>
   );
 }
-
-/* No clone needed — QR canvas is clean (no imageSettings taint).
-   html-to-image handles <canvas> elements natively. */
 
 /* =========================================================
    PREVIEW MODAL + DOWNLOAD
