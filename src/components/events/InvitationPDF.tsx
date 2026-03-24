@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { X, Download } from 'lucide-react';
+import { X, Download, ZoomIn } from 'lucide-react';
 import type { Event, EventParticipant } from '@/lib/services/events';
 
 interface InvitationPDFProps {
@@ -29,7 +29,7 @@ function fmtDate(dateStr: string) {
 }
 
 /* =========================================================
-   INVITATION TICKET (pure inline-styles for html2canvas)
+   TICKET DESIGN (pure inline styles)
    ========================================================= */
 function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }: {
   participant: EventParticipant; event: Event; catColor: string;
@@ -40,20 +40,13 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
 
       {/* ====== LEFT ====== */}
       <div style={{ width: '680px', height: `${H}px`, position: 'relative', padding: '30px 36px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: 'linear-gradient(160deg, #232323 0%, #1a1a1a 50%, #181818 100%)', overflow: 'hidden' }}>
-
-        {/* Gold borders top/bottom */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '3px', background: `linear-gradient(90deg, ${GOLD}, ${GOLD}80, ${GOLD})` }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '3px', background: `linear-gradient(90deg, ${GOLD}, ${GOLD}80, ${GOLD})` }} />
-
-        {/* Corner accents */}
         <div style={{ position: 'absolute', top: '10px', left: '10px', width: '28px', height: '28px', borderTop: `2px solid ${GOLD}50`, borderLeft: `2px solid ${GOLD}50` }} />
         <div style={{ position: 'absolute', top: '10px', right: '10px', width: '28px', height: '28px', borderTop: `2px solid ${GOLD}50`, borderRight: `2px solid ${GOLD}50` }} />
         <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '28px', height: '28px', borderBottom: `2px solid ${GOLD}50`, borderLeft: `2px solid ${GOLD}50` }} />
-
-        {/* Glow */}
         <div style={{ position: 'absolute', top: '-80px', left: '50%', width: '400px', height: '250px', borderRadius: '50%', background: `radial-gradient(ellipse, ${GOLD}06, transparent 70%)`, transform: 'translateX(-50%)' }} />
 
-        {/* ROW 1 — Logo + ticket number */}
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -63,13 +56,11 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
           <span style={{ fontSize: '9px', fontWeight: 700, color: `${GOLD}50`, letterSpacing: '2.5px' }}>N° {p.id.substring(0, 8).toUpperCase()}</span>
         </div>
 
-        {/* ROW 2 — INVITACIÓN + event name */}
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: GOLD, letterSpacing: '6px', marginBottom: '5px' }}>✦ INVITACIÓN ✦</div>
           <div style={{ fontSize: '26px', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.15, letterSpacing: '-0.3px' }}>{ev.nombre}</div>
         </div>
 
-        {/* ROW 3 — Date / Time / Location */}
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
           <div style={{ textAlign: 'center', minWidth: '85px' }}>
             <div style={{ fontSize: '8px', fontWeight: 700, color: `${GOLD}70`, letterSpacing: '2px', marginBottom: '3px' }}>FECHA</div>
@@ -91,7 +82,6 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
           )}
         </div>
 
-        {/* ROW 4 — Participant */}
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ height: '1px', background: `linear-gradient(90deg, ${GOLD}30, ${GOLD}08, transparent)`, marginBottom: '12px' }} />
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '10px' }}>
@@ -156,14 +146,67 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
 }
 
 /* =========================================================
-   PREVIEW MODAL  +  DOWNLOAD BUTTON
+   Capture helper — clones the visible ticket, replaces
+   <canvas> with <img>, then uses html-to-image (SVG-based,
+   no canvas pattern bugs) to generate a PNG data URL.
+   ========================================================= */
+async function captureTicket(sourceEl: HTMLElement): Promise<string> {
+  const { toPng } = await import('html-to-image');
+
+  const clone = sourceEl.cloneNode(true) as HTMLElement;
+
+  // Replace <canvas> elements (QR) with <img> for reliable serialization
+  const srcCanvases = sourceEl.querySelectorAll('canvas');
+  const cloneCanvases = clone.querySelectorAll('canvas');
+  cloneCanvases.forEach((cc, i) => {
+    const orig = srcCanvases[i];
+    if (!orig || orig.width === 0 || orig.height === 0) return;
+    try {
+      const img = document.createElement('img');
+      img.src = orig.toDataURL('image/png');
+      img.width = orig.width;
+      img.height = orig.height;
+      img.style.width = `${orig.offsetWidth}px`;
+      img.style.height = `${orig.offsetHeight}px`;
+      img.style.display = 'block';
+      cc.parentNode?.replaceChild(img, cc);
+    } catch { /* tainted canvas — skip */ }
+  });
+
+  // Place clone in DOM at full size so html-to-image can serialize it
+  clone.style.position = 'fixed';
+  clone.style.top = '0';
+  clone.style.left = '0';
+  clone.style.width = `${W}px`;
+  clone.style.height = `${H}px`;
+  clone.style.zIndex = '99999';
+  clone.style.transform = 'none';
+  clone.style.pointerEvents = 'none';
+  document.body.appendChild(clone);
+
+  await new Promise(r => setTimeout(r, 200));
+
+  try {
+    // First call warms up font/image loading, second produces clean result
+    await toPng(clone, { width: W, height: H, pixelRatio: 1, skipAutoScale: true }).catch(() => {});
+    const dataUrl = await toPng(clone, { width: W, height: H, pixelRatio: 3, skipAutoScale: true });
+    return dataUrl;
+  } finally {
+    document.body.removeChild(clone);
+  }
+}
+
+/* =========================================================
+   PREVIEW MODAL + DOWNLOAD
    ========================================================= */
 export function InvitationDownloadButton({
   participant, event, getCatColor, baseUrl, children, className,
 }: InvitationPDFProps & { children: React.ReactNode; className?: string }) {
-  const captureRef = useRef<HTMLDivElement>(null);
+  const ticketRef = useRef<HTMLDivElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [scale, setScale] = useState(0.6);
 
   const catColor = getCatColor(participant.categoria) || DEFAULT_CAT;
   const eventDate = event.fecha_fin || event.fecha_inicio;
@@ -171,43 +214,47 @@ export function InvitationDownloadButton({
   const qrValue = `${baseUrl}/eventos/${event.id}/checkin/${participant.id}`;
 
   useEffect(() => {
-    if (showPreview) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (showPreview) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [showPreview]);
 
+  useEffect(() => {
+    if (!showPreview) return;
+    const el = previewContainerRef.current;
+    if (!el) return;
+    const calc = () => {
+      const w = el.getBoundingClientRect().width;
+      setScale(Math.max(0.5, Math.min(w / W, 1)));
+    };
+    const t = setTimeout(calc, 50);
+    const ro = new ResizeObserver(calc);
+    ro.observe(el);
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, [showPreview]);
+
   const handleDownload = useCallback(async () => {
-    if (downloading || !captureRef.current) return;
+    if (downloading || !ticketRef.current) return;
     setDownloading(true);
     try {
-      await new Promise(r => setTimeout(r, 200));
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-      const canvas = await html2canvas(captureRef.current, {
-        scale: 4,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        width: W,
-        height: H,
-      });
-      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgData = await captureTicket(ticketRef.current);
+      const { default: jsPDF } = await import('jspdf');
+
       const pdfW = 280;
       const pdfH = Math.round(pdfW * (H / W));
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pdfH, pdfW], compress: false });
       pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH, undefined, 'NONE');
       pdf.save(`Invitacion-${participant.nombre.replace(/\s+/g, '_')}.pdf`);
-    } catch (err) {
-      console.error('Error generating PDF:', err);
+    } catch (err: unknown) {
+      console.error('PDF generation error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Error al generar PDF: ${msg}`);
     } finally {
       setDownloading(false);
     }
   }, [downloading, participant.nombre]);
+
+  const ticketProps = { participant, event, catColor, date, qrValue };
 
   return (
     <>
@@ -217,88 +264,68 @@ export function InvitationDownloadButton({
 
       {showPreview && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col"
           onClick={(e) => { if (e.target === e.currentTarget) setShowPreview(false); }}
         >
-          <div className="relative w-full max-w-5xl animate-in fade-in-0 zoom-in-95 duration-200">
-            {/* Close */}
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
+            <div className="flex items-center gap-2 text-white/60 text-xs">
+              <ZoomIn className="h-4 w-4" />
+              <span className="hidden sm:inline">Desliza para ver completo</span>
+              <span className="sm:hidden">Desliza horizontalmente</span>
+            </div>
             <button
               onClick={() => setShowPreview(false)}
-              className="absolute -top-3 -right-3 z-10 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors backdrop-blur-sm"
+              className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
+          </div>
 
-            {/* Preview (scaled to fit container) */}
-            <PreviewScaler width={W} height={H}>
-              <div ref={captureRef} style={{ width: `${W}px`, height: `${H}px` }}>
-                <InvitationTicket
-                  participant={participant}
-                  event={event}
-                  catColor={catColor}
-                  date={date}
-                  qrValue={qrValue}
-                />
+          {/* Preview — single ticket, JS-scaled, horizontally scrollable on small screens */}
+          <div ref={previewContainerRef} className="flex-1 overflow-auto flex items-start sm:items-center justify-start sm:justify-center px-4 pb-2">
+            <div
+              className="flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl"
+              style={{ width: `${W * scale}px`, height: `${H * scale}px`, minWidth: '550px' }}
+            >
+              {/* Transform wrapper — ticketRef is INSIDE (no transform on it) */}
+              <div style={{ width: `${W}px`, height: `${H}px`, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+                <div ref={ticketRef} style={{ width: `${W}px`, height: `${H}px` }}>
+                  <InvitationTicket {...ticketProps} />
+                </div>
               </div>
-            </PreviewScaler>
-
-            {/* Download bar */}
-            <div className="flex items-center justify-center gap-3 mt-4">
-              <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-800 text-white font-semibold rounded-xl transition-colors shadow-lg"
-              >
-                {downloading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                    Generando PDF...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-5 w-5" />
-                    Descargar Invitación PDF
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition-colors"
-              >
-                Cerrar
-              </button>
             </div>
+          </div>
+
+          {/* Download bar */}
+          <div className="flex items-center justify-center gap-3 px-4 py-4 flex-shrink-0 bg-black/40">
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 disabled:bg-amber-800 disabled:opacity-70 text-white font-bold rounded-xl transition-colors shadow-lg text-base"
+            >
+              {downloading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  Generando PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="h-5 w-5" />
+                  Descargar PDF
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setShowPreview(false)}
+              className="px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition-colors text-base"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
     </>
-  );
-}
-
-function PreviewScaler({ width, height, children }: { width: number; height: number; children: React.ReactNode }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.5);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const calc = () => {
-      const rect = el.getBoundingClientRect();
-      const s = Math.min(rect.width / width, 1);
-      setScale(s);
-    };
-    calc();
-    const ro = new ResizeObserver(calc);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [width]);
-
-  return (
-    <div ref={containerRef} className="w-full overflow-hidden rounded-2xl shadow-2xl" style={{ height: `${height * scale}px` }}>
-      <div style={{ width: `${width}px`, height: `${height}px`, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-        {children}
-      </div>
-    </div>
   );
 }
 
