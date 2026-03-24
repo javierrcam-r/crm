@@ -208,8 +208,10 @@ export function InvitationDownloadButton({
     const el = previewContainerRef.current;
     if (!el) return;
     const calc = () => {
-      const w = el.getBoundingClientRect().width;
-      setScale(Math.max(0.5, Math.min(w / W, 1)));
+      const { width: cw, height: ch } = el.getBoundingClientRect();
+      const sx = (cw - 32) / W;
+      const sy = (ch - 16) / H;
+      setScale(Math.max(0.28, Math.min(sx, sy, 1)));
     };
     const t = setTimeout(calc, 50);
     const ro = new ResizeObserver(calc);
@@ -217,15 +219,60 @@ export function InvitationDownloadButton({
     return () => { clearTimeout(t); ro.disconnect(); };
   }, [showPreview]);
 
-  const ensureDataUrl = useCallback(async (src: string): Promise<string> => {
-    if (!src || src.startsWith('data:')) return src;
-    const r = await fetch(src);
-    const blob = await r.blob();
-    return new Promise<string>((res) => {
-      const fr = new FileReader();
-      fr.onloadend = () => res(fr.result as string);
-      fr.readAsDataURL(blob);
-    });
+  const captureViaForeignObject = useCallback(async (el: HTMLElement): Promise<string> => {
+    const clone = el.cloneNode(true) as HTMLElement;
+    const imgs = clone.querySelectorAll('img');
+    await Promise.all(
+      Array.from(imgs).map(async (img) => {
+        const src = img.getAttribute('src') || '';
+        if (src && !src.startsWith('data:')) {
+          try {
+            const r = await fetch(src);
+            const blob = await r.blob();
+            const du: string = await new Promise(res => {
+              const fr = new FileReader();
+              fr.onloadend = () => res(fr.result as string);
+              fr.readAsDataURL(blob);
+            });
+            img.setAttribute('src', du);
+          } catch { /* image won't appear */ }
+        }
+      }),
+    );
+
+    const xhtml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">` +
+      `<foreignObject width="100%" height="100%">${xhtml}</foreignObject>` +
+      `</svg>`;
+
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = () => reject(new Error('foreignObject render failed'));
+        i.src = url;
+      });
+      const PX = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = W * PX;
+      canvas.height = H * PX;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('no 2d ctx');
+      ctx.drawImage(image, 0, 0, W * PX, H * PX);
+      return canvas.toDataURL('image/png');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }, []);
+
+  const captureViaHtmlToImage = useCallback(async (el: HTMLElement): Promise<string> => {
+    const { toPng } = await import('html-to-image');
+    const opts = { width: W, height: H, cacheBust: true };
+    await toPng(el, { ...opts, pixelRatio: 1, skipAutoScale: true }).catch(() => {});
+    return toPng(el, { ...opts, pixelRatio: 2, skipAutoScale: true });
   }, []);
 
   const handleDownload = useCallback(async () => {
@@ -235,54 +282,24 @@ export function InvitationDownloadButton({
       const { default: jsPDF } = await import('jspdf');
       const el = ticketRef.current;
 
-      const clone = el.cloneNode(true) as HTMLElement;
-
-      const imgs = clone.querySelectorAll('img');
-      await Promise.all(
-        Array.from(imgs).map(async (img) => {
-          try {
-            const du = await ensureDataUrl(img.getAttribute('src') || '');
-            img.setAttribute('src', du);
-          } catch { /* non-critical — image just won't appear */ }
-        }),
-      );
-
-      const xhtml = new XMLSerializer().serializeToString(clone);
-      const svgDoc =
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">` +
-        `<foreignObject width="100%" height="100%">${xhtml}</foreignObject>` +
-        `</svg>`;
-
-      const svgBlob = new Blob([svgDoc], { type: 'image/svg+xml;charset=utf-8' });
-      const blobUrl = URL.createObjectURL(svgBlob);
-
+      let pngDataUrl: string;
       try {
-        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const i = new Image();
-          i.onload = () => resolve(i);
-          i.onerror = () => reject(new Error('No se pudo renderizar la invitación'));
-          i.src = blobUrl;
-        });
-
-        const PX = 2;
-        const canvas = document.createElement('canvas');
-        canvas.width = W * PX;
-        canvas.height = H * PX;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Canvas no disponible');
-        ctx.drawImage(image, 0, 0, W * PX, H * PX);
-
-        const pngDataUrl = canvas.toDataURL('image/png');
-        const pdfW = 280;
-        const pdfH = Math.round(pdfW * (H / W));
-        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pdfH, pdfW], compress: true });
-        pdf.addImage({ imageData: pngDataUrl, format: 'PNG', x: 0, y: 0, width: pdfW, height: pdfH, compression: 'FAST' });
-
-        const safeName = (participant.nombre || 'Invitado').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
-        pdf.save(`Invitacion-${safeName}.pdf`);
-      } finally {
-        URL.revokeObjectURL(blobUrl);
+        pngDataUrl = await captureViaForeignObject(el);
+      } catch {
+        pngDataUrl = await captureViaHtmlToImage(el);
       }
+
+      if (!pngDataUrl || !pngDataUrl.startsWith('data:image')) {
+        throw new Error('La captura de imagen falló');
+      }
+
+      const pdfW = 280;
+      const pdfH = Math.round(pdfW * (H / W));
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pdfH, pdfW], compress: true });
+      pdf.addImage({ imageData: pngDataUrl, format: 'PNG', x: 0, y: 0, width: pdfW, height: pdfH, compression: 'FAST' });
+
+      const safeName = (participant.nombre || 'Invitado').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+      pdf.save(`Invitacion-${safeName}.pdf`);
     } catch (err: unknown) {
       console.error('PDF generation error:', err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -290,7 +307,7 @@ export function InvitationDownloadButton({
     } finally {
       setDownloading(false);
     }
-  }, [downloading, participant.nombre, ensureDataUrl]);
+  }, [downloading, participant.nombre, captureViaForeignObject, captureViaHtmlToImage]);
 
   const ticketProps = { participant, event, catColor, date, qrValue, logoSrc };
 
@@ -321,10 +338,10 @@ export function InvitationDownloadButton({
           </div>
 
           {/* Preview */}
-          <div ref={previewContainerRef} className="flex-1 overflow-auto flex items-start sm:items-center justify-start sm:justify-center px-4 pb-2">
+          <div ref={previewContainerRef} className="flex-1 overflow-auto flex items-center justify-center px-4 pb-2">
             <div
               className="flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl"
-              style={{ width: `${W * scale}px`, height: `${H * scale}px`, minWidth: '550px' }}
+              style={{ width: `${W * scale}px`, height: `${H * scale}px` }}
             >
               <div style={{ width: `${W}px`, height: `${H}px`, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
                 <div ref={ticketRef} style={{ width: `${W}px`, height: `${H}px` }}>
