@@ -32,9 +32,8 @@ function fmtDate(dateStr: string) {
 }
 
 /* =========================================================
-   Logo pre-loader: fetches /logo-disfero.png once and
-   converts it to a base64 data URL so html-to-image can
-   serialize it reliably on every browser / mobile.
+   Logo pre-loader: converts logo to base64 data URL so
+   SVG foreignObject capture works reliably everywhere.
    ========================================================= */
 let _logoCache: string | null = null;
 function useLogoDataUrl() {
@@ -218,37 +217,72 @@ export function InvitationDownloadButton({
     return () => { clearTimeout(t); ro.disconnect(); };
   }, [showPreview]);
 
+  const ensureDataUrl = useCallback(async (src: string): Promise<string> => {
+    if (!src || src.startsWith('data:')) return src;
+    const r = await fetch(src);
+    const blob = await r.blob();
+    return new Promise<string>((res) => {
+      const fr = new FileReader();
+      fr.onloadend = () => res(fr.result as string);
+      fr.readAsDataURL(blob);
+    });
+  }, []);
+
   const handleDownload = useCallback(async () => {
     if (downloading || !ticketRef.current) return;
     setDownloading(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
       const { default: jsPDF } = await import('jspdf');
-
       const el = ticketRef.current;
 
-      const canvas = await html2canvas(el, {
-        width: W,
-        height: H,
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#1a1a1a',
-        logging: false,
-      });
+      const clone = el.cloneNode(true) as HTMLElement;
 
-      if (!canvas || canvas.width === 0 || canvas.height === 0) {
-        throw new Error('La captura de imagen falló');
+      const imgs = clone.querySelectorAll('img');
+      await Promise.all(
+        Array.from(imgs).map(async (img) => {
+          try {
+            const du = await ensureDataUrl(img.getAttribute('src') || '');
+            img.setAttribute('src', du);
+          } catch { /* non-critical — image just won't appear */ }
+        }),
+      );
+
+      const xhtml = new XMLSerializer().serializeToString(clone);
+      const svgDoc =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">` +
+        `<foreignObject width="100%" height="100%">${xhtml}</foreignObject>` +
+        `</svg>`;
+
+      const svgBlob = new Blob([svgDoc], { type: 'image/svg+xml;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(svgBlob);
+
+      try {
+        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error('No se pudo renderizar la invitación'));
+          i.src = blobUrl;
+        });
+
+        const PX = 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = W * PX;
+        canvas.height = H * PX;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas no disponible');
+        ctx.drawImage(image, 0, 0, W * PX, H * PX);
+
+        const pngDataUrl = canvas.toDataURL('image/png');
+        const pdfW = 280;
+        const pdfH = Math.round(pdfW * (H / W));
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pdfH, pdfW], compress: true });
+        pdf.addImage({ imageData: pngDataUrl, format: 'PNG', x: 0, y: 0, width: pdfW, height: pdfH, compression: 'FAST' });
+
+        const safeName = (participant.nombre || 'Invitado').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+        pdf.save(`Invitacion-${safeName}.pdf`);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
       }
-
-      const pdfW = 280;
-      const pdfH = Math.round(pdfW * (H / W));
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pdfH, pdfW], compress: true });
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage({ imageData: imgData, format: 'PNG', x: 0, y: 0, width: pdfW, height: pdfH, compression: 'FAST' });
-
-      const safeName = (participant.nombre || 'Invitado').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
-      pdf.save(`Invitacion-${safeName}.pdf`);
     } catch (err: unknown) {
       console.error('PDF generation error:', err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -256,7 +290,7 @@ export function InvitationDownloadButton({
     } finally {
       setDownloading(false);
     }
-  }, [downloading, participant.nombre]);
+  }, [downloading, participant.nombre, ensureDataUrl]);
 
   const ticketProps = { participant, event, catColor, date, qrValue, logoSrc };
 
