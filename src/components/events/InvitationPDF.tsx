@@ -29,11 +29,37 @@ function fmtDate(dateStr: string) {
 }
 
 /* =========================================================
-   TICKET DESIGN (pure inline styles)
+   Logo pre-loader: fetches /logo-disfero.png once and
+   converts it to a base64 data URL so html-to-image can
+   serialize it reliably on every browser / mobile.
    ========================================================= */
-function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }: {
+let _logoCache: string | null = null;
+function useLogoDataUrl() {
+  const [src, setSrc] = useState(_logoCache || '/logo-disfero.png');
+  useEffect(() => {
+    if (_logoCache) { setSrc(_logoCache); return; }
+    fetch('/logo-disfero.png')
+      .then(r => r.blob())
+      .then(blob => new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      }))
+      .then(dataUrl => { _logoCache = dataUrl; setSrc(dataUrl); })
+      .catch(() => {});
+  }, []);
+  return src;
+}
+
+/* =========================================================
+   TICKET DESIGN (pure inline styles)
+   Logo is passed as data URL prop so it works in PDF capture.
+   QR has NO imageSettings — logo is overlaid via CSS to
+   avoid tainting the canvas (which breaks toDataURL on mobile).
+   ========================================================= */
+function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, logoSrc }: {
   participant: EventParticipant; event: Event; catColor: string;
-  date: ReturnType<typeof fmtDate>; qrValue: string;
+  date: ReturnType<typeof fmtDate>; qrValue: string; logoSrc: string;
 }) {
   return (
     <div style={{ width: `${W}px`, height: `${H}px`, display: 'flex', flexDirection: 'row', fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", background: '#1a1a1a', overflow: 'hidden', borderRadius: '16px', border: `2px solid ${GOLD}40` }}>
@@ -50,7 +76,7 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-disfero.png" alt="" style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px' }} />
+            <img src={logoSrc} alt="" style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px' }} />
             <span style={{ fontSize: '9px', fontWeight: 600, color: `${GOLD}90`, letterSpacing: '3px' }}>DISFERO PRESENTA</span>
           </div>
           <span style={{ fontSize: '9px', fontWeight: 700, color: `${GOLD}50`, letterSpacing: '2.5px' }}>N° {p.id.substring(0, 8).toUpperCase()}</span>
@@ -127,9 +153,17 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
           <span style={{ fontSize: '8px', fontWeight: 700, color: `${GOLD}60`, letterSpacing: '4px' }}>ESCANEA TU ENTRADA</span>
         </div>
 
+        {/* QR container — logo overlaid via CSS, NOT drawn into canvas (avoids taint) */}
         <div style={{ position: 'relative', zIndex: 2, background: '#fff', borderRadius: '14px', padding: '14px', boxShadow: `0 0 30px ${GOLD}12, 0 4px 20px rgba(0,0,0,0.3)`, border: `2px solid ${GOLD}25`, width: '288px', height: '288px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: '260px', height: '260px', overflow: 'hidden' }}>
-            <QRCodeCanvas value={qrValue} size={780} level="H" bgColor="#ffffff" fgColor="#111111" style={{ width: '260px', height: '260px' }} imageSettings={{ src: '/logo-disfero.png', x: undefined, y: undefined, height: 144, width: 144, excavate: true }} />
+          <div style={{ position: 'relative', width: '260px', height: '260px' }}>
+            <QRCodeCanvas value={qrValue} size={780} level="H" bgColor="#ffffff" fgColor="#111111" style={{ width: '260px', height: '260px', display: 'block' }} />
+            {/* Logo overlay — separate from canvas so canvas stays clean for toDataURL */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoSrc}
+              alt=""
+              style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px', borderRadius: '6px', background: '#fff', padding: '4px', boxSizing: 'content-box' }}
+            />
           </div>
         </div>
 
@@ -138,7 +172,7 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <div style={{ width: '16px', height: '1px', background: `${GOLD}25` }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-disfero.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', borderRadius: '3px', opacity: 0.4 }} />
+            <img src={logoSrc} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', borderRadius: '3px', opacity: 0.4 }} />
             <div style={{ width: '16px', height: '1px', background: `${GOLD}25` }} />
           </div>
         </div>
@@ -149,15 +183,14 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue }
 
 /* =========================================================
    Capture helper — clones the visible ticket, replaces
-   <canvas> with <img>, then uses html-to-image (SVG-based,
-   no canvas pattern bugs) to generate a PNG data URL.
+   <canvas> with <img> (pure data URL), then uses
+   html-to-image (SVG-based) to generate a PNG.
    ========================================================= */
 async function captureTicket(sourceEl: HTMLElement): Promise<string> {
   const { toPng } = await import('html-to-image');
 
   const clone = sourceEl.cloneNode(true) as HTMLElement;
 
-  // Replace <canvas> elements (QR) with <img> for reliable serialization
   const srcCanvases = sourceEl.querySelectorAll('canvas');
   const cloneCanvases = clone.querySelectorAll('canvas');
   cloneCanvases.forEach((cc, i) => {
@@ -172,10 +205,11 @@ async function captureTicket(sourceEl: HTMLElement): Promise<string> {
       img.style.height = `${orig.offsetHeight}px`;
       img.style.display = 'block';
       cc.parentNode?.replaceChild(img, cc);
-    } catch { /* tainted canvas — skip */ }
+    } catch (e) {
+      console.warn('Canvas toDataURL failed (tainted?):', e);
+    }
   });
 
-  // Place clone in DOM at full size so html-to-image can serialize it
   clone.style.position = 'fixed';
   clone.style.top = '0';
   clone.style.left = '0';
@@ -186,10 +220,9 @@ async function captureTicket(sourceEl: HTMLElement): Promise<string> {
   clone.style.pointerEvents = 'none';
   document.body.appendChild(clone);
 
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 300));
 
   try {
-    // First call warms up font/image loading, second produces clean result
     await toPng(clone, { width: W, height: H, pixelRatio: 1, skipAutoScale: true }).catch(() => {});
     const dataUrl = await toPng(clone, { width: W, height: H, pixelRatio: 4, skipAutoScale: true });
     return dataUrl;
@@ -209,6 +242,7 @@ export function InvitationDownloadButton({
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [scale, setScale] = useState(0.6);
+  const logoSrc = useLogoDataUrl();
 
   const catColor = getCatColor(participant.categoria) || DEFAULT_CAT;
   const eventDate = event.fecha_fin || event.fecha_inicio;
@@ -256,7 +290,7 @@ export function InvitationDownloadButton({
     }
   }, [downloading, participant.nombre]);
 
-  const ticketProps = { participant, event, catColor, date, qrValue };
+  const ticketProps = { participant, event, catColor, date, qrValue, logoSrc };
 
   return (
     <>
@@ -284,13 +318,12 @@ export function InvitationDownloadButton({
             </button>
           </div>
 
-          {/* Preview — single ticket, JS-scaled, horizontally scrollable on small screens */}
+          {/* Preview */}
           <div ref={previewContainerRef} className="flex-1 overflow-auto flex items-start sm:items-center justify-start sm:justify-center px-4 pb-2">
             <div
               className="flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl"
               style={{ width: `${W * scale}px`, height: `${H * scale}px`, minWidth: '550px' }}
             >
-              {/* Transform wrapper — ticketRef is INSIDE (no transform on it) */}
               <div style={{ width: `${W}px`, height: `${H}px`, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
                 <div ref={ticketRef} style={{ width: `${W}px`, height: `${H}px` }}>
                   <InvitationTicket {...ticketProps} />
