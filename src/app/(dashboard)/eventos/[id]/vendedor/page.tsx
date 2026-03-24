@@ -46,7 +46,7 @@ export default function VendorEventPage() {
   const [editingParticipant, setEditingParticipant] = useState<EventParticipant | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito' });
+  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', numero_asiento: '' });
   const [qrParticipant, setQrParticipant] = useState<EventParticipant | null>(null);
 
   useEffect(() => {
@@ -104,12 +104,18 @@ export default function VendorEventPage() {
       categoria: '',
       notas: '',
       estado_inscripcion: 'pre_inscrito',
+      numero_asiento: '',
     });
     setCustomerSearch('');
   };
 
   const handleAddParticipant = async () => {
     if (!partForm.nombre) { toast.error('Nombre requerido'); return; }
+    const seat = partForm.numero_asiento.trim();
+    if (seat) {
+      const dup = participants.find(p => p.numero_asiento === seat);
+      if (dup) { toast.error(`El asiento "${seat}" ya está asignado a ${dup.nombre}`); return; }
+    }
     try {
       await createParticipant({
         event_id: eventId,
@@ -124,11 +130,12 @@ export default function VendorEventPage() {
         categoria: partForm.categoria || null,
         registered_by: userProfile?.id,
         notas: partForm.notas || null,
+        numero_asiento: seat || null,
       } as any);
       toast.success('Participante registrado');
       setShowAddModal(false);
       setSelectedCustomer(null);
-      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito' });
+      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', numero_asiento: '' });
       const parts = await getEventParticipants(eventId);
       setParticipants(parts);
     } catch (err: any) { toast.error(err?.message || 'Error al registrar'); }
@@ -146,12 +153,18 @@ export default function VendorEventPage() {
       categoria: p.categoria || '',
       notas: p.notas || '',
       estado_inscripcion: p.estado_inscripcion || 'pre_inscrito',
+      numero_asiento: p.numero_asiento || '',
     });
     setShowEditModal(true);
   };
 
   const handleEditParticipant = async () => {
     if (!editingParticipant) return;
+    const seat = partForm.numero_asiento.trim();
+    if (seat) {
+      const dup = participants.find(p => p.numero_asiento === seat && p.id !== editingParticipant.id);
+      if (dup) { toast.error(`El asiento "${seat}" ya está asignado a ${dup.nombre}`); return; }
+    }
     try {
       await updateParticipant(editingParticipant.id, {
         nombre: partForm.nombre,
@@ -164,6 +177,7 @@ export default function VendorEventPage() {
         cupos_adicionales: Number(partForm.cupos_adicionales) || 0,
         categoria: partForm.categoria || null,
         notas: partForm.notas || null,
+        numero_asiento: seat || null,
       } as any);
       toast.success('Participante actualizado');
       setShowEditModal(false);
@@ -325,7 +339,7 @@ export default function VendorEventPage() {
 
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-gray-900">Todos los Participantes ({participants.length})</h3>
-            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito' }); }}>
+            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', numero_asiento: '' }); }}>
               <Plus className="h-4 w-4 mr-1" />Inscribir Cliente
             </Button>
           </div>
@@ -343,6 +357,7 @@ export default function VendorEventPage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm truncate">{p.nombre}</p>
                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          {p.numero_asiento && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold">Asiento {p.numero_asiento}</span>}
                           {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
                           {isMine && <span className="text-[10px] text-indigo-600 font-medium">Mi inscrito</span>}
                           {p.empresa && <span className="text-[10px] text-gray-400">{p.empresa}</span>}
@@ -375,6 +390,7 @@ export default function VendorEventPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="bg-gray-50 border-b">
+                  <th className="text-center px-4 py-3 w-16">Asiento</th>
                   <th className="text-left px-4 py-3">Nombre</th>
                   <th className="text-left px-4 py-3">Contacto</th>
                   <th className="text-center px-4 py-3">Inscripción</th>
@@ -385,11 +401,12 @@ export default function VendorEventPage() {
                 </tr></thead>
                 <tbody className="divide-y">
                   {participants.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-8 text-gray-500">Sin participantes aún</td></tr>
+                    <tr><td colSpan={8} className="text-center py-8 text-gray-500">Sin participantes aún</td></tr>
                   ) : participants.map(p => {
                     const isMine = isMyParticipant(p);
                     return (
                       <tr key={p.id} className={`hover:bg-gray-50 ${isMine ? 'bg-indigo-50/30' : ''}`}>
+                        <td className="px-4 py-3 text-center">{p.numero_asiento ? <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg">{p.numero_asiento}</span> : <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3">
                           <p className="font-medium">{p.nombre}</p>
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -543,9 +560,10 @@ export default function VendorEventPage() {
                 <Input label="Teléfono" value={partForm.telefono} onChange={e => setPartForm(p => ({ ...p, telefono: e.target.value }))} />
                 <Input label="Empresa" value={partForm.empresa} onChange={e => setPartForm(p => ({ ...p, empresa: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
-                <Input label="Cupos adicionales (ayudantes)" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
+                <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
+                <Input label="N° Asiento" value={partForm.numero_asiento} onChange={e => setPartForm(p => ({ ...p, numero_asiento: e.target.value }))} placeholder="Ej: A1, 12" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
@@ -589,9 +607,10 @@ export default function VendorEventPage() {
             <Input label="Teléfono" value={partForm.telefono} onChange={e => setPartForm(p => ({ ...p, telefono: e.target.value }))} />
             <Input label="Empresa" value={partForm.empresa} onChange={e => setPartForm(p => ({ ...p, empresa: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
             <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
+            <Input label="N° Asiento" value={partForm.numero_asiento} onChange={e => setPartForm(p => ({ ...p, numero_asiento: e.target.value }))} placeholder="Ej: A1, 12" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
@@ -624,6 +643,7 @@ export default function VendorEventPage() {
           <div className="flex flex-col items-center space-y-4">
             <div className="text-center">
               <p className="font-semibold text-lg text-gray-900">{qrParticipant.nombre}</p>
+              {qrParticipant.numero_asiento && <p className="text-sm font-bold text-indigo-600">Asiento {qrParticipant.numero_asiento}</p>}
               <div className="flex items-center justify-center gap-2 mt-1">
                 {qrParticipant.categoria && (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(qrParticipant.categoria) || '#0d9488' }}>

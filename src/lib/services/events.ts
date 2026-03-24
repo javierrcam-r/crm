@@ -98,6 +98,7 @@ export interface EventParticipant {
   categoria: string | null;
   registered_by: string | null;
   notas: string | null;
+  numero_asiento: string | null;
   created_at: string;
 }
 

@@ -65,7 +65,7 @@ export default function EventDetailPage() {
   // Forms
   const [expenseForm, setExpenseForm] = useState({ categoria: '', descripcion: '', proveedor: '', monto: '', fecha: '', estado: 'cotizado' as ExpenseStatus, comprobante: '', num_comprobante: '', num_factura: '', notas: '' });
   const [activityForm, setActivityForm] = useState({ nombre: '', descripcion: '', tipo: 'operativa' as EventActivityType, responsable_id: '', fecha_inicio: '', fecha_fin: '', prioridad: 'media', estado: 'pendiente' as EventActivityStatus, porcentaje_avance: 0, es_hito: false, notas: '' });
-  const [participantForm, setParticipantForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito' as any, estado_pago: 'pendiente' as any, monto_pagado: '', categoria: '', notas: '' });
+  const [participantForm, setParticipantForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito' as any, estado_pago: 'pendiente' as any, monto_pagado: '', categoria: '', notas: '', numero_asiento: '' });
 
   useEffect(() => {
     if (userProfile) {
@@ -240,18 +240,23 @@ export default function EventDetailPage() {
   const openParticipantModal = (item?: EventParticipant) => {
     if (item) {
       setEditingItem(item);
-      setParticipantForm({ nombre: item.nombre, email: item.email || '', telefono: item.telefono || '', empresa: item.empresa || '', estado_inscripcion: item.estado_inscripcion, estado_pago: item.estado_pago, monto_pagado: String(item.monto_pagado || 0), categoria: item.categoria || '', notas: item.notas || '' });
+      setParticipantForm({ nombre: item.nombre, email: item.email || '', telefono: item.telefono || '', empresa: item.empresa || '', estado_inscripcion: item.estado_inscripcion, estado_pago: item.estado_pago, monto_pagado: String(item.monto_pagado || 0), categoria: item.categoria || '', notas: item.notas || '', numero_asiento: item.numero_asiento || '' });
     } else {
       setEditingItem(null);
-      setParticipantForm({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', monto_pagado: '0', categoria: '', notas: '' });
+      setParticipantForm({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', monto_pagado: '0', categoria: '', notas: '', numero_asiento: '' });
     }
     setShowParticipantModal(true);
   };
 
   const saveParticipant = async () => {
     if (!participantForm.nombre) { toast.error('Nombre requerido'); return; }
+    const seat = participantForm.numero_asiento.trim();
+    if (seat) {
+      const duplicate = participants.find(p => p.numero_asiento === seat && p.id !== editingItem?.id);
+      if (duplicate) { toast.error(`El asiento "${seat}" ya está asignado a ${duplicate.nombre}`); return; }
+    }
     try {
-      const data: any = { event_id: eventId, nombre: participantForm.nombre, email: participantForm.email || null, telefono: participantForm.telefono || null, empresa: participantForm.empresa || null, estado_inscripcion: participantForm.estado_inscripcion, estado_pago: participantForm.estado_pago, monto_pagado: Number(participantForm.monto_pagado) || 0, categoria: participantForm.categoria || null, notas: participantForm.notas || null };
+      const data: any = { event_id: eventId, nombre: participantForm.nombre, email: participantForm.email || null, telefono: participantForm.telefono || null, empresa: participantForm.empresa || null, estado_inscripcion: participantForm.estado_inscripcion, estado_pago: participantForm.estado_pago, monto_pagado: Number(participantForm.monto_pagado) || 0, categoria: participantForm.categoria || null, notas: participantForm.notas || null, numero_asiento: seat || null };
       if (editingItem) { await updateParticipant(editingItem.id, data); } else { data.registered_by = userProfile?.id || null; await createParticipant(data); }
       toast.success(editingItem ? 'Participante actualizado' : 'Participante agregado');
       setShowParticipantModal(false);
@@ -695,6 +700,7 @@ export default function EventDetailPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{p.nombre}</p>
                       <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        {p.numero_asiento && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold">Asiento {p.numero_asiento}</span>}
                         {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
                         {p.empresa && <span className="text-[10px] text-gray-400">{p.empresa}</span>}
                       </div>
@@ -725,10 +731,11 @@ export default function EventDetailPage() {
           <Card padding="none" className="hidden md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3">Nombre</th><th className="text-left px-4 py-3">Contacto</th><th className="text-center px-4 py-3">Inscripción</th><th className="text-center px-4 py-3">Pago</th><th className="text-center px-4 py-3">Asist.</th><th className="text-center px-4 py-3">Cert.</th><th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
+                <thead><tr className="bg-gray-50 border-b"><th className="text-center px-4 py-3 w-16">Asiento</th><th className="text-left px-4 py-3">Nombre</th><th className="text-left px-4 py-3">Contacto</th><th className="text-center px-4 py-3">Inscripción</th><th className="text-center px-4 py-3">Pago</th><th className="text-center px-4 py-3">Asist.</th><th className="text-center px-4 py-3">Cert.</th><th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
                 <tbody className="divide-y">
-                  {participants.length === 0 ? <tr><td colSpan={8} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
+                  {participants.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
                     <tr key={p.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-center">{p.numero_asiento ? <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg">{p.numero_asiento}</span> : <span className="text-gray-300">—</span>}</td>
                       <td className="px-4 py-3"><p className="font-medium">{p.nombre}</p><div className="flex items-center gap-1.5">{p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}{p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}</div></td>
                       <td className="px-4 py-3 text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
                       <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
@@ -950,7 +957,10 @@ export default function EventDetailPage() {
             <Input label="Email" type="email" value={participantForm.email} onChange={e => setParticipantForm(p => ({ ...p, email: e.target.value }))} />
             <Input label="Teléfono" value={participantForm.telefono} onChange={e => setParticipantForm(p => ({ ...p, telefono: e.target.value }))} />
           </div>
-          <Input label="Empresa" value={participantForm.empresa} onChange={e => setParticipantForm(p => ({ ...p, empresa: e.target.value }))} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Empresa" value={participantForm.empresa} onChange={e => setParticipantForm(p => ({ ...p, empresa: e.target.value }))} />
+            <Input label="N° Asiento" value={participantForm.numero_asiento} onChange={e => setParticipantForm(p => ({ ...p, numero_asiento: e.target.value }))} placeholder="Ej: A1, 12, VIP-3" />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Inscripción</label><select value={participantForm.estado_inscripcion} onChange={e => setParticipantForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="pre_inscrito">Pre-inscrito</option><option value="confirmado">Confirmado</option><option value="cancelado">Cancelado</option><option value="lista_espera">Lista de espera</option></select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Pago</label><select value={participantForm.estado_pago} onChange={e => setParticipantForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white"><option value="pendiente">Pendiente</option><option value="parcial">Parcial</option><option value="pagado">Pagado</option><option value="reembolsado">Reembolsado</option><option value="exento">Exento</option></select></div>
@@ -1119,6 +1129,7 @@ export default function EventDetailPage() {
           <div className="flex flex-col items-center space-y-4">
             <div className="text-center">
               <p className="font-semibold text-lg text-gray-900">{qrParticipant.nombre}</p>
+              {qrParticipant.numero_asiento && <p className="text-sm font-bold text-indigo-600">Asiento {qrParticipant.numero_asiento}</p>}
               <div className="flex items-center justify-center gap-2 mt-1">
                 {qrParticipant.categoria && (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(qrParticipant.categoria) || '#0d9488' }}>

@@ -376,6 +376,11 @@ export default function EventAssistancePage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-gray-900 truncate">{p.nombre}</p>
                     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      {p.numero_asiento && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold">
+                          Asiento {p.numero_asiento}
+                        </span>
+                      )}
                       {p.categoria && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>
                           {p.categoria}
@@ -448,6 +453,9 @@ function ParticipantDetail({
         {/* Name and category */}
         <div className="text-center pb-3 border-b">
           <p className="text-xl font-bold text-gray-900">{p.nombre}</p>
+          {p.numero_asiento && (
+            <p className="text-sm font-bold text-indigo-600 mt-1">Asiento {p.numero_asiento}</p>
+          )}
           <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
             {p.categoria && (
               <span className="text-xs px-3 py-1 rounded-full font-semibold text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>
