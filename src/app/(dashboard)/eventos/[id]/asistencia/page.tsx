@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Camera, Search, Users, CheckCircle, XCircle,
-  User, Mail, Phone, Building2, CreditCard, Tag, FileText,
+  User, Mail, Phone, Building2, CreditCard, Tag, FileText, MapPin,
   Award, ScanLine, X, ChevronUp, UserCheck, AlertTriangle,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
@@ -283,6 +283,20 @@ export default function EventAssistancePage() {
                   <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto mb-2" />
                   <p className="font-semibold text-amber-700">Ya Registrado</p>
                   <p className="text-sm text-amber-600 mt-1">{selectedParticipant.nombre}</p>
+                  {selectedParticipant.categoria && (
+                    <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-medium text-white mt-2" style={{ backgroundColor: getCatColor(selectedParticipant.categoria) || '#0d9488' }}>
+                      {selectedParticipant.categoria}
+                    </span>
+                  )}
+                  {selectedParticipant.numero_asiento && (
+                    <div className="mt-3 bg-white rounded-xl p-3 border border-amber-200">
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <MapPin className="h-4 w-4 text-indigo-500" />
+                        <span className="text-[10px] text-indigo-600 font-semibold uppercase">Ubicación</span>
+                      </div>
+                      <p className="text-2xl font-bold text-indigo-700 tracking-wide">{selectedParticipant.numero_asiento}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -291,6 +305,20 @@ export default function EventAssistancePage() {
                   <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
                   <p className="font-semibold text-green-700">Participante Encontrado</p>
                   <p className="text-sm text-green-600 mt-1">{selectedParticipant.nombre}</p>
+                  {selectedParticipant.categoria && (
+                    <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-medium text-white mt-2" style={{ backgroundColor: getCatColor(selectedParticipant.categoria) || '#0d9488' }}>
+                      {selectedParticipant.categoria}
+                    </span>
+                  )}
+                  {selectedParticipant.numero_asiento && (
+                    <div className="mt-3 bg-white rounded-xl p-3 border border-green-200">
+                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                        <MapPin className="h-4 w-4 text-indigo-500" />
+                        <span className="text-[10px] text-indigo-600 font-semibold uppercase">Ubicación</span>
+                      </div>
+                      <p className="text-2xl font-bold text-indigo-700 tracking-wide">{selectedParticipant.numero_asiento}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -454,9 +482,6 @@ function ParticipantDetail({
         {/* Name and category */}
         <div className="text-center pb-3 border-b">
           <p className="text-xl font-bold text-gray-900">{p.nombre}</p>
-          {p.numero_asiento && (
-            <p className="text-sm font-bold text-indigo-600 mt-1">Asiento {p.numero_asiento}</p>
-          )}
           <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
             {p.categoria && (
               <span className="text-xs px-3 py-1 rounded-full font-semibold text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>
@@ -468,6 +493,20 @@ function ParticipantDetail({
             </span>
           </div>
         </div>
+
+        {p.numero_asiento ? (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <MapPin className="h-4 w-4 text-indigo-600" />
+              <span className="text-[10px] text-indigo-600 font-semibold uppercase tracking-wide">Ubicación asignada</span>
+            </div>
+            <p className="text-3xl font-bold text-indigo-700 tracking-wide">{p.numero_asiento}</p>
+          </div>
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+            <p className="text-xs text-gray-400">Sin asiento asignado</p>
+          </div>
+        )}
 
         {/* Main action: Attendance */}
         <button

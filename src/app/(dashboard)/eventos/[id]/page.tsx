@@ -72,17 +72,19 @@ export default function EventDetailPage() {
   const [activityForm, setActivityForm] = useState({ nombre: '', descripcion: '', tipo: 'operativa' as EventActivityType, responsable_id: '', fecha_inicio: '', fecha_fin: '', prioridad: 'media', estado: 'pendiente' as EventActivityStatus, porcentaje_avance: 0, es_hito: false, notas: '' });
   const [participantForm, setParticipantForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito' as any, estado_pago: 'pendiente' as any, monto_pagado: '', categoria: '', notas: '', numero_asiento: '' });
 
+  const [redirecting, setRedirecting] = useState(false);
+
   useEffect(() => {
-    if (userProfile) {
-      const isSup = userProfile.rol === 'admin' || userProfile.rol === 'supervisor' || userProfile.rol === 'supervisor_nivel1' || userProfile.rol === 'supervisor_vendedor';
-      if (!isSup) {
-        if (userProfile.rol === 'event_assistant') {
-          router.replace(`/eventos/${eventId}/asistencia`);
-        } else {
-          router.replace(`/eventos/${eventId}/vendedor`);
-        }
-        return;
+    if (!userProfile) return;
+    const isSup = userProfile.rol === 'admin' || userProfile.rol === 'supervisor' || userProfile.rol === 'supervisor_nivel1' || userProfile.rol === 'supervisor_vendedor';
+    if (!isSup) {
+      setRedirecting(true);
+      if (userProfile.rol === 'event_assistant') {
+        router.replace(`/eventos/${eventId}/asistencia`);
+      } else {
+        router.replace(`/eventos/${eventId}/vendedor`);
       }
+      return;
     }
     loadAll();
   }, [eventId, userProfile]);
@@ -292,7 +294,7 @@ export default function EventDetailPage() {
     a.click();
   };
 
-  if (loading || !event) return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>;
+  if (redirecting || loading || !event) return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>;
 
   const kpis = computeEventKPIs(event, expenses, activities, participants);
   const tabs: { id: Tab; label: string; icon: any; count?: number }[] = [

@@ -50,8 +50,12 @@ export default function VendorEventPage() {
   const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', numero_asiento: '' });
   const [qrParticipant, setQrParticipant] = useState<EventParticipant | null>(null);
 
+  const [redirecting, setRedirecting] = useState(false);
+
   useEffect(() => {
-    if (userProfile?.rol === 'event_assistant') {
+    if (!userProfile) return;
+    if (userProfile.rol === 'event_assistant') {
+      setRedirecting(true);
       router.replace(`/eventos/${eventId}/asistencia`);
       return;
     }
@@ -204,7 +208,7 @@ export default function VendorEventPage() {
     a.click();
   };
 
-  if (loading || !event) return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>;
+  if (redirecting || loading || !event) return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>;
 
   // Gantt for my activities
   const ganttStart = myActivities.length > 0 ? new Date(Math.min(...myActivities.map(a => new Date(a.fecha_inicio).getTime()))) : new Date();
