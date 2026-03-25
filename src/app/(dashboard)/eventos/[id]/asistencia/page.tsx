@@ -280,51 +280,19 @@ export default function EventAssistancePage() {
               )}
 
               {scanResult === 'already' && selectedParticipant && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
-                  <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto mb-2" />
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
+                  <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-1" />
                   <p className="font-semibold text-amber-700">Ya Registrado</p>
-                  <p className="text-sm text-amber-600 mt-1">{selectedParticipant.nombre}</p>
-                  {selectedParticipant.categoria && (
-                    <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-medium text-white mt-2" style={{ backgroundColor: getCatColor(selectedParticipant.categoria) || '#0d9488' }}>
-                      {selectedParticipant.categoria}
-                    </span>
-                  )}
-                  {selectedParticipant.numero_asiento && (
-                    <div className="mt-3 bg-white rounded-xl p-3 border border-amber-200">
-                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                        <MapPin className="h-4 w-4 text-indigo-500" />
-                        <span className="text-[10px] text-indigo-600 font-semibold uppercase">Ubicación</span>
-                      </div>
-                      <p className="text-2xl font-bold text-indigo-700 tracking-wide">{selectedParticipant.numero_asiento}</p>
-                    </div>
-                  )}
+                  <p className="text-sm text-amber-600">{selectedParticipant.nombre}</p>
                 </div>
               )}
 
               {scanResult === 'success' && selectedParticipant && (
-                <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
-                  <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
-                  <p className="font-semibold text-green-700">Participante Encontrado</p>
-                  <p className="text-sm text-green-600 mt-1">{selectedParticipant.nombre}</p>
-                  {selectedParticipant.categoria && (
-                    <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-medium text-white mt-2" style={{ backgroundColor: getCatColor(selectedParticipant.categoria) || '#0d9488' }}>
-                      {selectedParticipant.categoria}
-                    </span>
-                  )}
-                  {selectedParticipant.numero_asiento && (
-                    <div className="mt-3 bg-white rounded-xl p-3 border border-green-200">
-                      <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                        <MapPin className="h-4 w-4 text-indigo-500" />
-                        <span className="text-[10px] text-indigo-600 font-semibold uppercase">Ubicación</span>
-                      </div>
-                      <p className="text-2xl font-bold text-indigo-700 tracking-wide">{selectedParticipant.numero_asiento}</p>
-                    </div>
-                  )}
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-3 text-center">
+                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-1" />
+                  <p className="font-semibold text-green-700">Check-in Exitoso</p>
+                  <p className="text-sm text-green-600">{selectedParticipant.nombre}</p>
                 </div>
-              )}
-
-              {selectedParticipant?.numero_asiento && (
-                <SeatMapView event={event} highlightSeatId={selectedParticipant.numero_asiento} participants={participants} />
               )}
 
               <Button onClick={startScanner} variant="secondary" className="w-full">
