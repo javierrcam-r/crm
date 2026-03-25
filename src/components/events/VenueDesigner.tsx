@@ -441,6 +441,7 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
   const [snapGrid, setSnapGrid] = useState(true);
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [seatPickerParticipant, setSeatPickerParticipant] = useState<EventParticipant | null>(null);
+  const [localParticipants, setLocalParticipants] = useState<EventParticipant[]>(participants);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef({ elX: 0, elY: 0, mx: 0, my: 0 });
@@ -448,8 +449,10 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  useEffect(() => { setLocalParticipants(participants); }, [participants]);
+
   const seatMap = new Map<string, EventParticipant>();
-  participants.forEach(p => { if (p.numero_asiento) seatMap.set(p.numero_asiento, p); });
+  localParticipants.forEach(p => { if (p.numero_asiento) seatMap.set(p.numero_asiento, p); });
 
   const catColors = useMemo(() => {
     const m = new Map<string, string>();
@@ -458,15 +461,15 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
   }, [event.categorias_participantes]);
   const categories = useMemo(() => {
     const set = new Set<string>();
-    participants.forEach(p => { if (p.categoria) set.add(p.categoria); });
+    localParticipants.forEach(p => { if (p.categoria) set.add(p.categoria); });
     return Array.from(set);
-  }, [participants]);
+  }, [localParticipants]);
 
   const selectedEl = layout.elements.find(e => e.id === selectedId) || null;
 
   const totalSeats = layout.elements.reduce((n, el) => n + allSeatIds(el).length, 0);
-  const occupiedSeats = participants.filter(p => p.numero_asiento).length;
-  const unassigned = participants.filter(p => !p.numero_asiento);
+  const occupiedSeats = localParticipants.filter(p => p.numero_asiento).length;
+  const unassigned = localParticipants.filter(p => !p.numero_asiento);
 
   // ─── Load / Save ──────────────────────────────────────────
   useEffect(() => {
@@ -584,6 +587,12 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
     if (d?.type === 'participant') setDraggedParticipant(d.participant);
   };
 
+  const optimisticAssign = useCallback((participantId: string, seatId: string | null) => {
+    setLocalParticipants(prev => prev.map(p =>
+      p.id === participantId ? { ...p, numero_asiento: seatId } : p
+    ));
+  }, []);
+
   const handleDragEnd = async (e: DragEndEvent) => {
     setDraggedParticipant(null);
     const { active, over } = e;
@@ -594,26 +603,35 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
       const p = aData.participant as EventParticipant;
       const sid = oData.seatId as string;
       if (seatMap.has(sid)) { toast.error('Asiento ocupado'); return; }
+      optimisticAssign(p.id, sid);
+      toast.success(`${p.nombre} → ${sid}`);
       try {
         await assignSeatToParticipant(p.id, sid);
-        toast.success(`${p.nombre} → ${sid}`);
         onParticipantsChange();
-      } catch { toast.error('Error al asignar'); }
+      } catch {
+        optimisticAssign(p.id, p.numero_asiento);
+        toast.error('Error al asignar');
+      }
     }
   };
 
   const handleRemoveSeat = async (sid: string) => {
     const p = seatMap.get(sid);
     if (!p) return;
+    const prev = p.numero_asiento;
+    optimisticAssign(p.id, null);
+    toast.success(`${p.nombre} liberado`);
     try {
       await assignSeatToParticipant(p.id, null);
-      toast.success(`${p.nombre} liberado`);
       onParticipantsChange();
-    } catch { toast.error('Error al liberar'); }
+    } catch {
+      optimisticAssign(p.id, prev);
+      toast.error('Error al liberar');
+    }
   };
 
   // ─── Filter participants ──────────────────────────────────
-  const filtered = participants.filter(p => {
+  const filtered = localParticipants.filter(p => {
     if (catFilter && p.categoria !== catFilter) return false;
     if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.empresa?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -810,9 +828,10 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
         </div>
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {draggedParticipant && (
-          <div className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold shadow-xl">
+          <div className="px-2 py-0.5 rounded bg-indigo-600/70 text-white text-[10px] font-medium shadow-lg backdrop-blur-sm whitespace-nowrap pointer-events-none"
+            style={{ transform: 'translate(12px, -24px)' }}>
             {draggedParticipant.nombre}
           </div>
         )}
@@ -823,8 +842,8 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
         onClose={() => setSeatPickerParticipant(null)}
         event={event}
         participant={seatPickerParticipant}
-        participants={participants}
-        onAssigned={onParticipantsChange}
+        participants={localParticipants}
+        onAssigned={() => { onParticipantsChange(); setSeatPickerParticipant(null); }}
       />
     </DndContext>
   );
