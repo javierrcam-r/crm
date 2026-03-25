@@ -6,8 +6,11 @@ import Link from 'next/link';
 import {
   ArrowLeft, Calendar, DollarSign, Users, Target, CheckCircle, Clock,
   Plus, Trash2, Edit, AlertTriangle, TrendingUp, BarChart3, X,
-  FileText, Award, MapPin, Video, Save, ChevronRight, Eye, QrCode, Download
+  FileText, Award, MapPin, Video, Save, ChevronRight, Eye, QrCode, Download, LayoutGrid,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const VenueDesigner = dynamic(() => import('@/components/events/VenueDesigner'), { ssr: false });
+const SeatPickerModal = dynamic(() => import('@/components/events/SeatPickerModal'), { ssr: false });
 import { QRCodeCanvas } from 'qrcode.react';
 import { InvitationDownloadButton } from '@/components/events/InvitationPDF';
 import Card from '@/components/ui/Card';
@@ -28,7 +31,7 @@ import { format, differenceInDays, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
-type Tab = 'general' | 'presupuesto' | 'actividades' | 'participantes' | 'kpis';
+type Tab = 'general' | 'presupuesto' | 'actividades' | 'participantes' | 'venue' | 'kpis';
 
 const statusColors: Record<EventStatus, string> = {
   planeado: 'bg-blue-100 text-blue-700', en_ejecucion: 'bg-amber-100 text-amber-700',
@@ -62,6 +65,7 @@ export default function EventDetailPage() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [expandedActivityId, setExpandedActivityId] = useState<string | null>(null);
   const [qrParticipant, setQrParticipant] = useState<EventParticipant | null>(null);
+  const [seatPickerParticipant, setSeatPickerParticipant] = useState<EventParticipant | null>(null);
 
   // Forms
   const [expenseForm, setExpenseForm] = useState({ categoria: '', descripcion: '', proveedor: '', monto: '', fecha: '', estado: 'cotizado' as ExpenseStatus, comprobante: '', num_comprobante: '', num_factura: '', notas: '' });
@@ -296,6 +300,7 @@ export default function EventDetailPage() {
     { id: 'presupuesto', label: 'Presupuesto', icon: DollarSign, count: expenses.length },
     { id: 'actividades', label: 'Actividades', icon: Target, count: activities.length },
     { id: 'participantes', label: 'Participantes', icon: Users, count: participants.length },
+    { id: 'venue', label: 'Espacios', icon: LayoutGrid },
     { id: 'kpis', label: 'KPIs', icon: BarChart3 },
   ];
 
@@ -707,6 +712,7 @@ export default function EventDetailPage() {
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0 items-center">
+                      <button onClick={() => setSeatPickerParticipant(p)} className="p-1 hover:bg-green-50 rounded" title="Asignar asiento"><MapPin className="h-4 w-4 text-green-500" /></button>
                       <button onClick={() => setQrParticipant(p)} className="p-1 hover:bg-indigo-50 rounded" title="Ver QR"><QrCode className="h-4 w-4 text-indigo-500" /></button>
                       {event && (
                         <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1 hover:bg-purple-50 rounded">
@@ -741,7 +747,13 @@ export default function EventDetailPage() {
                 <tbody className="divide-y">
                   {participants.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
                     <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-center">{p.numero_asiento ? <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg">{p.numero_asiento}</span> : <span className="text-gray-300">—</span>}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => setSeatPickerParticipant(p)} className="group" title="Cambiar asiento">
+                          {p.numero_asiento
+                            ? <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg group-hover:bg-indigo-100 transition">{p.numero_asiento}</span>
+                            : <span className="text-xs text-gray-300 group-hover:text-green-500 transition">Asignar</span>}
+                        </button>
+                      </td>
                       <td className="px-4 py-3"><p className="font-medium">{p.nombre}</p><div className="flex items-center gap-1.5">{p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}{p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}</div></td>
                       <td className="px-4 py-3 text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
                       <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
@@ -751,6 +763,7 @@ export default function EventDetailPage() {
                       <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex gap-1 justify-center">
+                          <button onClick={() => setSeatPickerParticipant(p)} className="p-1 hover:bg-green-50 rounded" title="Asignar asiento"><MapPin className="h-3.5 w-3.5 text-green-500" /></button>
                           <button onClick={() => setQrParticipant(p)} className="p-1 hover:bg-indigo-50 rounded" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
                           {event && (
                             <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1 hover:bg-purple-50 rounded" >
@@ -772,6 +785,11 @@ export default function EventDetailPage() {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* ============= TAB: Venue Designer ============= */}
+      {tab === 'venue' && event && (
+        <VenueDesigner event={event} participants={participants} onParticipantsChange={loadAll} />
       )}
 
       {/* ============= TAB: KPIs ============= */}
@@ -1133,6 +1151,18 @@ export default function EventDetailPage() {
           <Button onClick={saveEditEvent} loading={savingEvent}><Save className="h-4 w-4 mr-1" />Guardar Cambios</Button>
         </div>
       </Modal>
+
+      {/* Seat Picker Modal */}
+      {event && (
+        <SeatPickerModal
+          isOpen={!!seatPickerParticipant}
+          onClose={() => setSeatPickerParticipant(null)}
+          event={event}
+          participant={seatPickerParticipant}
+          participants={participants}
+          onAssigned={loadAll}
+        />
+      )}
 
       {/* QR Modal */}
       <Modal isOpen={!!qrParticipant} onClose={() => setQrParticipant(null)} title="QR del Participante">

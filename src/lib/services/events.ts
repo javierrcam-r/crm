@@ -538,6 +538,105 @@ export async function getVendorEvents(vendorId: string) {
 }
 
 // =====================================================
+// VENUE LAYOUTS
+// =====================================================
+export type VenueElementType =
+  | 'stage'
+  | 'round_table'
+  | 'rect_table'
+  | 'seat_block'
+  | 'booth'
+  | 'area'
+  | 'label';
+
+export interface VenueElement {
+  id: string;
+  type: VenueElementType;
+  label: string;
+  x: number;          // meters from origin
+  y: number;          // meters from origin
+  w: number;          // width in meters
+  h: number;          // height in meters
+  rotation: number;   // degrees
+  color: string;
+  seats?: number;     // round_table: count around perimeter; rect_table: per long side
+  rows?: number;      // seat_block rows
+  cols?: number;      // seat_block columns per row
+  seatPrefix?: string;
+  groupId?: string;
+  locked?: boolean;
+}
+
+export interface VenueLayout {
+  elements: VenueElement[];
+}
+
+export interface EventVenueLayout {
+  id: string;
+  event_id: string;
+  nombre: string;
+  layout: VenueLayout;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SeatAssignment {
+  seatId: string;
+  participantId: string;
+}
+
+export async function getEventVenueLayout(eventId: string): Promise<EventVenueLayout | null> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_venue_layouts')
+    .select('*')
+    .eq('event_id', eventId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as EventVenueLayout | null;
+}
+
+export async function upsertEventVenueLayout(
+  eventId: string,
+  layout: VenueLayout,
+  nombre: string = 'Principal',
+): Promise<EventVenueLayout> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_venue_layouts')
+    .upsert({ event_id: eventId, layout, nombre }, { onConflict: 'event_id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as EventVenueLayout;
+}
+
+export async function assignSeatToParticipant(
+  participantId: string,
+  seatNumber: string | null,
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('event_participants')
+    .update({ numero_asiento: seatNumber })
+    .eq('id', participantId);
+  if (error) throw error;
+}
+
+export async function bulkAssignSeats(
+  assignments: { participantId: string; seatNumber: string | null }[],
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  for (const a of assignments) {
+    const { error } = await supabase
+      .from('event_participants')
+      .update({ numero_asiento: a.seatNumber })
+      .eq('id', a.participantId);
+    if (error) throw error;
+  }
+}
+
+// =====================================================
 // USERS for selection
 // =====================================================
 export async function getActiveUsers() {
