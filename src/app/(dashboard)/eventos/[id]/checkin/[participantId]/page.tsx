@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Loader2, MapPin } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getEvent, getEventParticipants, updateParticipant,
@@ -108,6 +108,19 @@ export default function CheckinPage() {
                   <p className="text-sm font-medium text-gray-900">{event.nombre}</p>
                 </div>
               )}
+              {participant.numero_asiento ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <MapPin className="h-4 w-4 text-amber-600" />
+                    <p className="text-xs text-amber-700 font-semibold uppercase">Tu ubicación</p>
+                  </div>
+                  <p className="text-2xl font-bold text-amber-800 tracking-wide">{participant.numero_asiento}</p>
+                </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 w-full text-center">
+                  <p className="text-xs text-gray-500">Sin asiento asignado</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -131,6 +144,19 @@ export default function CheckinPage() {
                 <div className="bg-indigo-50 rounded-xl p-3 w-full text-center">
                   <p className="text-xs text-indigo-600 font-semibold uppercase">Evento</p>
                   <p className="text-sm font-medium text-gray-900">{event.nombre}</p>
+                </div>
+              )}
+              {participant.numero_asiento ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <MapPin className="h-4 w-4 text-amber-600" />
+                    <p className="text-xs text-amber-700 font-semibold uppercase">Tu ubicación</p>
+                  </div>
+                  <p className="text-2xl font-bold text-amber-800 tracking-wide">{participant.numero_asiento}</p>
+                </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 w-full text-center">
+                  <p className="text-xs text-gray-500">Sin asiento asignado</p>
                 </div>
               )}
             </div>
