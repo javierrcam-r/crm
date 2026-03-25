@@ -9,6 +9,7 @@ import {
   getEvent, getEventParticipants, updateParticipant,
   type Event, type EventParticipant,
 } from '@/lib/services/events';
+import SeatMapView from '@/components/events/SeatMapView';
 import toast from 'react-hot-toast';
 
 type CheckinState = 'loading' | 'success' | 'already' | 'error';
@@ -22,6 +23,7 @@ export default function CheckinPage() {
   const [state, setState] = useState<CheckinState>('loading');
   const [event, setEvent] = useState<Event | null>(null);
   const [participant, setParticipant] = useState<EventParticipant | null>(null);
+  const [participants, setParticipants] = useState<EventParticipant[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function CheckinPage() {
         getEventParticipants(eventId),
       ]);
       setEvent(ev);
+      setParticipants(parts);
 
       const found = parts.find(p => p.id === participantId);
       if (!found) {
@@ -109,13 +112,16 @@ export default function CheckinPage() {
                 </div>
               )}
               {participant.numero_asiento ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full text-center">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <MapPin className="h-4 w-4 text-amber-600" />
-                    <p className="text-xs text-amber-700 font-semibold uppercase">Tu ubicación</p>
+                <>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <MapPin className="h-4 w-4 text-amber-600" />
+                      <p className="text-xs text-amber-700 font-semibold uppercase">Tu ubicación</p>
+                    </div>
+                    <p className="text-2xl font-bold text-amber-800 tracking-wide">{participant.numero_asiento}</p>
                   </div>
-                  <p className="text-2xl font-bold text-amber-800 tracking-wide">{participant.numero_asiento}</p>
-                </div>
+                  {event && <SeatMapView event={event} highlightSeatId={participant.numero_asiento} participants={participants} />}
+                </>
               ) : (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 w-full text-center">
                   <p className="text-xs text-gray-500">Sin asiento asignado</p>
@@ -147,13 +153,16 @@ export default function CheckinPage() {
                 </div>
               )}
               {participant.numero_asiento ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full text-center">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <MapPin className="h-4 w-4 text-amber-600" />
-                    <p className="text-xs text-amber-700 font-semibold uppercase">Tu ubicación</p>
+                <>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <MapPin className="h-4 w-4 text-amber-600" />
+                      <p className="text-xs text-amber-700 font-semibold uppercase">Tu ubicación</p>
+                    </div>
+                    <p className="text-2xl font-bold text-amber-800 tracking-wide">{participant.numero_asiento}</p>
                   </div>
-                  <p className="text-2xl font-bold text-amber-800 tracking-wide">{participant.numero_asiento}</p>
-                </div>
+                  {event && <SeatMapView event={event} highlightSeatId={participant.numero_asiento} participants={participants} />}
+                </>
               ) : (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 w-full text-center">
                   <p className="text-xs text-gray-500">Sin asiento asignado</p>

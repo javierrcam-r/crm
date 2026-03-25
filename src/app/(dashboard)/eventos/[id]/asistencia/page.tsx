@@ -12,6 +12,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { InvitationDownloadButton } from '@/components/events/InvitationPDF';
+import SeatMapView from '@/components/events/SeatMapView';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getEvent, getEventParticipants, updateParticipant, getActiveUsers,
@@ -322,6 +323,10 @@ export default function EventAssistancePage() {
                 </div>
               )}
 
+              {selectedParticipant?.numero_asiento && (
+                <SeatMapView event={event} highlightSeatId={selectedParticipant.numero_asiento} participants={participants} />
+              )}
+
               <Button onClick={startScanner} variant="secondary" className="w-full">
                 <ScanLine className="h-4 w-4 mr-1" /> Escanear Otro
               </Button>
@@ -333,6 +338,7 @@ export default function EventAssistancePage() {
             <ParticipantDetail
               participant={selectedParticipant}
               event={event}
+              participants={participants}
               getCatColor={getCatColor}
               getUserName={getUserName}
               onToggleAttendance={() => toggleAttendance(selectedParticipant)}
@@ -442,6 +448,7 @@ export default function EventAssistancePage() {
               <ParticipantDetail
                 participant={selectedParticipant}
                 event={event}
+                participants={participants}
                 getCatColor={getCatColor}
                 getUserName={getUserName}
                 onToggleAttendance={() => toggleAttendance(selectedParticipant)}
@@ -460,6 +467,7 @@ export default function EventAssistancePage() {
 function ParticipantDetail({
   participant: p,
   event,
+  participants,
   getCatColor,
   getUserName,
   onToggleAttendance,
@@ -469,6 +477,7 @@ function ParticipantDetail({
 }: {
   participant: EventParticipant;
   event: Event;
+  participants: EventParticipant[];
   getCatColor: (cat: string | null) => string | null;
   getUserName: (id: string) => string;
   onToggleAttendance: () => void;
@@ -506,6 +515,10 @@ function ParticipantDetail({
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
             <p className="text-xs text-gray-400">Sin asiento asignado</p>
           </div>
+        )}
+
+        {p.numero_asiento && (
+          <SeatMapView event={event} highlightSeatId={p.numero_asiento} participants={participants} />
         )}
 
         {/* Main action: Attendance */}
