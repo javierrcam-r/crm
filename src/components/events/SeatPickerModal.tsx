@@ -65,7 +65,7 @@ function elementBounds(el: VenueElement) {
   return { minX, minY, maxX, maxY };
 }
 
-function seatColor(occ: EventParticipant | null, isMine: boolean, isSel: boolean) {
+function seatColor(occ: EventParticipant | null | undefined, isMine: boolean, isSel: boolean) {
   if (isSel) return '#6366f1';
   if (isMine) return '#f59e0b';
   if (occ) return '#f87171';
