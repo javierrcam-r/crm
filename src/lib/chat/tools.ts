@@ -77,16 +77,17 @@ export const getUserScheduleToday = tool(
     const dayStart = `${date}T00:00:00-05:00`;
     const dayEnd = `${date}T23:59:59-05:00`;
 
+    const visitSelect = 'id, scheduled_at, status, objetivo, resultado, location_text, customer:customers(nombre, direccion, ciudad)';
     const [visitsById, visitsByAuth, activitiesRes] = await Promise.all([
       db.from('visits')
-        .select('id, scheduled_at, status, tipo, resultado, customer:customers(nombre, direccion, ciudad)')
+        .select(visitSelect)
         .is('deleted_at', null)
         .eq('user_id', profileId)
         .gte('scheduled_at', dayStart)
         .lte('scheduled_at', dayEnd)
         .order('scheduled_at'),
       db.from('visits')
-        .select('id, scheduled_at, status, tipo, resultado, customer:customers(nombre, direccion, ciudad)')
+        .select(visitSelect)
         .is('deleted_at', null)
         .eq('user_id', authId)
         .gte('scheduled_at', dayStart)
@@ -147,16 +148,17 @@ export const getUserActivitiesRange = tool(
     const startISO = `${dateFrom}T00:00:00-05:00`;
     const endISO = `${dateTo}T23:59:59-05:00`;
 
+    const vSelect = 'id, scheduled_at, status, objetivo, resultado, customer:customers(nombre)';
     const [visitsById, visitsByAuth, allActivities] = await Promise.all([
       db.from('visits')
-        .select('id, scheduled_at, status, tipo, resultado, customer:customers(nombre)')
+        .select(vSelect)
         .is('deleted_at', null)
         .eq('user_id', profileId)
         .gte('scheduled_at', startISO)
         .lte('scheduled_at', endISO)
         .order('scheduled_at'),
       db.from('visits')
-        .select('id, scheduled_at, status, tipo, resultado, customer:customers(nombre)')
+        .select(vSelect)
         .is('deleted_at', null)
         .eq('user_id', authId)
         .gte('scheduled_at', startISO)
