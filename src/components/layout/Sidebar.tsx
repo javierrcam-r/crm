@@ -21,6 +21,7 @@ import {
   ClipboardList,
   UserCheck,
   Palmtree,
+  Sparkles,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -44,6 +45,7 @@ const vendedorNavigation = [
 
 const adminNavigation = [
   { key: 'usuarios', name: 'Usuarios', href: '/usuarios', icon: Shield },
+  { key: 'asistente', name: 'Asistente IA', href: '/asistente', icon: Sparkles },
 ];
 
 // Panel de supervisión - para supervisor y supervisor_nivel1

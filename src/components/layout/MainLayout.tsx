@@ -1,6 +1,7 @@
 'use client';
 
 import Sidebar from './Sidebar';
+import FloatingChatWidget from '@/components/chat/FloatingChatWidget';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
+      <FloatingChatWidget />
     </div>
   );
 }
