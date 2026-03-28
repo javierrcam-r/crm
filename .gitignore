@@ -24,10 +24,22 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local env files
+.env
 .env*.local
+.env.production
 
 # Vercel
 .vercel
+
+# IDE / Editor
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+
+# Claude
+.claude/
 
 # TypeScript
 *.tsbuildinfo
