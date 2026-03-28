@@ -18,7 +18,6 @@ export default function AudioRecorder({ onTranscription, disabled }: AudioRecord
   const analyserRef = useRef<AnalyserNode | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
-  const streamRef = useRef<MediaStream | null>(null);
 
   const drawWaveform = useCallback(() => {
     const analyser = analyserRef.current;
@@ -32,8 +31,13 @@ export default function AudioRecorder({ onTranscription, disabled }: AudioRecord
     analyser.getByteTimeDomainData(dataArray);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    gradient.addColorStop(0, 'rgba(129, 140, 248, 0.4)');
+    gradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.8)');
+    gradient.addColorStop(1, 'rgba(129, 140, 248, 0.4)');
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(165, 180, 252, 0.8)';
+    ctx.strokeStyle = gradient;
     ctx.beginPath();
 
     const sliceWidth = canvas.width / bufferLength;
@@ -41,8 +45,7 @@ export default function AudioRecorder({ onTranscription, disabled }: AudioRecord
     for (let i = 0; i < bufferLength; i++) {
       const v = dataArray[i] / 128.0;
       const y = (v * canvas.height) / 2;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       x += sliceWidth;
     }
     ctx.lineTo(canvas.width, canvas.height / 2);
@@ -51,16 +54,13 @@ export default function AudioRecorder({ onTranscription, disabled }: AudioRecord
   }, [recording]);
 
   useEffect(() => {
-    if (recording) {
-      drawWaveform();
-    }
+    if (recording) drawWaveform();
     return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
   }, [recording, drawWaveform]);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
 
       const audioCtx = new AudioContext();
       const source = audioCtx.createMediaStreamSource(stream);
@@ -106,8 +106,6 @@ export default function AudioRecorder({ onTranscription, disabled }: AudioRecord
       const data = await res.json();
       if (data.text && typeof data.text === 'string') {
         onTranscription(data.text.trim());
-      } else if (data.error) {
-        console.error('Transcription error:', data.error);
       }
     } catch (err) {
       console.error('Send audio error:', err);
@@ -120,23 +118,28 @@ export default function AudioRecorder({ onTranscription, disabled }: AudioRecord
 
   if (transcribing) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10">
-        <Loader2 className="w-4 h-4 text-indigo-300 animate-spin" />
-        <span className="text-xs text-indigo-200">Transcribiendo...</span>
+      <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-indigo-500/20"
+        style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.1))' }}>
+        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-300 animate-spin" />
+        <span className="text-[10px] sm:text-xs text-indigo-200/70 font-medium">Transcribiendo...</span>
       </div>
     );
   }
 
   if (recording) {
     return (
-      <div className="flex items-center gap-2">
-        <canvas ref={canvasRef} width={80} height={28} className="opacity-80" />
-        <span className="text-xs text-red-300 font-mono min-w-[36px] tabular-nums">{formatTime(elapsed)}</span>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="relative">
+          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping" />
+          <span className="relative w-2 h-2 rounded-full bg-red-400 block" />
+        </div>
+        <canvas ref={canvasRef} width={60} height={24} className="opacity-90 hidden sm:block" />
+        <span className="text-[10px] sm:text-xs text-red-300/80 font-mono min-w-[32px] tabular-nums">{formatTime(elapsed)}</span>
         <button
           onClick={stopRecording}
-          className="w-9 h-9 rounded-xl bg-red-500/80 hover:bg-red-500 flex items-center justify-center transition-all animate-pulse"
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-red-500/30 hover:bg-red-500/50 border border-red-500/30 flex items-center justify-center transition-all"
         >
-          <Square className="w-3.5 h-3.5 text-white fill-white" />
+          <Square className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-300 fill-red-300" />
         </button>
       </div>
     );
@@ -146,10 +149,11 @@ export default function AudioRecorder({ onTranscription, disabled }: AudioRecord
     <button
       onClick={startRecording}
       disabled={disabled}
-      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all disabled:opacity-40"
+      className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg sm:rounded-xl flex items-center justify-center transition-all disabled:opacity-20 border border-white/[0.08] hover:border-white/15 hover:bg-white/[0.06] active:scale-90"
+      style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))' }}
       title="Grabar audio"
     >
-      <Mic className="w-4 h-4 text-indigo-300" />
+      <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
     </button>
   );
 }

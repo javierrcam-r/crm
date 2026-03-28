@@ -377,18 +377,239 @@ export const getSalesGoalsInfo = tool(
 );
 
 // ============================================================
+export const getVisitReport = tool(
+  async ({ userProfileId, dateFrom, dateTo }: { userProfileId?: string; dateFrom: string; dateTo: string }) => {
+    const db = getDb();
+    const s = `${dateFrom}T00:00:00-05:00`;
+    const e = `${dateTo}T23:59:59-05:00`;
+    const sel = 'id, scheduled_at, status, objetivo, resultado, observaciones, user_id, customer:customers(nombre, ciudad)';
+
+    let visits: any[] = [];
+    if (userProfileId) {
+      const { profileId, authId } = await resolveUserIds(db, userProfileId);
+      const [r1, r2] = await Promise.all([
+        db.from('visits').select(sel).is('deleted_at', null).eq('user_id', profileId).gte('scheduled_at', s).lte('scheduled_at', e).order('scheduled_at'),
+        db.from('visits').select(sel).is('deleted_at', null).eq('user_id', authId).gte('scheduled_at', s).lte('scheduled_at', e).order('scheduled_at'),
+      ]);
+      const seen = new Set<string>();
+      visits = [...(r1.data || []), ...(r2.data || [])].filter(v => { if (seen.has(v.id)) return false; seen.add(v.id); return true; });
+    } else {
+      const { data } = await db.from('visits').select(sel).is('deleted_at', null).gte('scheduled_at', s).lte('scheduled_at', e).order('scheduled_at');
+      visits = data || [];
+    }
+
+    const byStatus: Record<string, number> = {};
+    const withResult: any[] = [];
+    const byCity: Record<string, number> = {};
+    visits.forEach((v: any) => {
+      byStatus[v.status] = (byStatus[v.status] || 0) + 1;
+      if (v.resultado) withResult.push({ fecha: v.scheduled_at, cliente: v.customer?.nombre, resultado: v.resultado, observaciones: v.observaciones });
+      const city = v.customer?.ciudad || 'Sin ciudad';
+      byCity[city] = (byCity[city] || 0) + 1;
+    });
+
+    const uniqueCustomers = new Set(visits.map((v: any) => v.customer?.nombre).filter(Boolean));
+    return JSON.stringify({
+      periodo: { desde: dateFrom, hasta: dateTo },
+      totalVisitas: visits.length,
+      clientesUnicos: uniqueCustomers.size,
+      porEstado: byStatus,
+      porCiudad: byCity,
+      tasaCompletadas: visits.length > 0 ? `${Math.round((byStatus['completada'] || 0) / visits.length * 100)}%` : '0%',
+      visitasConResultado: withResult.length,
+      resultados: withResult.slice(0, 30),
+      visitasDetalle: visits.slice(0, 50).map((v: any) => ({ fecha: v.scheduled_at, cliente: v.customer?.nombre, ciudad: v.customer?.ciudad, estado: v.status, objetivo: v.objetivo, resultado: v.resultado })),
+    });
+  },
+  {
+    name: 'getVisitReport',
+    description: 'Visit report for a date range, optionally by salesperson. Returns stats (by status, city), completion rate, results, and visit details. Perfect for "reporte de visitas de X este mes".',
+    schema: z.object({
+      userProfileId: z.string().optional().describe('Profile id from findUser. Omit for all sellers.'),
+      dateFrom: z.string().describe('YYYY-MM-DD'),
+      dateTo: z.string().describe('YYYY-MM-DD'),
+    }),
+  }
+);
+
+// ============================================================
+export const getCustomerPortfolio = tool(
+  async ({ userProfileId }: { userProfileId?: string }) => {
+    const db = getDb();
+    const { data: users } = await db.from('users_profile').select('id, user_id, nombre_completo, rol').eq('activo', true);
+    const userMap: Record<string, string> = {};
+    (users || []).forEach(u => { userMap[u.user_id] = u.nombre_completo; userMap[u.id] = u.nombre_completo; });
+
+    let q = db.from('customers').select('id, nombre, user_id, tipo, etapa_embudo, ciudad, zona, calidad_pago, categoria_compra').is('deleted_at', null);
+    if (userProfileId) {
+      const { authId } = await resolveUserIds(db, userProfileId);
+      q = q.eq('user_id', authId);
+    }
+    const { data, error } = await q;
+    if (error) return JSON.stringify({ error: error.message });
+    const custs = data || [];
+
+    const byFunnel: Record<string, number> = {};
+    const byCity: Record<string, number> = {};
+    const bySeller: Record<string, number> = {};
+    const byPayQuality: Record<string, number> = {};
+    custs.forEach(c => {
+      byFunnel[c.etapa_embudo || 'sin etapa'] = (byFunnel[c.etapa_embudo || 'sin etapa'] || 0) + 1;
+      byCity[c.ciudad || 'sin ciudad'] = (byCity[c.ciudad || 'sin ciudad'] || 0) + 1;
+      const seller = userMap[c.user_id] || 'Sin asignar';
+      bySeller[seller] = (bySeller[seller] || 0) + 1;
+      byPayQuality[c.calidad_pago || 'sin dato'] = (byPayQuality[c.calidad_pago || 'sin dato'] || 0) + 1;
+    });
+
+    return JSON.stringify({
+      totalClientes: custs.length,
+      porEtapaEmbudo: byFunnel,
+      porCiudad: byCity,
+      porVendedor: userProfileId ? undefined : bySeller,
+      porCalidadPago: byPayQuality,
+      clientes: custs.slice(0, 60).map(c => ({ nombre: c.nombre, ciudad: c.ciudad, embudo: c.etapa_embudo, calidad_pago: c.calidad_pago, vendedor: userMap[c.user_id] || 'Sin asignar' })),
+    });
+  },
+  {
+    name: 'getCustomerPortfolio',
+    description: 'Customer portfolio report. Optionally filtered by seller. Shows counts by funnel stage, city, payment quality. Use for "cuántos clientes tiene Camila", "reporte de cartera".',
+    schema: z.object({
+      userProfileId: z.string().optional().describe('Profile id from findUser. Omit for all sellers.'),
+    }),
+  }
+);
+
+// ============================================================
+export const getEventExpenseReport = tool(
+  async ({ eventId }: { eventId: string }) => {
+    const db = getDb();
+    const { data: ev } = await db.from('events').select('nombre, presupuesto_total').eq('id', eventId).single();
+    if (!ev) return JSON.stringify({ found: false, message: 'Evento no encontrado' });
+
+    const { data: users } = await db.from('users_profile').select('id, nombre_completo').eq('activo', true);
+    const uMap: Record<string, string> = {};
+    (users || []).forEach(u => { uMap[u.id] = u.nombre_completo; });
+
+    const { data, error } = await db.from('event_expenses').select('id, categoria, descripcion, proveedor, monto, fecha, estado, comprobante, num_comprobante, num_factura, created_by, notas').eq('event_id', eventId).order('fecha');
+    if (error) return JSON.stringify({ error: error.message });
+    const expenses = data || [];
+
+    const byCat: Record<string, { monto: number; count: number }> = {};
+    const byStatus: Record<string, { monto: number; count: number }> = {};
+    let totalGastos = 0;
+    expenses.forEach(e => {
+      const cat = e.categoria || 'Sin categoría';
+      if (!byCat[cat]) byCat[cat] = { monto: 0, count: 0 };
+      byCat[cat].monto += Number(e.monto);
+      byCat[cat].count++;
+      const st = e.estado || 'sin estado';
+      if (!byStatus[st]) byStatus[st] = { monto: 0, count: 0 };
+      byStatus[st].monto += Number(e.monto);
+      byStatus[st].count++;
+      totalGastos += Number(e.monto);
+    });
+
+    return JSON.stringify({
+      found: true,
+      evento: ev.nombre,
+      presupuesto: ev.presupuesto_total,
+      totalGastos: Math.round(totalGastos * 100) / 100,
+      saldo: Math.round(((ev.presupuesto_total || 0) - totalGastos) * 100) / 100,
+      porcentajeUsado: ev.presupuesto_total ? `${Math.round(totalGastos / ev.presupuesto_total * 100)}%` : 'N/A',
+      totalItems: expenses.length,
+      porCategoria: byCat,
+      porEstado: byStatus,
+      gastos: expenses.map(e => ({
+        categoria: e.categoria,
+        descripcion: e.descripcion,
+        proveedor: e.proveedor,
+        monto: e.monto,
+        fecha: e.fecha,
+        estado: e.estado,
+        comprobante: e.comprobante,
+        num_factura: e.num_factura,
+        registradoPor: uMap[e.created_by] || e.created_by,
+      })),
+    });
+  },
+  {
+    name: 'getEventExpenseReport',
+    description: 'Detailed event expense report: every expense item with category, provider, amount, status, receipt info. Shows budget vs actual spending. Use for "gastos del evento X", "desglose de gastos".',
+    schema: z.object({ eventId: z.string().describe('Event UUID from searchEvents') }),
+  }
+);
+
+// ============================================================
+export const getAllSellersReport = tool(
+  async ({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) => {
+    const db = getDb();
+    const s = `${dateFrom}T00:00:00-05:00`;
+    const e = `${dateTo}T23:59:59-05:00`;
+
+    const { data: users } = await db.from('users_profile').select('id, user_id, nombre_completo, rol').eq('activo', true);
+    const sellers = (users || []).filter(u => ['vendedor', 'supervisor_vendedor'].includes(u.rol));
+    const uMap: Record<string, string> = {};
+    (users || []).forEach(u => { uMap[u.id] = u.nombre_completo; uMap[u.user_id] = u.nombre_completo; });
+
+    const { data: allVisits } = await db.from('visits').select('id, user_id, status, resultado').is('deleted_at', null).gte('scheduled_at', s).lte('scheduled_at', e);
+    const { data: allCustomers } = await db.from('customers').select('user_id').is('deleted_at', null);
+    const { data: allOrders } = await db.from('orders').select('user_id, total').is('deleted_at', null).gte('order_date', dateFrom).lte('order_date', dateTo);
+
+    const report = sellers.map(seller => {
+      const authId = seller.user_id;
+      const profileId = seller.id;
+      const visits = (allVisits || []).filter(v => v.user_id === authId || v.user_id === profileId);
+      const custCount = (allCustomers || []).filter(c => c.user_id === authId).length;
+      const orders = (allOrders || []).filter((o: any) => o.user_id === authId || o.user_id === profileId);
+      const byStatus: Record<string, number> = {};
+      visits.forEach(v => { byStatus[v.status] = (byStatus[v.status] || 0) + 1; });
+
+      return {
+        vendedor: seller.nombre_completo,
+        rol: seller.rol,
+        totalClientes: custCount,
+        visitas: {
+          total: visits.length,
+          completadas: byStatus['completada'] || 0,
+          noAtendio: byStatus['no_atendio'] || 0,
+          programadas: byStatus['programada'] || 0,
+          canceladas: byStatus['cancelada'] || 0,
+          tasaExito: visits.length > 0 ? `${Math.round((byStatus['completada'] || 0) / visits.length * 100)}%` : '0%',
+          conResultado: visits.filter(v => v.resultado).length,
+        },
+        pedidos: { total: orders.length, montoTotal: orders.reduce((sum, o) => sum + Number(o.total || 0), 0) },
+      };
+    });
+
+    return JSON.stringify({ periodo: { desde: dateFrom, hasta: dateTo }, vendedores: report });
+  },
+  {
+    name: 'getAllSellersReport',
+    description: 'Comparative report of ALL sellers in a period: visits (by status, completion rate), client count, orders. Use for "reporte de todos los vendedores", "comparar vendedores", "desempeño del equipo".',
+    schema: z.object({
+      dateFrom: z.string().describe('YYYY-MM-DD'),
+      dateTo: z.string().describe('YYYY-MM-DD'),
+    }),
+  }
+);
+
+// ============================================================
 export const allTools = [
   getCurrentDateTime,
   findUser,
   getUserScheduleToday,
   getUserActivitiesRange,
   searchVisitsByCustomer,
+  getVisitReport,
+  getCustomerPortfolio,
   searchEvents,
   getEventInfo,
+  getEventExpenseReport,
   getEventParticipantStats,
   getUserVacations,
   getBlockedDaysInfo,
   getOrdersInfo,
   getCustomerInfo,
   getSalesGoalsInfo,
+  getAllSellersReport,
 ];
