@@ -26,12 +26,12 @@ import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-const STATUS_CFG: Record<string, { label: string; color: string; dot: string; glass: string; icon: any }> = {
-  completada: { label: 'Completadas', color: 'text-emerald-400', dot: 'bg-emerald-400', glass: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20', icon: CheckCircle2 },
-  programada: { label: 'Programadas', color: 'text-blue-400', dot: 'bg-blue-400', glass: 'from-blue-500/20 to-blue-500/5 border-blue-500/20', icon: Clock },
-  no_atendio: { label: 'No atendió', color: 'text-amber-400', dot: 'bg-amber-400', glass: 'from-amber-500/20 to-amber-500/5 border-amber-500/20', icon: Ban },
-  cancelada: { label: 'Canceladas', color: 'text-red-400', dot: 'bg-red-400', glass: 'from-red-500/20 to-red-500/5 border-red-500/20', icon: XCircle },
-  reprogramada: { label: 'Reprogramadas', color: 'text-purple-400', dot: 'bg-purple-400', glass: 'from-purple-500/20 to-purple-500/5 border-purple-500/20', icon: RefreshCw },
+const STATUS_CFG: Record<string, { label: string; color: string; colorLight: string; dot: string; glass: string; glassLight: string; icon: any }> = {
+  completada:  { label: 'Completadas',  color: 'text-emerald-400', colorLight: 'text-emerald-600', dot: 'bg-emerald-400 dark:bg-emerald-400',  glass: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20', glassLight: 'from-emerald-500/10 to-emerald-50 border-emerald-200', icon: CheckCircle2 },
+  programada:  { label: 'Programadas',  color: 'text-blue-400',    colorLight: 'text-blue-600',    dot: 'bg-blue-400 dark:bg-blue-400',      glass: 'from-blue-500/20 to-blue-500/5 border-blue-500/20',       glassLight: 'from-blue-500/10 to-blue-50 border-blue-200',       icon: Clock },
+  no_atendio:  { label: 'No atendió',   color: 'text-amber-400',   colorLight: 'text-amber-600',   dot: 'bg-amber-400 dark:bg-amber-400',    glass: 'from-amber-500/20 to-amber-500/5 border-amber-500/20',     glassLight: 'from-amber-500/10 to-amber-50 border-amber-200',     icon: Ban },
+  cancelada:   { label: 'Canceladas',   color: 'text-red-400',     colorLight: 'text-red-600',     dot: 'bg-red-400 dark:bg-red-400',        glass: 'from-red-500/20 to-red-500/5 border-red-500/20',           glassLight: 'from-red-500/10 to-red-50 border-red-200',           icon: XCircle },
+  reprogramada:{ label: 'Reprogramadas',color: 'text-purple-400',  colorLight: 'text-purple-600',  dot: 'bg-purple-400 dark:bg-purple-400',  glass: 'from-purple-500/20 to-purple-500/5 border-purple-500/20',   glassLight: 'from-purple-500/10 to-purple-50 border-purple-200',   icon: RefreshCw },
 };
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -40,8 +40,8 @@ type PeriodMode = 'month' | 'week' | 'custom';
 
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative rounded-2xl border border-slate-700/60 bg-slate-900 overflow-hidden ${className}`}>
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/25 to-transparent" />
+    <div className={`relative rounded-2xl border border-gray-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 overflow-hidden shadow-sm dark:shadow-none ${className}`}>
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/15 dark:via-indigo-500/25 to-transparent" />
       {children}
     </div>
   );
@@ -49,15 +49,15 @@ function GlassCard({ children, className = '' }: { children: React.ReactNode; cl
 
 function GlassStat({ icon: Icon, label, value, sub, color, glow }: { icon: any; label: string; value: string | number; sub?: string; color: string; glow: string }) {
   return (
-    <div className="relative rounded-xl border border-slate-700/60 bg-slate-900 p-3 sm:p-4 overflow-hidden group">
-      <div className={`absolute -top-8 -right-8 w-20 h-20 rounded-full blur-2xl opacity-15 group-hover:opacity-30 transition-opacity ${glow}`} />
+    <div className="relative rounded-xl border border-gray-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-3 sm:p-4 overflow-hidden group shadow-sm dark:shadow-none">
+      <div className={`absolute -top-8 -right-8 w-20 h-20 rounded-full blur-2xl opacity-10 dark:opacity-15 group-hover:opacity-20 dark:group-hover:opacity-30 transition-opacity ${glow}`} />
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 uppercase tracking-wider">{label}</p>
-          <p className={`text-lg sm:text-2xl font-bold mt-0.5 ${color}`}>{value}</p>
-          {sub && <p className="text-[10px] text-slate-500 mt-0.5">{sub}</p>}
+          <p className="text-[10px] sm:text-[11px] font-medium text-gray-400 dark:text-slate-400 uppercase tracking-wider">{label}</p>
+          <p className={`text-lg sm:text-2xl font-bold mt-0.5 text-gray-900 dark:${color}`}>{value}</p>
+          {sub && <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">{sub}</p>}
         </div>
-        <div className={`p-1.5 sm:p-2 rounded-lg border border-slate-700/50 bg-slate-800/80 ${color}`}>
+        <div className={`p-1.5 sm:p-2 rounded-lg border border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/80 ${color}`}>
           <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       </div>
@@ -70,10 +70,10 @@ function GlassProgress({ label, value, max, color }: { label: string; value: num
   return (
     <div>
       <div className="flex justify-between text-[11px] mb-1.5">
-        <span className="text-slate-400">{label}</span>
+        <span className="text-gray-500 dark:text-slate-400">{label}</span>
         <span className={`font-bold ${color}`}>{pct}%</span>
       </div>
-      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-700 ${color.replace('text-', 'bg-')}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -85,7 +85,6 @@ export default function ReportesPage() {
   const [tab, setTab] = useState<'visitas' | 'pedidos'>('visitas');
   const [loading, setLoading] = useState(true);
 
-  // Period
   const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
   const [refDate, setRefDate] = useState(new Date());
   const [customFrom, setCustomFrom] = useState('');
@@ -109,7 +108,6 @@ export default function ReportesPage() {
     setRefDate(d => periodMode === 'week' ? (dir === -1 ? subWeeks(d, 1) : addWeeks(d, 1)) : (dir === -1 ? subMonths(d, 1) : addMonths(d, 1)));
   };
 
-  // Data
   const [visits, setVisits] = useState<Visit[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [periodOrders, setPeriodOrders] = useState<Order[]>([]);
@@ -205,8 +203,8 @@ export default function ReportesPage() {
       </div>
 
       {/* === PERIOD FILTER BAR === */}
-      <div className="relative rounded-2xl border border-slate-700/60 bg-slate-900 overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/25 to-transparent" />
+      <div className="relative rounded-2xl border border-gray-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 overflow-hidden shadow-sm dark:shadow-none">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/15 dark:via-indigo-500/25 to-transparent" />
         <div className="relative p-3 sm:p-4 space-y-3">
           {/* Mode selector */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -217,23 +215,23 @@ export default function ReportesPage() {
             ]).map(m => (
               <button key={m.key} onClick={() => setPeriodMode(m.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${periodMode === m.key
-                  ? 'bg-indigo-600/25 text-indigo-300 border border-indigo-500/40'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent hover:border-slate-700'}`}>
+                  ? 'bg-indigo-50 dark:bg-indigo-600/25 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 border border-transparent hover:border-gray-200 dark:hover:border-slate-700'}`}>
                 <m.icon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{m.label}</span>
               </button>
             ))}
 
             {/* Tabs */}
-            <div className="ml-auto flex gap-1 bg-slate-800 rounded-lg p-0.5 border border-slate-700/50">
+            <div className="ml-auto flex gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5 border border-gray-200 dark:border-slate-700/50">
               {[
                 { key: 'visitas' as const, label: 'Visitas', icon: MapPin },
                 { key: 'pedidos' as const, label: 'Pedidos', icon: ShoppingCart },
               ].map(t => (
                 <button key={t.key} onClick={() => setTab(t.key)}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all ${tab === t.key
-                    ? 'bg-indigo-600/30 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-300'}`}>
+                    ? 'bg-white dark:bg-indigo-600/30 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'}`}>
                   <t.icon className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t.label}</span>
                 </button>
@@ -244,11 +242,11 @@ export default function ReportesPage() {
           {/* Period controls */}
           {periodMode !== 'custom' ? (
             <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+              <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-semibold text-white capitalize min-w-[140px] text-center">{periodLabel}</span>
-              <button onClick={() => navigate(1)} className="p-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize min-w-[140px] text-center">{periodLabel}</span>
+              <button onClick={() => navigate(1)} className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white transition-all">
                 <ChevronRight className="w-4 h-4" />
               </button>
 
@@ -260,10 +258,10 @@ export default function ReportesPage() {
                     return (
                       <button key={m} onClick={() => setRefDate(new Date(currentYear, i, 1))}
                         className={`px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-medium transition-all whitespace-nowrap ${isActive
-                          ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                          ? 'bg-indigo-50 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40'
                           : isCurrent
-                          ? 'text-slate-300 border border-slate-600'
-                          : 'text-slate-500 hover:text-slate-300 border border-transparent hover:border-slate-700'}`}>
+                          ? 'text-gray-700 dark:text-slate-300 border border-gray-300 dark:border-slate-600'
+                          : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 border border-transparent hover:border-gray-200 dark:hover:border-slate-700'}`}>
                         {m}
                       </button>
                     );
@@ -274,10 +272,10 @@ export default function ReportesPage() {
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
               <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-                className="px-3 py-1.5 rounded-lg text-xs bg-slate-800 border border-slate-700 text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]" />
-              <span className="text-slate-500 text-xs">a</span>
+                className="px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:border-indigo-500 focus:outline-none dark:[color-scheme:dark]" />
+              <span className="text-gray-400 dark:text-slate-500 text-xs">a</span>
               <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-                className="px-3 py-1.5 rounded-lg text-xs bg-slate-800 border border-slate-700 text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]" />
+                className="px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:border-indigo-500 focus:outline-none dark:[color-scheme:dark]" />
             </div>
           )}
         </div>
@@ -287,7 +285,7 @@ export default function ReportesPage() {
         <>
           {/* Stats grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
-            <GlassStat icon={BarChart3} label="Total" value={totalVisits} color="text-white" glow="bg-white" />
+            <GlassStat icon={BarChart3} label="Total" value={totalVisits} color="text-white" glow="bg-indigo-500" />
             {Object.entries(STATUS_CFG).map(([key, cfg]) => (
               <GlassStat key={key} icon={cfg.icon} label={cfg.label} value={byStatus[key] || 0}
                 sub={totalVisits > 0 ? `${Math.round(((byStatus[key] || 0) / totalVisits) * 100)}%` : '0%'}
@@ -298,15 +296,15 @@ export default function ReportesPage() {
           {/* Performance bars */}
           <GlassCard className="p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-white">Rendimiento</h2>
-              <button onClick={exportVisits} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 hover:bg-slate-800 transition-all">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Rendimiento</h2>
+              <button onClick={exportVisits} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all">
                 <FileDown className="w-3.5 h-3.5" /> CSV
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-              <GlassProgress label="Tasa de completación" value={byStatus['completada'] || 0} max={totalVisits} color="text-emerald-400" />
-              <GlassProgress label="No atendieron" value={byStatus['no_atendio'] || 0} max={totalVisits} color="text-amber-400" />
-              <GlassProgress label="Con resultado" value={withResult} max={totalVisits} color="text-blue-400" />
+              <GlassProgress label="Tasa de completación" value={byStatus['completada'] || 0} max={totalVisits} color="text-emerald-500 dark:text-emerald-400" />
+              <GlassProgress label="No atendieron" value={byStatus['no_atendio'] || 0} max={totalVisits} color="text-amber-500 dark:text-amber-400" />
+              <GlassProgress label="Con resultado" value={withResult} max={totalVisits} color="text-blue-500 dark:text-blue-400" />
             </div>
           </GlassCard>
 
@@ -314,20 +312,20 @@ export default function ReportesPage() {
           <GlassCard className="p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-white">Historial por Cliente</h2>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Historial por Cliente</h2>
                 {selectedCustomer && (
-                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs border border-indigo-500/20">
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs border border-indigo-200 dark:border-indigo-500/20">
                     {selectedCustomer.nombre}
-                    <button onClick={() => { setSelectedCustomerId(null); setAiSummary(null); }} className="hover:text-red-400 transition-colors">
+                    <button onClick={() => { setSelectedCustomerId(null); setAiSummary(null); }} className="hover:text-red-500 dark:hover:text-red-400 transition-colors">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
                 )}
               </div>
               <div className="relative w-full sm:w-56">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
                 <input type="text" value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Buscar cliente..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
               </div>
             </div>
 
@@ -338,19 +336,19 @@ export default function ReportesPage() {
                   const comp = cv.filter(v => v.status === 'completada').length;
                   return (
                     <button key={c.id} onClick={() => { setSelectedCustomerId(c.id); setAiSummary(null); }}
-                      className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-slate-700/50 hover:border-indigo-500/40 bg-slate-800/50 hover:bg-slate-800 text-left transition-all group">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-700 bg-slate-800 group-hover:border-indigo-500/40 transition-colors">
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-indigo-300 transition-colors">{cv.length}</span>
+                      className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-gray-100 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-500/40 bg-gray-50/50 dark:bg-slate-800/50 hover:bg-indigo-50/50 dark:hover:bg-slate-800 text-left transition-all group">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 group-hover:border-indigo-300 dark:group-hover:border-indigo-500/40 transition-colors">
+                        <span className="text-xs font-bold text-gray-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{cv.length}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-slate-200 truncate group-hover:text-white transition-colors">{c.nombre}</p>
-                        <p className="text-[10px] text-slate-500">{c.ciudad || 'Sin ciudad'} · {comp}/{cv.length} completadas</p>
+                        <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{c.nombre}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-slate-500">{c.ciudad || 'Sin ciudad'} · {comp}/{cv.length} completadas</p>
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-700 group-hover:text-indigo-400 shrink-0 transition-colors" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 shrink-0 transition-colors" />
                     </button>
                   );
                 })}
-                {filteredCustomers.length === 0 && <p className="col-span-full text-center text-xs text-slate-500 py-8">Sin clientes con visitas en este período</p>}
+                {filteredCustomers.length === 0 && <p className="col-span-full text-center text-xs text-gray-400 dark:text-slate-500 py-8">Sin clientes con visitas en este período</p>}
               </div>
             ) : (
               <div className="space-y-4">
@@ -358,7 +356,7 @@ export default function ReportesPage() {
                   {Object.entries(STATUS_CFG).map(([key, cfg]) => {
                     const count = customerVisits.filter(v => v.status === key).length;
                     if (count === 0) return null;
-                    return <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border bg-gradient-to-r ${cfg.glass} ${cfg.color}`}>
+                    return <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border bg-gradient-to-r dark:${cfg.glass} ${cfg.glassLight} dark:${cfg.color} ${cfg.colorLight}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} /> {cfg.label}: {count}
                     </span>;
                   })}
@@ -366,56 +364,56 @@ export default function ReportesPage() {
 
                 {/* Timeline */}
                 <div className="relative">
-                  <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-indigo-500/40 via-slate-700 to-transparent" />
+                  <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-indigo-400/40 dark:from-indigo-500/40 via-gray-200 dark:via-slate-700 to-transparent" />
                   <div className="space-y-0.5">
                     {customerVisits.map(v => {
                       const cfg = STATUS_CFG[v.status] || STATUS_CFG['programada'];
                       const d = new Date(v.scheduled_at);
                       return (
                         <button key={v.id} onClick={() => setSelectedVisit(v)}
-                          className="relative w-full flex items-start gap-2.5 pl-1 pr-2 py-2 rounded-lg hover:bg-slate-800/70 text-left transition-all group">
-                          <div className="relative z-10 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 border-slate-600 bg-slate-900 group-hover:border-indigo-400/60 transition-colors">
+                          className="relative w-full flex items-start gap-2.5 pl-1 pr-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/70 text-left transition-all group">
+                          <div className="relative z-10 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 group-hover:border-indigo-400 dark:group-hover:border-indigo-400/60 transition-colors">
                             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[11px] font-semibold text-slate-200">{format(d, "d MMM yyyy", { locale: es })}</span>
-                              <span className="text-[9px] text-slate-500">{format(d, "HH:mm")}</span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded border bg-gradient-to-r font-medium ${cfg.glass} ${cfg.color}`}>{cfg.label}</span>
+                              <span className="text-[11px] font-semibold text-gray-700 dark:text-slate-200">{format(d, "d MMM yyyy", { locale: es })}</span>
+                              <span className="text-[9px] text-gray-400 dark:text-slate-500">{format(d, "HH:mm")}</span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded border bg-gradient-to-r font-medium dark:${cfg.glass} ${cfg.glassLight} dark:${cfg.color} ${cfg.colorLight}`}>{cfg.label}</span>
                             </div>
-                            {v.objetivo && <p className="text-[11px] text-slate-400 mt-0.5 truncate"><Target className="w-2.5 h-2.5 inline mr-0.5" />{v.objetivo}</p>}
-                            {v.resultado && <p className="text-[11px] text-emerald-400 mt-0.5 truncate"><MessageSquare className="w-2.5 h-2.5 inline mr-0.5" />{v.resultado}</p>}
+                            {v.objetivo && <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 truncate"><Target className="w-2.5 h-2.5 inline mr-0.5" />{v.objetivo}</p>}
+                            {v.resultado && <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 truncate"><MessageSquare className="w-2.5 h-2.5 inline mr-0.5" />{v.resultado}</p>}
                           </div>
-                          <Eye className="w-3.5 h-3.5 text-slate-700 group-hover:text-indigo-400 shrink-0 mt-1 transition-colors" />
+                          <Eye className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 shrink-0 mt-1 transition-colors" />
                         </button>
                       );
                     })}
                   </div>
-                  {customerVisits.length === 0 && <p className="text-center text-xs text-slate-500 py-6 pl-6">Sin visitas en este período</p>}
+                  {customerVisits.length === 0 && <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6 pl-6">Sin visitas en este período</p>}
                 </div>
 
                 {/* AI Analysis */}
-                <div className="relative rounded-xl overflow-hidden border border-indigo-500/30 bg-gradient-to-br from-indigo-950/80 to-slate-900">
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent" />
-                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-600/10 rounded-full blur-3xl" />
+                <div className="relative rounded-xl overflow-hidden border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/80 dark:to-slate-900">
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/30 dark:via-indigo-400/40 to-transparent" />
+                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full blur-3xl" />
                   <div className="relative p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-indigo-600/30"><Sparkles className="w-3.5 h-3.5 text-indigo-400" /></div>
-                        <h3 className="text-xs font-semibold text-white">Análisis IA</h3>
+                        <div className="p-1 rounded-md bg-indigo-100 dark:bg-indigo-600/30"><Sparkles className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" /></div>
+                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white">Análisis IA</h3>
                       </div>
                       <button onClick={() => loadAiSummary(selectedCustomerId!)} disabled={aiLoading}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/20 disabled:opacity-50 transition-all">
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-600/20 disabled:opacity-50 transition-all">
                         {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                         {aiLoading ? 'Analizando...' : aiSummary ? 'Regenerar' : 'Generar'}
                       </button>
                     </div>
                     {aiSummary ? (
                       <div className="space-y-2.5">
-                        <div><p className="text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1">Resumen Ejecutivo</p><p className="text-xs text-slate-300 leading-relaxed">{aiSummary.summary}</p></div>
-                        {aiSummary.recommendation && <div><p className="text-[9px] uppercase font-bold text-purple-400 tracking-wider mb-1">Recomendación</p><p className="text-xs text-slate-300 leading-relaxed">{aiSummary.recommendation}</p></div>}
+                        <div><p className="text-[9px] uppercase font-bold text-indigo-500 dark:text-indigo-400 tracking-wider mb-1">Resumen Ejecutivo</p><p className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">{aiSummary.summary}</p></div>
+                        {aiSummary.recommendation && <div><p className="text-[9px] uppercase font-bold text-purple-500 dark:text-purple-400 tracking-wider mb-1">Recomendación</p><p className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">{aiSummary.recommendation}</p></div>}
                       </div>
-                    ) : !aiLoading ? <p className="text-[11px] text-slate-500">Genera un resumen ejecutivo y recomendación con IA.</p> : null}
+                    ) : !aiLoading ? <p className="text-[11px] text-gray-400 dark:text-slate-500">Genera un resumen ejecutivo y recomendación con IA.</p> : null}
                   </div>
                 </div>
               </div>
@@ -427,7 +425,7 @@ export default function ReportesPage() {
       {tab === 'pedidos' && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            <GlassStat icon={ShoppingCart} label="Pedidos" value={periodOrders.length} color="text-white" glow="bg-white" />
+            <GlassStat icon={ShoppingCart} label="Pedidos" value={periodOrders.length} color="text-white" glow="bg-indigo-500" />
             <GlassStat icon={TrendingUp} label="Total Ventas" value={formatCurrency(periodOrders.reduce((s, o) => s + o.total, 0))} color="text-emerald-400" glow="bg-emerald-400" />
             <GlassStat icon={CheckCircle2} label="Entregados" value={periodOrders.filter(o => o.status === 'entregado').length} color="text-blue-400" glow="bg-blue-400" />
             <GlassStat icon={Package} label="Promedio" value={periodOrders.length > 0 ? formatCurrency(periodOrders.reduce((s, o) => s + o.total, 0) / periodOrders.length) : '$0'} color="text-purple-400" glow="bg-purple-400" />
@@ -435,19 +433,17 @@ export default function ReportesPage() {
 
           <GlassCard className="p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-white">Resumen del Día</h2>
-              <div className="flex items-center gap-2">
-                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-                  className="px-2.5 py-1 rounded-lg text-xs bg-slate-800 border border-slate-700 text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]" />
-              </div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Resumen del Día</h2>
+              <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+                className="px-2.5 py-1 rounded-lg text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:border-indigo-500 focus:outline-none dark:[color-scheme:dark]" />
             </div>
-            {dailyOrders.length === 0 ? <p className="text-center text-xs text-slate-500 py-6">Sin pedidos</p> : (
+            {dailyOrders.length === 0 ? <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6">Sin pedidos</p> : (
               <div className="space-y-1.5">
                 {dailyOrders.map(o => (
-                  <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-700/50 bg-slate-800/50">
-                    <div className="min-w-0"><p className="text-xs font-medium text-slate-200 truncate">{o.customer?.nombre}</p><p className="text-[10px] text-slate-500">{o.items?.length || 0} productos</p></div>
-                    <div className="text-right shrink-0"><p className="text-xs font-bold text-emerald-400">{formatCurrency(o.total)}</p>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/15' : 'text-slate-400 bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></div>
+                  <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50 bg-gray-50/50 dark:bg-slate-800/50">
+                    <div className="min-w-0"><p className="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">{o.customer?.nombre}</p><p className="text-[10px] text-gray-400 dark:text-slate-500">{o.items?.length || 0} productos</p></div>
+                    <div className="text-right shrink-0"><p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(o.total)}</p>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${o.status === 'entregado' ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15' : 'text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></div>
                   </div>
                 ))}
               </div>
@@ -456,26 +452,26 @@ export default function ReportesPage() {
 
           <GlassCard className="p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-white">Pedidos del Período</h2>
-              <button onClick={exportPeriodOrders} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 hover:bg-slate-800 transition-all">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Pedidos del Período</h2>
+              <button onClick={exportPeriodOrders} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all">
                 <FileDown className="w-3.5 h-3.5" /> Exportar
               </button>
             </div>
-            <div className="overflow-x-auto rounded-xl border border-slate-700/50">
+            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700/50">
               <table className="w-full text-xs">
-                <thead><tr className="border-b border-slate-700/60 bg-slate-800/50">
-                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fecha</th>
-                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cliente</th>
-                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</th>
-                  <th className="px-3 py-2.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</th>
+                <thead><tr className="border-b border-gray-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-800/50">
+                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Fecha</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Cliente</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Estado</th>
+                  <th className="px-3 py-2.5 text-right text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Total</th>
                 </tr></thead>
                 <tbody>
                   {periodOrders.slice(0, 30).map(o => (
-                    <tr key={o.id} className="border-b border-slate-800 hover:bg-slate-800/60">
-                      <td className="px-3 py-2 text-slate-400">{formatDate(o.order_date)}</td>
-                      <td className="px-3 py-2 font-medium text-slate-200">{o.customer?.nombre}</td>
-                      <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/15' : 'text-slate-400 bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></td>
-                      <td className="px-3 py-2 text-right font-bold text-emerald-400">{formatCurrency(o.total)}</td>
+                    <tr key={o.id} className="border-b border-gray-100 dark:border-slate-800 hover:bg-gray-50/50 dark:hover:bg-slate-800/60">
+                      <td className="px-3 py-2 text-gray-500 dark:text-slate-400">{formatDate(o.order_date)}</td>
+                      <td className="px-3 py-2 font-medium text-gray-700 dark:text-slate-200">{o.customer?.nombre}</td>
+                      <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.status === 'entregado' ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15' : 'text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></td>
+                      <td className="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(o.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -484,14 +480,14 @@ export default function ReportesPage() {
           </GlassCard>
 
           <GlassCard className="p-4 sm:p-5">
-            <h2 className="text-sm font-semibold text-white mb-4">Top Productos (30 días)</h2>
-            {topProducts.length === 0 ? <p className="text-center text-xs text-slate-500 py-6">Sin datos</p> : (
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Top Productos (30 días)</h2>
+            {topProducts.length === 0 ? <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6">Sin datos</p> : (
               <div className="space-y-1.5">
                 {topProducts.slice(0, 10).map((p, i) => (
-                  <div key={p.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-800 transition-colors">
-                    <span className={`w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-bold ${i < 3 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>{i + 1}</span>
-                    <div className="flex-1 min-w-0"><p className="text-xs font-medium text-slate-200 truncate">{p.name}</p><p className="text-[10px] text-slate-500">{p.sku}</p></div>
-                    <div className="text-right shrink-0"><p className="text-xs font-bold text-slate-200">{p.totalQty} uds</p><p className="text-[10px] text-emerald-400">{formatCurrency(p.totalAmount)}</p></div>
+                  <div key={p.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50 bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                    <span className={`w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-bold ${i < 3 ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border border-gray-200 dark:border-slate-700'}`}>{i + 1}</span>
+                    <div className="flex-1 min-w-0"><p className="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">{p.name}</p><p className="text-[10px] text-gray-400 dark:text-slate-500">{p.sku}</p></div>
+                    <div className="text-right shrink-0"><p className="text-xs font-bold text-gray-700 dark:text-slate-200">{p.totalQty} uds</p><p className="text-[10px] text-emerald-600 dark:text-emerald-400">{formatCurrency(p.totalAmount)}</p></div>
                   </div>
                 ))}
               </div>
@@ -505,8 +501,8 @@ export default function ReportesPage() {
         <Modal isOpen onClose={() => setSelectedVisit(null)} title="Detalle de Visita">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${STATUS_CFG[selectedVisit.status]?.glass || 'from-gray-500/20 to-gray-500/5 border-gray-500/20'} border`}>
-                {(() => { const I = STATUS_CFG[selectedVisit.status]?.icon || Clock; return <I className={`w-5 h-5 ${STATUS_CFG[selectedVisit.status]?.color || 'text-gray-400'}`} />; })()}
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${STATUS_CFG[selectedVisit.status]?.glassLight || 'from-gray-100 to-gray-50 border-gray-200'} dark:bg-gradient-to-br dark:${STATUS_CFG[selectedVisit.status]?.glass || 'from-gray-500/20 to-gray-500/5 border-gray-500/20'} border`}>
+                {(() => { const I = STATUS_CFG[selectedVisit.status]?.icon || Clock; return <I className={`w-5 h-5 ${STATUS_CFG[selectedVisit.status]?.colorLight || 'text-gray-500'} dark:${STATUS_CFG[selectedVisit.status]?.color || 'text-gray-400'}`} />; })()}
               </div>
               <div>
                 <p className="font-semibold text-gray-900 dark:text-white">{selectedVisit.customer?.nombre || 'Cliente'}</p>
