@@ -17,6 +17,7 @@ import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { getOrders, getOrder, type Order } from '@/lib/services/orders';
+import { fuzzySearch } from '@/lib/search';
 import {
   formatDate,
   formatCurrency,
@@ -71,11 +72,8 @@ export default function PedidosPage() {
 
   const filteredOrders = orders.filter((order) => {
     if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      order.customer?.nombre?.toLowerCase().includes(searchLower) ||
-      order.id.toLowerCase().includes(searchLower)
-    );
+    return fuzzySearch(search, order.customer?.nombre || '') > 0 ||
+      fuzzySearch(search, order.id) > 0;
   });
 
   const statusOptions = [

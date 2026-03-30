@@ -26,6 +26,7 @@ import {
   type Customer,
 } from '@/lib/services/customers';
 import { cn } from '@/lib/utils';
+import { searchCustomers } from '@/lib/search';
 import type { CustomerType, FunnelStage } from '@/types/database';
 
 // Helper para obtener el estado simplificado
@@ -40,7 +41,7 @@ const getEstadoCliente = (customer: Customer) => {
 };
 
 export default function ClientesPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('');
@@ -52,20 +53,13 @@ export default function ClientesPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadCustomers();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search, filterEstado, filterCiudad]);
-
   const loadData = async () => {
     try {
       const [customersData, citiesData] = await Promise.all([
         getCustomers(),
         getCities(),
       ]);
-      setCustomers(customersData);
+      setAllCustomers(customersData);
       setCities(citiesData);
     } catch (error) {
       console.error('Error cargando clientes:', error);
@@ -74,41 +68,27 @@ export default function ClientesPage() {
     }
   };
 
-  const loadCustomers = async () => {
-    try {
-      // Mapear el filtro de estado a los campos de la BD
-      let tipo: CustomerType | undefined;
-      let etapa_embudo: FunnelStage | undefined;
-      
-      if (filterEstado === 'cliente') {
-        tipo = 'cliente';
-      } else if (filterEstado === 'prospecto') {
-        tipo = 'prospecto';
-        // Excluir perdidos cuando se filtran prospectos
-      } else if (filterEstado === 'perdido') {
-        etapa_embudo = 'perdido';
-      }
-      
-      const data = await getCustomers({
-        search: search || undefined,
-        tipo: tipo,
-        etapa_embudo: etapa_embudo,
-        ciudad: filterCiudad || undefined,
-      });
-      
-      // Filtrar prospectos no perdidos si se seleccionó "prospecto"
-      let filteredData = data;
-      if (filterEstado === 'prospecto') {
-        filteredData = data.filter(c => c.etapa_embudo !== 'perdido' && c.tipo === 'prospecto');
-      } else if (filterEstado === 'cliente') {
-        filteredData = data.filter(c => c.tipo === 'cliente' || c.etapa_embudo === 'ganado');
-      }
-      
-      setCustomers(filteredData);
-    } catch (error) {
-      console.error('Error filtrando clientes:', error);
+  const customers = (() => {
+    let list = allCustomers;
+
+    if (filterEstado === 'cliente') {
+      list = list.filter(c => c.tipo === 'cliente' || c.etapa_embudo === 'ganado');
+    } else if (filterEstado === 'prospecto') {
+      list = list.filter(c => c.etapa_embudo !== 'perdido' && c.tipo === 'prospecto');
+    } else if (filterEstado === 'perdido') {
+      list = list.filter(c => c.etapa_embudo === 'perdido');
     }
-  };
+
+    if (filterCiudad) {
+      list = list.filter(c => c.ciudad === filterCiudad);
+    }
+
+    if (search.trim()) {
+      list = searchCustomers(list, search);
+    }
+
+    return list;
+  })();
 
   const clearFilters = () => {
     setSearch('');

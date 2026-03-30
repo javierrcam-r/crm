@@ -36,6 +36,7 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import ActivityReminder, { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { useAuth } from '@/contexts/AuthContext';
+import { fuzzySearch } from '@/lib/search';
 import { 
   getActivities, 
   createActivity, 
@@ -193,8 +194,8 @@ export default function ActividadesPage() {
   
   // Filter activities
   const filteredActivities = activities.filter(activity => {
-    const matchesSearch = activity.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         activity.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || fuzzySearch(searchTerm, activity.titulo) > 0 ||
+                         fuzzySearch(searchTerm, activity.descripcion || '') > 0;
     const matchesTipo = !filterTipo || activity.tipo === filterTipo;
     const matchesPrioridad = !filterPrioridad || activity.prioridad === filterPrioridad;
 

@@ -14,6 +14,7 @@ import Modal from '@/components/ui/Modal';
 import { InvitationDownloadButton } from '@/components/events/InvitationPDF';
 import SeatMapView from '@/components/events/SeatMapView';
 import { useAuth } from '@/contexts/AuthContext';
+import { fuzzySearch } from '@/lib/search';
 import {
   getEvent, getEventParticipants, updateParticipant, getActiveUsers,
   type Event, type EventParticipant,
@@ -163,15 +164,16 @@ export default function EventAssistancePage() {
     } catch { toast.error('Error'); }
   };
 
-  const filteredParticipants = participants.filter(p => {
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return p.nombre.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q) ||
-      p.telefono?.includes(q) ||
-      p.empresa?.toLowerCase().includes(q) ||
-      p.categoria?.toLowerCase().includes(q);
-  });
+  const filteredParticipants = (() => {
+    if (!searchTerm.trim()) return participants;
+    return participants.filter(p => {
+      return fuzzySearch(searchTerm, p.nombre) > 0 ||
+        fuzzySearch(searchTerm, p.email || '') > 0 ||
+        fuzzySearch(searchTerm, p.telefono || '') > 0 ||
+        fuzzySearch(searchTerm, p.empresa || '') > 0 ||
+        fuzzySearch(searchTerm, p.categoria || '') > 0;
+    });
+  })();
 
   if (loading || !event) return (
     <div className="flex items-center justify-center py-20">

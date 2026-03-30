@@ -12,6 +12,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
+import { fuzzySearch } from '@/lib/search';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -97,10 +98,8 @@ export default function HistorialVacacionesPage() {
       if (filterDateFrom && req.fecha_fin < filterDateFrom) return false;
       if (filterDateTo && req.fecha_inicio > filterDateTo) return false;
       if (searchTerm) {
-        const userName = usersMap[req.user_profile_id]?.toLowerCase() || '';
-        const motivo = req.motivo?.toLowerCase() || '';
-        const term = searchTerm.toLowerCase();
-        if (!userName.includes(term) && !motivo.includes(term)) return false;
+        const userName = usersMap[req.user_profile_id] || '';
+        if (fuzzySearch(searchTerm, userName) === 0 && fuzzySearch(searchTerm, req.motivo || '') === 0) return false;
       }
       return true;
     });

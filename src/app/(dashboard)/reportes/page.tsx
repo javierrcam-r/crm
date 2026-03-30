@@ -11,6 +11,7 @@ import Modal from '@/components/ui/Modal';
 import { getCustomers, type Customer } from '@/lib/services/customers';
 import { getVisits, type Visit } from '@/lib/services/visits';
 import { formatDate, exportToCSV } from '@/lib/utils';
+import { searchItems } from '@/lib/search';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths, addMonths, subWeeks, addWeeks, subYears, addYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
@@ -131,7 +132,7 @@ export default function ReportesPage() {
   const visitedCustomerIds = useMemo(() => new Set(visits.map(v => v.customer_id)), [visits]);
   const filteredCustomers = useMemo(() => {
     let list = customers.filter(c => visitedCustomerIds.has(c.id));
-    if (clientSearch) { const s = clientSearch.toLowerCase(); list = list.filter(c => c.nombre.toLowerCase().includes(s) || c.ciudad?.toLowerCase().includes(s)); }
+    if (clientSearch) { list = searchItems(list, clientSearch, [{ key: 'nombre', weight: 2 }, { key: 'ciudad' }]); }
     return list.sort((a, b) => visits.filter(v => v.customer_id === b.id).length - visits.filter(v => v.customer_id === a.id).length);
   }, [customers, visitedCustomerIds, clientSearch, visits]);
 

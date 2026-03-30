@@ -19,6 +19,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { fuzzySearch } from '@/lib/search';
 import {
   getAllCustomersForSupervisor,
   getCustomerVendorAssignments,
@@ -329,11 +330,11 @@ export default function SupervisorClientesPage() {
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => {
       const matchesSearch = !searchTerm ||
-        c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.telefono?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.ciudad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.zona?.toLowerCase().includes(searchTerm.toLowerCase());
+        fuzzySearch(searchTerm, c.nombre) > 0 ||
+        fuzzySearch(searchTerm, c.telefono || '') > 0 ||
+        fuzzySearch(searchTerm, c.email || '') > 0 ||
+        fuzzySearch(searchTerm, c.ciudad || '') > 0 ||
+        fuzzySearch(searchTerm, c.zona || '') > 0;
 
       // Buscar el vendedor seleccionado para comparar tanto por id como por user_id
       const selectedVendor = filterVendor ? vendors.find(v => v.id === filterVendor) : null;

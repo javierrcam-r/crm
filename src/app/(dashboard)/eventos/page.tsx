@@ -14,6 +14,7 @@ import EventCalendar from '@/components/events/EventCalendar';
 import EventsDashboard from '@/components/events/EventsDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEvents, getVendorEvents, getAllEventExpenses, getAllEventParticipants, type Event, type EventStatus, type EventType, type EventExpense, type EventParticipant } from '@/lib/services/events';
+import { fuzzySearch } from '@/lib/search';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
@@ -77,7 +78,7 @@ export default function EventosPage() {
   };
 
   const filtered = events.filter(e => {
-    const matchSearch = !searchTerm || e.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = !searchTerm || fuzzySearch(searchTerm, e.nombre) > 0;
     const matchStatus = !filterStatus || e.estado === filterStatus;
     const matchType = !filterType || e.tipo === filterType;
     return matchSearch && matchStatus && matchType;

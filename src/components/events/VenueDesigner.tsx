@@ -18,6 +18,7 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import toast from 'react-hot-toast';
 import type { Event, EventParticipant, VenueLayout, VenueElement, VenueElementType } from '@/lib/services/events';
+import { fuzzySearch } from '@/lib/search';
 import { getEventVenueLayout, upsertEventVenueLayout, assignSeatToParticipant } from '@/lib/services/events';
 import SeatPickerModal from './SeatPickerModal';
 
@@ -633,7 +634,7 @@ export default function VenueDesigner({ event, participants, onParticipantsChang
   // ─── Filter participants ──────────────────────────────────
   const filtered = localParticipants.filter(p => {
     if (catFilter && p.categoria !== catFilter) return false;
-    if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.empresa?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && fuzzySearch(search, p.nombre) === 0 && fuzzySearch(search, p.empresa || '') === 0) return false;
     return true;
   });
 

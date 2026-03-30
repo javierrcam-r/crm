@@ -15,6 +15,7 @@ import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { searchCustomers } from '@/lib/search';
 import {
   getEvent, getEventActivities, getEventParticipants,
   createParticipant, updateParticipant, deleteParticipant,
@@ -94,7 +95,7 @@ export default function VendorEventPage() {
   const othersParticipants = participants.filter(p => !isMyParticipant(p));
 
   const filteredCustomers = customerSearch.trim()
-    ? myCustomers.filter(c => c.nombre.toLowerCase().includes(customerSearch.toLowerCase()) || c.telefono?.includes(customerSearch))
+    ? searchCustomers(myCustomers, customerSearch)
     : myCustomers.slice(0, 10);
 
   const selectCustomerForRegistration = (customer: Customer) => {
