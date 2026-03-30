@@ -40,9 +40,8 @@ type PeriodMode = 'month' | 'week' | 'custom';
 
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative rounded-2xl border border-white/[0.08] overflow-hidden ${className}`}
-      style={{ background: 'linear-gradient(135deg, rgba(30,27,75,0.6), rgba(15,23,42,0.7))', backdropFilter: 'blur(20px)' }}>
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+    <div className={`relative rounded-2xl border border-slate-700/60 bg-slate-900 overflow-hidden ${className}`}>
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/25 to-transparent" />
       {children}
     </div>
   );
@@ -50,17 +49,15 @@ function GlassCard({ children, className = '' }: { children: React.ReactNode; cl
 
 function GlassStat({ icon: Icon, label, value, sub, color, glow }: { icon: any; label: string; value: string | number; sub?: string; color: string; glow: string }) {
   return (
-    <div className="relative rounded-xl border border-white/[0.06] p-3 sm:p-4 overflow-hidden group"
-      style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))' }}>
-      <div className={`absolute -top-6 -right-6 w-16 h-16 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity ${glow}`} />
+    <div className="relative rounded-xl border border-slate-700/60 bg-slate-900 p-3 sm:p-4 overflow-hidden group">
+      <div className={`absolute -top-8 -right-8 w-20 h-20 rounded-full blur-2xl opacity-15 group-hover:opacity-30 transition-opacity ${glow}`} />
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-[10px] sm:text-[11px] font-medium text-white/40 uppercase tracking-wider">{label}</p>
+          <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 uppercase tracking-wider">{label}</p>
           <p className={`text-lg sm:text-2xl font-bold mt-0.5 ${color}`}>{value}</p>
-          {sub && <p className="text-[10px] text-white/30 mt-0.5">{sub}</p>}
+          {sub && <p className="text-[10px] text-slate-500 mt-0.5">{sub}</p>}
         </div>
-        <div className={`p-1.5 sm:p-2 rounded-lg border border-white/[0.06] ${color}`}
-          style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <div className={`p-1.5 sm:p-2 rounded-lg border border-slate-700/50 bg-slate-800/80 ${color}`}>
           <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       </div>
@@ -73,10 +70,10 @@ function GlassProgress({ label, value, max, color }: { label: string; value: num
   return (
     <div>
       <div className="flex justify-between text-[11px] mb-1.5">
-        <span className="text-white/40">{label}</span>
+        <span className="text-slate-400">{label}</span>
         <span className={`font-bold ${color}`}>{pct}%</span>
       </div>
-      <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-700 ${color.replace('text-', 'bg-')}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -208,9 +205,8 @@ export default function ReportesPage() {
       </div>
 
       {/* === PERIOD FILTER BAR === */}
-      <div className="relative rounded-2xl border border-white/[0.08] overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, rgba(30,27,75,0.5), rgba(15,23,42,0.6))', backdropFilter: 'blur(16px)' }}>
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="relative rounded-2xl border border-slate-700/60 bg-slate-900 overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/25 to-transparent" />
         <div className="relative p-3 sm:p-4 space-y-3">
           {/* Mode selector */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -221,23 +217,23 @@ export default function ReportesPage() {
             ]).map(m => (
               <button key={m.key} onClick={() => setPeriodMode(m.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${periodMode === m.key
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                  : 'text-white/40 hover:text-white/60 border border-transparent hover:border-white/10'}`}>
+                  ? 'bg-indigo-600/25 text-indigo-300 border border-indigo-500/40'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent hover:border-slate-700'}`}>
                 <m.icon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{m.label}</span>
               </button>
             ))}
 
             {/* Tabs */}
-            <div className="ml-auto flex gap-1 bg-white/[0.04] rounded-lg p-0.5 border border-white/[0.06]">
+            <div className="ml-auto flex gap-1 bg-slate-800 rounded-lg p-0.5 border border-slate-700/50">
               {[
                 { key: 'visitas' as const, label: 'Visitas', icon: MapPin },
                 { key: 'pedidos' as const, label: 'Pedidos', icon: ShoppingCart },
               ].map(t => (
                 <button key={t.key} onClick={() => setTab(t.key)}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all ${tab === t.key
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-white/30 hover:text-white/50'}`}>
+                    ? 'bg-indigo-600/30 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-300'}`}>
                   <t.icon className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t.label}</span>
                 </button>
@@ -248,11 +244,11 @@ export default function ReportesPage() {
           {/* Period controls */}
           {periodMode !== 'custom' ? (
             <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-white/10 hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-all">
+              <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="text-sm font-semibold text-white capitalize min-w-[140px] text-center">{periodLabel}</span>
-              <button onClick={() => navigate(1)} className="p-1.5 rounded-lg border border-white/10 hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-all">
+              <button onClick={() => navigate(1)} className="p-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
                 <ChevronRight className="w-4 h-4" />
               </button>
 
@@ -264,10 +260,10 @@ export default function ReportesPage() {
                     return (
                       <button key={m} onClick={() => setRefDate(new Date(currentYear, i, 1))}
                         className={`px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-medium transition-all whitespace-nowrap ${isActive
-                          ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/30'
+                          ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
                           : isCurrent
-                          ? 'text-white/60 border border-white/10'
-                          : 'text-white/25 hover:text-white/50 border border-transparent hover:border-white/10'}`}>
+                          ? 'text-slate-300 border border-slate-600'
+                          : 'text-slate-500 hover:text-slate-300 border border-transparent hover:border-slate-700'}`}>
                         {m}
                       </button>
                     );
@@ -278,10 +274,10 @@ export default function ReportesPage() {
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
               <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-                className="px-3 py-1.5 rounded-lg text-xs bg-white/[0.04] border border-white/10 text-white focus:border-indigo-500/40 focus:outline-none [color-scheme:dark]" />
-              <span className="text-white/30 text-xs">a</span>
+                className="px-3 py-1.5 rounded-lg text-xs bg-slate-800 border border-slate-700 text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]" />
+              <span className="text-slate-500 text-xs">a</span>
               <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-                className="px-3 py-1.5 rounded-lg text-xs bg-white/[0.04] border border-white/10 text-white focus:border-indigo-500/40 focus:outline-none [color-scheme:dark]" />
+                className="px-3 py-1.5 rounded-lg text-xs bg-slate-800 border border-slate-700 text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]" />
             </div>
           )}
         </div>
@@ -303,7 +299,7 @@ export default function ReportesPage() {
           <GlassCard className="p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-white">Rendimiento</h2>
-              <button onClick={exportVisits} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white/40 hover:text-white/70 border border-white/[0.08] hover:border-white/15 transition-all">
+              <button onClick={exportVisits} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 hover:bg-slate-800 transition-all">
                 <FileDown className="w-3.5 h-3.5" /> CSV
               </button>
             </div>
@@ -329,9 +325,9 @@ export default function ReportesPage() {
                 )}
               </div>
               <div className="relative w-full sm:w-56">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
                 <input type="text" value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Buscar cliente..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-indigo-500/40" />
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
               </div>
             </div>
 
@@ -342,21 +338,19 @@ export default function ReportesPage() {
                   const comp = cv.filter(v => v.status === 'completada').length;
                   return (
                     <button key={c.id} onClick={() => { setSelectedCustomerId(c.id); setAiSummary(null); }}
-                      className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-white/[0.06] hover:border-indigo-500/30 text-left transition-all group"
-                      style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.02), transparent)' }}>
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/[0.08] group-hover:border-indigo-500/30 transition-colors"
-                        style={{ background: 'rgba(255,255,255,0.03)' }}>
-                        <span className="text-xs font-bold text-white/50 group-hover:text-indigo-300 transition-colors">{cv.length}</span>
+                      className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-slate-700/50 hover:border-indigo-500/40 bg-slate-800/50 hover:bg-slate-800 text-left transition-all group">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-700 bg-slate-800 group-hover:border-indigo-500/40 transition-colors">
+                        <span className="text-xs font-bold text-slate-400 group-hover:text-indigo-300 transition-colors">{cv.length}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-white/80 truncate group-hover:text-white transition-colors">{c.nombre}</p>
-                        <p className="text-[10px] text-white/25">{c.ciudad || 'Sin ciudad'} · {comp}/{cv.length} completadas</p>
+                        <p className="text-xs sm:text-sm font-medium text-slate-200 truncate group-hover:text-white transition-colors">{c.nombre}</p>
+                        <p className="text-[10px] text-slate-500">{c.ciudad || 'Sin ciudad'} · {comp}/{cv.length} completadas</p>
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-white/10 group-hover:text-indigo-400 shrink-0 transition-colors" />
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-700 group-hover:text-indigo-400 shrink-0 transition-colors" />
                     </button>
                   );
                 })}
-                {filteredCustomers.length === 0 && <p className="col-span-full text-center text-xs text-white/25 py-8">Sin clientes con visitas en este período</p>}
+                {filteredCustomers.length === 0 && <p className="col-span-full text-center text-xs text-slate-500 py-8">Sin clientes con visitas en este período</p>}
               </div>
             ) : (
               <div className="space-y-4">
@@ -372,58 +366,56 @@ export default function ReportesPage() {
 
                 {/* Timeline */}
                 <div className="relative">
-                  <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-indigo-500/30 via-white/10 to-transparent" />
+                  <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-indigo-500/40 via-slate-700 to-transparent" />
                   <div className="space-y-0.5">
                     {customerVisits.map(v => {
                       const cfg = STATUS_CFG[v.status] || STATUS_CFG['programada'];
                       const d = new Date(v.scheduled_at);
                       return (
                         <button key={v.id} onClick={() => setSelectedVisit(v)}
-                          className="relative w-full flex items-start gap-2.5 pl-1 pr-2 py-2 rounded-lg hover:bg-white/[0.04] text-left transition-all group">
-                          <div className={`relative z-10 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 border-white/20 group-hover:border-indigo-400/50 transition-colors`}
-                            style={{ background: 'rgba(15,23,42,0.8)' }}>
+                          className="relative w-full flex items-start gap-2.5 pl-1 pr-2 py-2 rounded-lg hover:bg-slate-800/70 text-left transition-all group">
+                          <div className="relative z-10 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 border-slate-600 bg-slate-900 group-hover:border-indigo-400/60 transition-colors">
                             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[11px] font-semibold text-white/80">{format(d, "d MMM yyyy", { locale: es })}</span>
-                              <span className="text-[9px] text-white/25">{format(d, "HH:mm")}</span>
+                              <span className="text-[11px] font-semibold text-slate-200">{format(d, "d MMM yyyy", { locale: es })}</span>
+                              <span className="text-[9px] text-slate-500">{format(d, "HH:mm")}</span>
                               <span className={`text-[9px] px-1.5 py-0.5 rounded border bg-gradient-to-r font-medium ${cfg.glass} ${cfg.color}`}>{cfg.label}</span>
                             </div>
-                            {v.objetivo && <p className="text-[11px] text-white/35 mt-0.5 truncate"><Target className="w-2.5 h-2.5 inline mr-0.5" />{v.objetivo}</p>}
-                            {v.resultado && <p className="text-[11px] text-emerald-400/70 mt-0.5 truncate"><MessageSquare className="w-2.5 h-2.5 inline mr-0.5" />{v.resultado}</p>}
+                            {v.objetivo && <p className="text-[11px] text-slate-400 mt-0.5 truncate"><Target className="w-2.5 h-2.5 inline mr-0.5" />{v.objetivo}</p>}
+                            {v.resultado && <p className="text-[11px] text-emerald-400 mt-0.5 truncate"><MessageSquare className="w-2.5 h-2.5 inline mr-0.5" />{v.resultado}</p>}
                           </div>
-                          <Eye className="w-3.5 h-3.5 text-white/10 group-hover:text-indigo-400 shrink-0 mt-1 transition-colors" />
+                          <Eye className="w-3.5 h-3.5 text-slate-700 group-hover:text-indigo-400 shrink-0 mt-1 transition-colors" />
                         </button>
                       );
                     })}
                   </div>
-                  {customerVisits.length === 0 && <p className="text-center text-xs text-white/25 py-6 pl-6">Sin visitas en este período</p>}
+                  {customerVisits.length === 0 && <p className="text-center text-xs text-slate-500 py-6 pl-6">Sin visitas en este período</p>}
                 </div>
 
                 {/* AI Analysis */}
-                <div className="relative rounded-xl overflow-hidden border border-indigo-500/20"
-                  style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.06))' }}>
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/30 to-transparent" />
-                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl" />
+                <div className="relative rounded-xl overflow-hidden border border-indigo-500/30 bg-gradient-to-br from-indigo-950/80 to-slate-900">
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent" />
+                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-600/10 rounded-full blur-3xl" />
                   <div className="relative p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-indigo-500/20"><Sparkles className="w-3.5 h-3.5 text-indigo-400" /></div>
+                        <div className="p-1 rounded-md bg-indigo-600/30"><Sparkles className="w-3.5 h-3.5 text-indigo-400" /></div>
                         <h3 className="text-xs font-semibold text-white">Análisis IA</h3>
                       </div>
                       <button onClick={() => loadAiSummary(selectedCustomerId!)} disabled={aiLoading}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-50 transition-all">
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/20 disabled:opacity-50 transition-all">
                         {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                         {aiLoading ? 'Analizando...' : aiSummary ? 'Regenerar' : 'Generar'}
                       </button>
                     </div>
                     {aiSummary ? (
                       <div className="space-y-2.5">
-                        <div><p className="text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1">Resumen Ejecutivo</p><p className="text-xs text-white/60 leading-relaxed">{aiSummary.summary}</p></div>
-                        {aiSummary.recommendation && <div><p className="text-[9px] uppercase font-bold text-purple-400 tracking-wider mb-1">Recomendación</p><p className="text-xs text-white/60 leading-relaxed">{aiSummary.recommendation}</p></div>}
+                        <div><p className="text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1">Resumen Ejecutivo</p><p className="text-xs text-slate-300 leading-relaxed">{aiSummary.summary}</p></div>
+                        {aiSummary.recommendation && <div><p className="text-[9px] uppercase font-bold text-purple-400 tracking-wider mb-1">Recomendación</p><p className="text-xs text-slate-300 leading-relaxed">{aiSummary.recommendation}</p></div>}
                       </div>
-                    ) : !aiLoading ? <p className="text-[11px] text-white/20">Genera un resumen ejecutivo y recomendación con IA.</p> : null}
+                    ) : !aiLoading ? <p className="text-[11px] text-slate-500">Genera un resumen ejecutivo y recomendación con IA.</p> : null}
                   </div>
                 </div>
               </div>
@@ -446,16 +438,16 @@ export default function ReportesPage() {
               <h2 className="text-sm font-semibold text-white">Resumen del Día</h2>
               <div className="flex items-center gap-2">
                 <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-                  className="px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] border border-white/10 text-white focus:border-indigo-500/40 focus:outline-none [color-scheme:dark]" />
+                  className="px-2.5 py-1 rounded-lg text-xs bg-slate-800 border border-slate-700 text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]" />
               </div>
             </div>
-            {dailyOrders.length === 0 ? <p className="text-center text-xs text-white/25 py-6">Sin pedidos</p> : (
+            {dailyOrders.length === 0 ? <p className="text-center text-xs text-slate-500 py-6">Sin pedidos</p> : (
               <div className="space-y-1.5">
                 {dailyOrders.map(o => (
-                  <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                    <div className="min-w-0"><p className="text-xs font-medium text-white/80 truncate">{o.customer?.nombre}</p><p className="text-[10px] text-white/25">{o.items?.length || 0} productos</p></div>
+                  <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-700/50 bg-slate-800/50">
+                    <div className="min-w-0"><p className="text-xs font-medium text-slate-200 truncate">{o.customer?.nombre}</p><p className="text-[10px] text-slate-500">{o.items?.length || 0} productos</p></div>
                     <div className="text-right shrink-0"><p className="text-xs font-bold text-emerald-400">{formatCurrency(o.total)}</p>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/10' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/10' : 'text-white/40 bg-white/5'}`}>{orderStatusLabels[o.status]}</span></div>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/15' : 'text-slate-400 bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></div>
                   </div>
                 ))}
               </div>
@@ -465,24 +457,24 @@ export default function ReportesPage() {
           <GlassCard className="p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-white">Pedidos del Período</h2>
-              <button onClick={exportPeriodOrders} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white/40 hover:text-white/70 border border-white/[0.08] hover:border-white/15 transition-all">
+              <button onClick={exportPeriodOrders} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 hover:bg-slate-800 transition-all">
                 <FileDown className="w-3.5 h-3.5" /> Exportar
               </button>
             </div>
-            <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+            <div className="overflow-x-auto rounded-xl border border-slate-700/50">
               <table className="w-full text-xs">
-                <thead><tr className="border-b border-white/[0.08]">
-                  <th className="px-3 py-2 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Fecha</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Cliente</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Estado</th>
-                  <th className="px-3 py-2 text-right text-[10px] font-bold text-white/40 uppercase tracking-wider">Total</th>
+                <thead><tr className="border-b border-slate-700/60 bg-slate-800/50">
+                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fecha</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cliente</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</th>
+                  <th className="px-3 py-2.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</th>
                 </tr></thead>
                 <tbody>
                   {periodOrders.slice(0, 30).map(o => (
-                    <tr key={o.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                      <td className="px-3 py-2 text-white/50">{formatDate(o.order_date)}</td>
-                      <td className="px-3 py-2 font-medium text-white/70">{o.customer?.nombre}</td>
-                      <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/10' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/10' : 'text-white/40 bg-white/5'}`}>{orderStatusLabels[o.status]}</span></td>
+                    <tr key={o.id} className="border-b border-slate-800 hover:bg-slate-800/60">
+                      <td className="px-3 py-2 text-slate-400">{formatDate(o.order_date)}</td>
+                      <td className="px-3 py-2 font-medium text-slate-200">{o.customer?.nombre}</td>
+                      <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/15' : 'text-slate-400 bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></td>
                       <td className="px-3 py-2 text-right font-bold text-emerald-400">{formatCurrency(o.total)}</td>
                     </tr>
                   ))}
@@ -493,13 +485,13 @@ export default function ReportesPage() {
 
           <GlassCard className="p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-white mb-4">Top Productos (30 días)</h2>
-            {topProducts.length === 0 ? <p className="text-center text-xs text-white/25 py-6">Sin datos</p> : (
+            {topProducts.length === 0 ? <p className="text-center text-xs text-slate-500 py-6">Sin datos</p> : (
               <div className="space-y-1.5">
                 {topProducts.slice(0, 10).map((p, i) => (
-                  <div key={p.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors" style={{ background: 'rgba(255,255,255,0.01)' }}>
-                    <span className={`w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-bold ${i < 3 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' : 'bg-white/5 text-white/30 border border-white/[0.06]'}`}>{i + 1}</span>
-                    <div className="flex-1 min-w-0"><p className="text-xs font-medium text-white/70 truncate">{p.name}</p><p className="text-[10px] text-white/25">{p.sku}</p></div>
-                    <div className="text-right shrink-0"><p className="text-xs font-bold text-white/70">{p.totalQty} uds</p><p className="text-[10px] text-emerald-400">{formatCurrency(p.totalAmount)}</p></div>
+                  <div key={p.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-800 transition-colors">
+                    <span className={`w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-bold ${i < 3 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>{i + 1}</span>
+                    <div className="flex-1 min-w-0"><p className="text-xs font-medium text-slate-200 truncate">{p.name}</p><p className="text-[10px] text-slate-500">{p.sku}</p></div>
+                    <div className="text-right shrink-0"><p className="text-xs font-bold text-slate-200">{p.totalQty} uds</p><p className="text-[10px] text-emerald-400">{formatCurrency(p.totalAmount)}</p></div>
                   </div>
                 ))}
               </div>
