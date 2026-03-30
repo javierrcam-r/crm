@@ -1,18 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  Calendar,
-  FileDown,
-  TrendingUp,
-  Package,
-  Users,
-  ShoppingCart,
+  FileDown, TrendingUp, Package, ShoppingCart, CheckCircle2, XCircle, Ban,
+  Clock, BarChart3, Search, MapPin, Target, MessageSquare,
+  Eye, Sparkles, Loader2, Calendar, ArrowRight, RefreshCw, X,
+  ChevronLeft, ChevronRight, CalendarDays, Zap,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
 import {
   getDailySummary,
   getTopProducts,
@@ -20,483 +19,529 @@ import {
   type Order,
 } from '@/lib/services/orders';
 import { getCustomers, type Customer } from '@/lib/services/customers';
-import {
-  formatDate,
-  formatCurrency,
-  orderStatusLabels,
-  exportToCSV,
-} from '@/lib/utils';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { getVisits, type Visit } from '@/lib/services/visits';
+import { formatDate, formatCurrency, orderStatusLabels, exportToCSV } from '@/lib/utils';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, addMonths, subWeeks, addWeeks } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-interface TopProduct {
-  id: string;
-  name: string;
-  sku: string;
-  category: string;
-  totalQty: number;
-  totalAmount: number;
+const STATUS_CFG: Record<string, { label: string; color: string; dot: string; glass: string; icon: any }> = {
+  completada: { label: 'Completadas', color: 'text-emerald-400', dot: 'bg-emerald-400', glass: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20', icon: CheckCircle2 },
+  programada: { label: 'Programadas', color: 'text-blue-400', dot: 'bg-blue-400', glass: 'from-blue-500/20 to-blue-500/5 border-blue-500/20', icon: Clock },
+  no_atendio: { label: 'No atendió', color: 'text-amber-400', dot: 'bg-amber-400', glass: 'from-amber-500/20 to-amber-500/5 border-amber-500/20', icon: Ban },
+  cancelada: { label: 'Canceladas', color: 'text-red-400', dot: 'bg-red-400', glass: 'from-red-500/20 to-red-500/5 border-red-500/20', icon: XCircle },
+  reprogramada: { label: 'Reprogramadas', color: 'text-purple-400', dot: 'bg-purple-400', glass: 'from-purple-500/20 to-purple-500/5 border-purple-500/20', icon: RefreshCw },
+};
+
+const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+type PeriodMode = 'month' | 'week' | 'custom';
+
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative rounded-2xl border border-white/[0.08] overflow-hidden ${className}`}
+      style={{ background: 'linear-gradient(135deg, rgba(30,27,75,0.6), rgba(15,23,42,0.7))', backdropFilter: 'blur(20px)' }}>
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      {children}
+    </div>
+  );
+}
+
+function GlassStat({ icon: Icon, label, value, sub, color, glow }: { icon: any; label: string; value: string | number; sub?: string; color: string; glow: string }) {
+  return (
+    <div className="relative rounded-xl border border-white/[0.06] p-3 sm:p-4 overflow-hidden group"
+      style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))' }}>
+      <div className={`absolute -top-6 -right-6 w-16 h-16 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity ${glow}`} />
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-[10px] sm:text-[11px] font-medium text-white/40 uppercase tracking-wider">{label}</p>
+          <p className={`text-lg sm:text-2xl font-bold mt-0.5 ${color}`}>{value}</p>
+          {sub && <p className="text-[10px] text-white/30 mt-0.5">{sub}</p>}
+        </div>
+        <div className={`p-1.5 sm:p-2 rounded-lg border border-white/[0.06] ${color}`}
+          style={{ background: 'rgba(255,255,255,0.03)' }}>
+          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlassProgress({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-[11px] mb-1.5">
+        <span className="text-white/40">{label}</span>
+        <span className={`font-bold ${color}`}>{pct}%</span>
+      </div>
+      <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-700 ${color.replace('text-', 'bg-')}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
 }
 
 export default function ReportesPage() {
+  const { userProfile } = useAuth();
+  const [tab, setTab] = useState<'visitas' | 'pedidos'>('visitas');
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [dateFrom, setDateFrom] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [dateTo, setDateTo] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
-  
-  const [dailyOrders, setDailyOrders] = useState<Order[]>([]);
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [periodOrders, setPeriodOrders] = useState<Order[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  useEffect(() => {
-    loadData();
+  // Period
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
+  const [refDate, setRefDate] = useState(new Date());
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+
+  const { dateFrom, dateTo, periodLabel } = useMemo(() => {
+    if (periodMode === 'custom' && customFrom && customTo) {
+      return { dateFrom: customFrom, dateTo: customTo, periodLabel: `${customFrom} — ${customTo}` };
+    }
+    if (periodMode === 'week') {
+      const s = startOfWeek(refDate, { weekStartsOn: 1 });
+      const e = endOfWeek(refDate, { weekStartsOn: 1 });
+      return { dateFrom: format(s, 'yyyy-MM-dd'), dateTo: format(e, 'yyyy-MM-dd'), periodLabel: `Semana del ${format(s, "d MMM", { locale: es })} al ${format(e, "d MMM", { locale: es })}` };
+    }
+    const s = startOfMonth(refDate);
+    const e = endOfMonth(refDate);
+    return { dateFrom: format(s, 'yyyy-MM-dd'), dateTo: format(e, 'yyyy-MM-dd'), periodLabel: format(refDate, "MMMM yyyy", { locale: es }) };
+  }, [periodMode, refDate, customFrom, customTo]);
+
+  const navigate = (dir: -1 | 1) => {
+    setRefDate(d => periodMode === 'week' ? (dir === -1 ? subWeeks(d, 1) : addWeeks(d, 1)) : (dir === -1 ? subMonths(d, 1) : addMonths(d, 1)));
+  };
+
+  // Data
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [periodOrders, setPeriodOrders] = useState<Order[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [dailyOrders, setDailyOrders] = useState<Order[]>([]);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [clientSearch, setClientSearch] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
+  const [aiSummary, setAiSummary] = useState<{ summary: string; recommendation: string } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const loadVisits = useCallback(async () => {
+    try { setVisits(await getVisits({ date_from: dateFrom, date_to: dateTo })); } catch {}
+  }, [dateFrom, dateTo]);
+  const loadCustomers = useCallback(async () => {
+    try { setCustomers(await getCustomers()); } catch {}
   }, []);
 
-  useEffect(() => {
-    loadDailySummary();
-  }, [selectedDate]);
+  useEffect(() => { Promise.all([loadVisits(), loadCustomers(), loadPeriodOrders(), loadTopProducts()]).finally(() => setLoading(false)); }, []);
+  useEffect(() => { loadVisits(); }, [dateFrom, dateTo, loadVisits]);
 
-  useEffect(() => {
-    loadPeriodData();
-  }, [dateFrom, dateTo]);
+  const loadPeriodOrders = async () => { try { setPeriodOrders(await getOrders({ date_from: dateFrom, date_to: dateTo })); } catch {} };
+  const loadTopProducts = async () => { try { setTopProducts(await getTopProducts(30)); } catch {} };
+  useEffect(() => { loadPeriodOrders(); }, [dateFrom, dateTo]);
+  useEffect(() => { (async () => { try { setDailyOrders(await getDailySummary(selectedDate)); } catch {} })(); }, [selectedDate]);
 
-  const loadData = async () => {
+  const byStatus = useMemo(() => { const m: Record<string, number> = {}; visits.forEach(v => { m[v.status] = (m[v.status] || 0) + 1; }); return m; }, [visits]);
+  const totalVisits = visits.length;
+  const withResult = visits.filter(v => v.resultado).length;
+
+  const visitedCustomerIds = useMemo(() => new Set(visits.map(v => v.customer_id)), [visits]);
+  const filteredCustomers = useMemo(() => {
+    let list = customers.filter(c => visitedCustomerIds.has(c.id));
+    if (clientSearch) { const s = clientSearch.toLowerCase(); list = list.filter(c => c.nombre.toLowerCase().includes(s) || c.ciudad?.toLowerCase().includes(s)); }
+    return list.sort((a, b) => visits.filter(v => v.customer_id === b.id).length - visits.filter(v => v.customer_id === a.id).length);
+  }, [customers, visitedCustomerIds, clientSearch, visits]);
+
+  const customerVisits = useMemo(() => {
+    if (!selectedCustomerId) return [];
+    return visits.filter(v => v.customer_id === selectedCustomerId).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  }, [selectedCustomerId, visits]);
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  const loadAiSummary = async (custId: string) => {
+    if (!userProfile) return;
+    setAiLoading(true); setAiSummary(null);
     try {
-      const [customersData, topProductsData] = await Promise.all([
-        getCustomers(),
-        getTopProducts(30),
-      ]);
-      setCustomers(customersData);
-      setTopProducts(topProductsData);
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch('/api/visit-summary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerId: custId, userId: userProfile.id }) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setAiSummary(data);
+    } catch { toast.error('Error al generar resumen IA'); } finally { setAiLoading(false); }
   };
 
-  const loadDailySummary = async () => {
-    try {
-      const data = await getDailySummary(selectedDate);
-      setDailyOrders(data);
-    } catch (error) {
-      console.error('Error cargando resumen diario:', error);
-    }
-  };
-
-  const loadPeriodData = async () => {
-    try {
-      const data = await getOrders({
-        date_from: dateFrom,
-        date_to: dateTo,
-      });
-      setPeriodOrders(data);
-    } catch (error) {
-      console.error('Error cargando datos del período:', error);
-    }
-  };
-
-  // Daily stats
-  const dailyTotalAmount = dailyOrders.reduce((sum, o) => sum + o.total, 0);
-  const dailyTotalItems = dailyOrders.reduce(
-    (sum, o) => sum + (o.items?.reduce((s, i) => s + i.qty, 0) || 0),
-    0
-  );
-
-  // Period stats
-  const periodTotalAmount = periodOrders.reduce((sum, o) => sum + o.total, 0);
-  const periodTotalOrders = periodOrders.length;
-  const periodDelivered = periodOrders.filter((o) => o.status === 'entregado').length;
-
-  // Export functions
-  const exportDailyOrders = () => {
-    if (dailyOrders.length === 0) {
-      toast.error('No hay datos para exportar');
-      return;
-    }
-
-    const data = dailyOrders.map((order) => ({
-      fecha: formatDate(order.order_date),
-      cliente: order.customer?.nombre || '',
-      estado: orderStatusLabels[order.status],
-      subtotal: order.subtotal,
-      bonificado: order.total_bonificado,
-      total: order.total,
-      observacion: order.observacion_general || '',
-    }));
-
-    exportToCSV(data, `pedidos_${selectedDate}`, [
-      { key: 'fecha', label: 'Fecha' },
-      { key: 'cliente', label: 'Cliente' },
-      { key: 'estado', label: 'Estado' },
-      { key: 'subtotal', label: 'Subtotal' },
-      { key: 'bonificado', label: 'Bonificado' },
-      { key: 'total', label: 'Total' },
-      { key: 'observacion', label: 'Observación' },
-    ]);
-
-    toast.success('Archivo exportado');
+  const exportVisits = () => {
+    if (visits.length === 0) { toast.error('No hay datos'); return; }
+    exportToCSV(visits.map(v => ({ fecha: formatDate(v.scheduled_at), cliente: v.customer?.nombre || '', estado: v.status, objetivo: v.objetivo || '', resultado: v.resultado || '', observaciones: v.observaciones || '', ciudad: v.customer?.ciudad || '' })),
+      `visitas_${dateFrom}_${dateTo}`, [{ key: 'fecha', label: 'Fecha' }, { key: 'cliente', label: 'Cliente' }, { key: 'estado', label: 'Estado' }, { key: 'objetivo', label: 'Objetivo' }, { key: 'resultado', label: 'Resultado' }, { key: 'observaciones', label: 'Observaciones' }, { key: 'ciudad', label: 'Ciudad' }]);
+    toast.success('Exportado');
   };
 
   const exportPeriodOrders = () => {
-    if (periodOrders.length === 0) {
-      toast.error('No hay datos para exportar');
-      return;
-    }
-
-    const data = periodOrders.map((order) => ({
-      fecha: formatDate(order.order_date),
-      cliente: order.customer?.nombre || '',
-      estado: orderStatusLabels[order.status],
-      subtotal: order.subtotal,
-      bonificado: order.total_bonificado,
-      total: order.total,
-      observacion: order.observacion_general || '',
-    }));
-
-    exportToCSV(data, `pedidos_${dateFrom}_a_${dateTo}`, [
-      { key: 'fecha', label: 'Fecha' },
-      { key: 'cliente', label: 'Cliente' },
-      { key: 'estado', label: 'Estado' },
-      { key: 'subtotal', label: 'Subtotal' },
-      { key: 'bonificado', label: 'Bonificado' },
-      { key: 'total', label: 'Total' },
-      { key: 'observacion', label: 'Observación' },
-    ]);
-
-    toast.success('Archivo exportado');
+    if (periodOrders.length === 0) { toast.error('No hay datos'); return; }
+    exportToCSV(periodOrders.map(o => ({ fecha: formatDate(o.order_date), cliente: o.customer?.nombre || '', estado: orderStatusLabels[o.status], subtotal: o.subtotal, bonificado: o.total_bonificado, total: o.total })),
+      `pedidos_${dateFrom}_${dateTo}`, [{ key: 'fecha', label: 'Fecha' }, { key: 'cliente', label: 'Cliente' }, { key: 'estado', label: 'Estado' }, { key: 'subtotal', label: 'Subtotal' }, { key: 'bonificado', label: 'Bonificado' }, { key: 'total', label: 'Total' }]);
+    toast.success('Exportado');
   };
 
-  const exportTopProducts = () => {
-    if (topProducts.length === 0) {
-      toast.error('No hay datos para exportar');
-      return;
-    }
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="relative"><div className="w-10 h-10 rounded-xl bg-indigo-500/20 animate-pulse" /><div className="absolute inset-0 rounded-xl border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" /></div>
+    </div>
+  );
 
-    exportToCSV(
-      topProducts.map((p) => ({
-        sku: p.sku,
-        producto: p.name,
-        categoria: p.category,
-        cantidad_vendida: p.totalQty,
-        monto_total: p.totalAmount,
-      })),
-      'productos_mas_vendidos',
-      [
-        { key: 'sku', label: 'SKU' },
-        { key: 'producto', label: 'Producto' },
-        { key: 'categoria', label: 'Categoría' },
-        { key: 'cantidad_vendida', label: 'Cantidad Vendida' },
-        { key: 'monto_total', label: 'Monto Total' },
-      ]
-    );
-
-    toast.success('Archivo exportado');
-  };
-
-  const exportCustomers = () => {
-    if (customers.length === 0) {
-      toast.error('No hay datos para exportar');
-      return;
-    }
-
-    exportToCSV(
-      customers.map((c) => ({
-        nombre: c.nombre,
-        tipo: c.tipo,
-        telefono: c.telefono || '',
-        email: c.email || '',
-        direccion: c.direccion || '',
-        zona: c.zona || '',
-        ciudad: c.ciudad || '',
-        etapa: c.etapa_embudo,
-        etiquetas: c.etiquetas?.join(', ') || '',
-      })),
-      'clientes',
-      [
-        { key: 'nombre', label: 'Nombre' },
-        { key: 'tipo', label: 'Tipo' },
-        { key: 'telefono', label: 'Teléfono' },
-        { key: 'email', label: 'Email' },
-        { key: 'direccion', label: 'Dirección' },
-        { key: 'zona', label: 'Zona' },
-        { key: 'ciudad', label: 'Ciudad' },
-        { key: 'etapa', label: 'Etapa' },
-        { key: 'etiquetas', label: 'Etiquetas' },
-      ]
-    );
-
-    toast.success('Archivo exportado');
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500 dark:text-gray-300">Cargando reportes...</div>
-      </div>
-    );
-  }
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Reportes</h1>
-        <p className="text-gray-500 dark:text-gray-300 mt-1">
-          Analiza tus ventas y exporta datos
-        </p>
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="relative">
+          <div className="absolute -inset-1 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl opacity-40 blur-md" />
+          <div className="relative p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 shadow-xl shadow-indigo-500/25">
+            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </div>
+        </div>
+        <div>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">Reportes</h1>
+          <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">Panel de rendimiento y análisis</p>
+        </div>
       </div>
 
-      {/* Quick Exports */}
-      <Card>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Exportar Datos
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          <Button
-            variant="secondary"
-            icon={<FileDown className="h-4 w-4" />}
-            onClick={exportCustomers}
-          >
-            Clientes (CSV)
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<FileDown className="h-4 w-4" />}
-            onClick={exportTopProducts}
-          >
-            Productos Más Vendidos (CSV)
-          </Button>
-        </div>
-      </Card>
+      {/* === PERIOD FILTER BAR === */}
+      <div className="relative rounded-2xl border border-white/[0.08] overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, rgba(30,27,75,0.5), rgba(15,23,42,0.6))', backdropFilter: 'blur(16px)' }}>
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <div className="relative p-3 sm:p-4 space-y-3">
+          {/* Mode selector */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {([
+              { key: 'month' as PeriodMode, label: 'Mes', icon: CalendarDays },
+              { key: 'week' as PeriodMode, label: 'Semana', icon: Calendar },
+              { key: 'custom' as PeriodMode, label: 'Rango', icon: ArrowRight },
+            ]).map(m => (
+              <button key={m.key} onClick={() => setPeriodMode(m.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${periodMode === m.key
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'text-white/40 hover:text-white/60 border border-transparent hover:border-white/10'}`}>
+                <m.icon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{m.label}</span>
+              </button>
+            ))}
 
-      {/* Resumen Diario */}
-      <Card>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Resumen del Día
-          </h2>
-          <div className="flex items-center gap-3">
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto"
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<FileDown className="h-4 w-4" />}
-              onClick={exportDailyOrders}
-            >
-              Exportar
-            </Button>
+            {/* Tabs */}
+            <div className="ml-auto flex gap-1 bg-white/[0.04] rounded-lg p-0.5 border border-white/[0.06]">
+              {[
+                { key: 'visitas' as const, label: 'Visitas', icon: MapPin },
+                { key: 'pedidos' as const, label: 'Pedidos', icon: ShoppingCart },
+              ].map(t => (
+                <button key={t.key} onClick={() => setTab(t.key)}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all ${tab === t.key
+                    ? 'bg-white/10 text-white shadow-sm'
+                    : 'text-white/30 hover:text-white/50'}`}>
+                  <t.icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Daily Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-center">
-            <ShoppingCart className="h-6 w-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {dailyOrders.length}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-300">Pedidos</p>
-          </div>
-          <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-center">
-            <TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(dailyTotalAmount)}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-300">Total Ventas</p>
-          </div>
-          <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-center">
-            <Package className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {dailyTotalItems}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-300">Productos Vendidos</p>
-          </div>
-        </div>
+          {/* Period controls */}
+          {periodMode !== 'custom' ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-white/10 hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-all">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-semibold text-white capitalize min-w-[140px] text-center">{periodLabel}</span>
+              <button onClick={() => navigate(1)} className="p-1.5 rounded-lg border border-white/10 hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-all">
+                <ChevronRight className="w-4 h-4" />
+              </button>
 
-        {/* Daily Orders List */}
-        {dailyOrders.length === 0 ? (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-            No hay pedidos para este día
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {dailyOrders.map((order) => (
-              <div
-                key={order.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-dark-600"
-              >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {order.customer?.nombre}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-300">
-                    {order.items?.length || 0} productos
-                  </p>
+              {periodMode === 'month' && (
+                <div className="flex gap-1 ml-2 overflow-x-auto pb-1 sm:pb-0">
+                  {MONTHS.map((m, i) => {
+                    const isActive = refDate.getMonth() === i && refDate.getFullYear() === currentYear;
+                    const isCurrent = currentMonth === i;
+                    return (
+                      <button key={m} onClick={() => setRefDate(new Date(currentYear, i, 1))}
+                        className={`px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-medium transition-all whitespace-nowrap ${isActive
+                          ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/30'
+                          : isCurrent
+                          ? 'text-white/60 border border-white/10'
+                          : 'text-white/25 hover:text-white/50 border border-transparent hover:border-white/10'}`}>
+                        {m}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(order.total)}
-                  </p>
-                  <Badge
-                    variant={
-                      order.status === 'entregado'
-                        ? 'green'
-                        : order.status === 'confirmado'
-                        ? 'blue'
-                        : 'gray'
-                    }
-                  >
-                    {orderStatusLabels[order.status]}
-                  </Badge>
-                </div>
-              </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                className="px-3 py-1.5 rounded-lg text-xs bg-white/[0.04] border border-white/10 text-white focus:border-indigo-500/40 focus:outline-none [color-scheme:dark]" />
+              <span className="text-white/30 text-xs">a</span>
+              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+                className="px-3 py-1.5 rounded-lg text-xs bg-white/[0.04] border border-white/10 text-white focus:border-indigo-500/40 focus:outline-none [color-scheme:dark]" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {tab === 'visitas' && (
+        <>
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+            <GlassStat icon={BarChart3} label="Total" value={totalVisits} color="text-white" glow="bg-white" />
+            {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+              <GlassStat key={key} icon={cfg.icon} label={cfg.label} value={byStatus[key] || 0}
+                sub={totalVisits > 0 ? `${Math.round(((byStatus[key] || 0) / totalVisits) * 100)}%` : '0%'}
+                color={cfg.color} glow={cfg.dot} />
             ))}
           </div>
-        )}
-      </Card>
 
-      {/* Resumen por Período */}
-      <Card>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Resumen por Período
-          </h2>
-          <div className="flex items-center gap-3">
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-auto"
-            />
-            <span className="text-gray-500 dark:text-gray-300">a</span>
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-auto"
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<FileDown className="h-4 w-4" />}
-              onClick={exportPeriodOrders}
-            >
-              Exportar
-            </Button>
-          </div>
-        </div>
+          {/* Performance bars */}
+          <GlassCard className="p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-white">Rendimiento</h2>
+              <button onClick={exportVisits} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white/40 hover:text-white/70 border border-white/[0.08] hover:border-white/15 transition-all">
+                <FileDown className="w-3.5 h-3.5" /> CSV
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <GlassProgress label="Tasa de completación" value={byStatus['completada'] || 0} max={totalVisits} color="text-emerald-400" />
+              <GlassProgress label="No atendieron" value={byStatus['no_atendio'] || 0} max={totalVisits} color="text-amber-400" />
+              <GlassProgress label="Con resultado" value={withResult} max={totalVisits} color="text-blue-400" />
+            </div>
+          </GlassCard>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-600 text-center">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {periodTotalOrders}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-300">Total Pedidos</p>
-          </div>
-          <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-center">
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(periodTotalAmount)}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-300">Total Ventas</p>
-          </div>
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-600 text-center">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {periodDelivered}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-300">Entregados</p>
-          </div>
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-600 text-center">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {periodTotalOrders > 0
-                ? formatCurrency(periodTotalAmount / periodTotalOrders)
-                : formatCurrency(0)}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-300">Promedio por Pedido</p>
-          </div>
-        </div>
-      </Card>
+          {/* Client section */}
+          <GlassCard className="p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-white">Historial por Cliente</h2>
+                {selectedCustomer && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs border border-indigo-500/20">
+                    {selectedCustomer.nombre}
+                    <button onClick={() => { setSelectedCustomerId(null); setAiSummary(null); }} className="hover:text-red-400 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+              <div className="relative w-full sm:w-56">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                <input type="text" value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Buscar cliente..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-indigo-500/40" />
+              </div>
+            </div>
 
-      {/* Productos Más Vendidos */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Productos Más Vendidos (30 días)
-          </h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<FileDown className="h-4 w-4" />}
-            onClick={exportTopProducts}
-          >
-            Exportar
-          </Button>
-        </div>
-
-        {topProducts.length === 0 ? (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-            No hay datos de productos vendidos
-          </p>
-        ) : (
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Producto</th>
-                  <th>Categoría</th>
-                  <th className="text-right">Cantidad</th>
-                  <th className="text-right">Monto Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topProducts.slice(0, 10).map((product, index) => (
-                  <tr key={product.id}>
-                    <td>
-                      <span
-                        className={
-                          index < 3
-                            ? 'font-bold text-amber-600 dark:text-amber-400'
-                            : 'text-gray-400 dark:text-gray-500'
-                        }
-                      >
-                        {index + 1}
-                      </span>
-                    </td>
-                    <td>
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {product.name}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{product.sku}</p>
+            {!selectedCustomerId ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-2">
+                {filteredCustomers.slice(0, 30).map(c => {
+                  const cv = visits.filter(v => v.customer_id === c.id);
+                  const comp = cv.filter(v => v.status === 'completada').length;
+                  return (
+                    <button key={c.id} onClick={() => { setSelectedCustomerId(c.id); setAiSummary(null); }}
+                      className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-white/[0.06] hover:border-indigo-500/30 text-left transition-all group"
+                      style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.02), transparent)' }}>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/[0.08] group-hover:border-indigo-500/30 transition-colors"
+                        style={{ background: 'rgba(255,255,255,0.03)' }}>
+                        <span className="text-xs font-bold text-white/50 group-hover:text-indigo-300 transition-colors">{cv.length}</span>
                       </div>
-                    </td>
-                    <td>
-                      <Badge variant="blue">{product.category}</Badge>
-                    </td>
-                    <td className="text-right">
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {product.totalQty}
-                      </span>
-                    </td>
-                    <td className="text-right">
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(product.totalAmount)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-white/80 truncate group-hover:text-white transition-colors">{c.nombre}</p>
+                        <p className="text-[10px] text-white/25">{c.ciudad || 'Sin ciudad'} · {comp}/{cv.length} completadas</p>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-white/10 group-hover:text-indigo-400 shrink-0 transition-colors" />
+                    </button>
+                  );
+                })}
+                {filteredCustomers.length === 0 && <p className="col-span-full text-center text-xs text-white/25 py-8">Sin clientes con visitas en este período</p>}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(STATUS_CFG).map(([key, cfg]) => {
+                    const count = customerVisits.filter(v => v.status === key).length;
+                    if (count === 0) return null;
+                    return <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border bg-gradient-to-r ${cfg.glass} ${cfg.color}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} /> {cfg.label}: {count}
+                    </span>;
+                  })}
+                </div>
+
+                {/* Timeline */}
+                <div className="relative">
+                  <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-indigo-500/30 via-white/10 to-transparent" />
+                  <div className="space-y-0.5">
+                    {customerVisits.map(v => {
+                      const cfg = STATUS_CFG[v.status] || STATUS_CFG['programada'];
+                      const d = new Date(v.scheduled_at);
+                      return (
+                        <button key={v.id} onClick={() => setSelectedVisit(v)}
+                          className="relative w-full flex items-start gap-2.5 pl-1 pr-2 py-2 rounded-lg hover:bg-white/[0.04] text-left transition-all group">
+                          <div className={`relative z-10 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 border-white/20 group-hover:border-indigo-400/50 transition-colors`}
+                            style={{ background: 'rgba(15,23,42,0.8)' }}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[11px] font-semibold text-white/80">{format(d, "d MMM yyyy", { locale: es })}</span>
+                              <span className="text-[9px] text-white/25">{format(d, "HH:mm")}</span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded border bg-gradient-to-r font-medium ${cfg.glass} ${cfg.color}`}>{cfg.label}</span>
+                            </div>
+                            {v.objetivo && <p className="text-[11px] text-white/35 mt-0.5 truncate"><Target className="w-2.5 h-2.5 inline mr-0.5" />{v.objetivo}</p>}
+                            {v.resultado && <p className="text-[11px] text-emerald-400/70 mt-0.5 truncate"><MessageSquare className="w-2.5 h-2.5 inline mr-0.5" />{v.resultado}</p>}
+                          </div>
+                          <Eye className="w-3.5 h-3.5 text-white/10 group-hover:text-indigo-400 shrink-0 mt-1 transition-colors" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {customerVisits.length === 0 && <p className="text-center text-xs text-white/25 py-6 pl-6">Sin visitas en este período</p>}
+                </div>
+
+                {/* AI Analysis */}
+                <div className="relative rounded-xl overflow-hidden border border-indigo-500/20"
+                  style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.06))' }}>
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/30 to-transparent" />
+                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl" />
+                  <div className="relative p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded-md bg-indigo-500/20"><Sparkles className="w-3.5 h-3.5 text-indigo-400" /></div>
+                        <h3 className="text-xs font-semibold text-white">Análisis IA</h3>
+                      </div>
+                      <button onClick={() => loadAiSummary(selectedCustomerId!)} disabled={aiLoading}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-50 transition-all">
+                        {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                        {aiLoading ? 'Analizando...' : aiSummary ? 'Regenerar' : 'Generar'}
+                      </button>
+                    </div>
+                    {aiSummary ? (
+                      <div className="space-y-2.5">
+                        <div><p className="text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1">Resumen Ejecutivo</p><p className="text-xs text-white/60 leading-relaxed">{aiSummary.summary}</p></div>
+                        {aiSummary.recommendation && <div><p className="text-[9px] uppercase font-bold text-purple-400 tracking-wider mb-1">Recomendación</p><p className="text-xs text-white/60 leading-relaxed">{aiSummary.recommendation}</p></div>}
+                      </div>
+                    ) : !aiLoading ? <p className="text-[11px] text-white/20">Genera un resumen ejecutivo y recomendación con IA.</p> : null}
+                  </div>
+                </div>
+              </div>
+            )}
+          </GlassCard>
+        </>
+      )}
+
+      {tab === 'pedidos' && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <GlassStat icon={ShoppingCart} label="Pedidos" value={periodOrders.length} color="text-white" glow="bg-white" />
+            <GlassStat icon={TrendingUp} label="Total Ventas" value={formatCurrency(periodOrders.reduce((s, o) => s + o.total, 0))} color="text-emerald-400" glow="bg-emerald-400" />
+            <GlassStat icon={CheckCircle2} label="Entregados" value={periodOrders.filter(o => o.status === 'entregado').length} color="text-blue-400" glow="bg-blue-400" />
+            <GlassStat icon={Package} label="Promedio" value={periodOrders.length > 0 ? formatCurrency(periodOrders.reduce((s, o) => s + o.total, 0) / periodOrders.length) : '$0'} color="text-purple-400" glow="bg-purple-400" />
           </div>
-        )}
-      </Card>
+
+          <GlassCard className="p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-white">Resumen del Día</h2>
+              <div className="flex items-center gap-2">
+                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+                  className="px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] border border-white/10 text-white focus:border-indigo-500/40 focus:outline-none [color-scheme:dark]" />
+              </div>
+            </div>
+            {dailyOrders.length === 0 ? <p className="text-center text-xs text-white/25 py-6">Sin pedidos</p> : (
+              <div className="space-y-1.5">
+                {dailyOrders.map(o => (
+                  <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <div className="min-w-0"><p className="text-xs font-medium text-white/80 truncate">{o.customer?.nombre}</p><p className="text-[10px] text-white/25">{o.items?.length || 0} productos</p></div>
+                    <div className="text-right shrink-0"><p className="text-xs font-bold text-emerald-400">{formatCurrency(o.total)}</p>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/10' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/10' : 'text-white/40 bg-white/5'}`}>{orderStatusLabels[o.status]}</span></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+
+          <GlassCard className="p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-white">Pedidos del Período</h2>
+              <button onClick={exportPeriodOrders} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white/40 hover:text-white/70 border border-white/[0.08] hover:border-white/15 transition-all">
+                <FileDown className="w-3.5 h-3.5" /> Exportar
+              </button>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+              <table className="w-full text-xs">
+                <thead><tr className="border-b border-white/[0.08]">
+                  <th className="px-3 py-2 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Fecha</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Cliente</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Estado</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold text-white/40 uppercase tracking-wider">Total</th>
+                </tr></thead>
+                <tbody>
+                  {periodOrders.slice(0, 30).map(o => (
+                    <tr key={o.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                      <td className="px-3 py-2 text-white/50">{formatDate(o.order_date)}</td>
+                      <td className="px-3 py-2 font-medium text-white/70">{o.customer?.nombre}</td>
+                      <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.status === 'entregado' ? 'text-emerald-400 bg-emerald-500/10' : o.status === 'confirmado' ? 'text-blue-400 bg-blue-500/10' : 'text-white/40 bg-white/5'}`}>{orderStatusLabels[o.status]}</span></td>
+                      <td className="px-3 py-2 text-right font-bold text-emerald-400">{formatCurrency(o.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="p-4 sm:p-5">
+            <h2 className="text-sm font-semibold text-white mb-4">Top Productos (30 días)</h2>
+            {topProducts.length === 0 ? <p className="text-center text-xs text-white/25 py-6">Sin datos</p> : (
+              <div className="space-y-1.5">
+                {topProducts.slice(0, 10).map((p, i) => (
+                  <div key={p.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                    <span className={`w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-bold ${i < 3 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' : 'bg-white/5 text-white/30 border border-white/[0.06]'}`}>{i + 1}</span>
+                    <div className="flex-1 min-w-0"><p className="text-xs font-medium text-white/70 truncate">{p.name}</p><p className="text-[10px] text-white/25">{p.sku}</p></div>
+                    <div className="text-right shrink-0"><p className="text-xs font-bold text-white/70">{p.totalQty} uds</p><p className="text-[10px] text-emerald-400">{formatCurrency(p.totalAmount)}</p></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        </>
+      )}
+
+      {/* Visit Detail Modal */}
+      {selectedVisit && (
+        <Modal isOpen onClose={() => setSelectedVisit(null)} title="Detalle de Visita">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${STATUS_CFG[selectedVisit.status]?.glass || 'from-gray-500/20 to-gray-500/5 border-gray-500/20'} border`}>
+                {(() => { const I = STATUS_CFG[selectedVisit.status]?.icon || Clock; return <I className={`w-5 h-5 ${STATUS_CFG[selectedVisit.status]?.color || 'text-gray-400'}`} />; })()}
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-white">{selectedVisit.customer?.nombre || 'Cliente'}</p>
+                <p className="text-sm text-gray-500">{format(new Date(selectedVisit.scheduled_at), "EEEE d 'de' MMMM, yyyy · HH:mm", { locale: es })}</p>
+              </div>
+            </div>
+            {[
+              { label: 'Objetivo', value: selectedVisit.objetivo, icon: Target },
+              { label: 'Resultado', value: selectedVisit.resultado, icon: CheckCircle2 },
+              { label: 'Observaciones', value: selectedVisit.observaciones, icon: MessageSquare },
+              { label: 'Ubicación', value: selectedVisit.location_text || selectedVisit.customer?.direccion, icon: MapPin },
+              { label: 'Siguiente acción', value: selectedVisit.next_action, icon: ArrowRight },
+            ].filter(f => f.value).map(f => (
+              <div key={f.label} className="p-3 rounded-xl bg-gray-50 dark:bg-dark-600">
+                <div className="flex items-center gap-1.5 mb-1"><f.icon className="w-3.5 h-3.5 text-gray-400" /><p className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">{f.label}</p></div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{f.value}</p>
+              </div>
+            ))}
+            {selectedVisit.next_visit_at && (
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+                <div className="flex items-center gap-1.5 mb-1"><Calendar className="w-3.5 h-3.5 text-blue-500" /><p className="text-[10px] uppercase font-semibold text-blue-500 tracking-wider">Próxima visita</p></div>
+                <p className="text-sm text-blue-700 dark:text-blue-300">{format(new Date(selectedVisit.next_visit_at), "d 'de' MMMM, yyyy · HH:mm", { locale: es })}</p>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
