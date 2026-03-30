@@ -48,7 +48,7 @@ export default function VendorEventPage() {
   const [editingParticipant, setEditingParticipant] = useState<EventParticipant | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', numero_asiento: '' });
+  const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', numero_asiento: '' });
   const [qrParticipant, setQrParticipant] = useState<EventParticipant | null>(null);
 
   const [redirecting, setRedirecting] = useState(false);
@@ -110,6 +110,7 @@ export default function VendorEventPage() {
       categoria: '',
       notas: '',
       estado_inscripcion: 'pre_inscrito',
+      estado_pago: event?.precio_por_persona ? 'pagado' : 'pendiente',
       numero_asiento: '',
     });
     setCustomerSearch('');
@@ -130,7 +131,7 @@ export default function VendorEventPage() {
         telefono: partForm.telefono || null,
         empresa: partForm.empresa || null,
         estado_inscripcion: partForm.estado_inscripcion,
-        estado_pago: Number(partForm.monto_pagado) > 0 ? 'pagado' : 'pendiente',
+        estado_pago: partForm.estado_pago,
         monto_pagado: Number(partForm.monto_pagado) || 0,
         cupos_adicionales: Number(partForm.cupos_adicionales) || 0,
         categoria: partForm.categoria || null,
@@ -141,7 +142,7 @@ export default function VendorEventPage() {
       toast.success('Participante registrado');
       setShowAddModal(false);
       setSelectedCustomer(null);
-      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', numero_asiento: '' });
+      setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', numero_asiento: '' });
       const parts = await getEventParticipants(eventId);
       setParticipants(parts);
     } catch (err: any) { toast.error(err?.message || 'Error al registrar'); }
@@ -159,6 +160,7 @@ export default function VendorEventPage() {
       categoria: p.categoria || '',
       notas: p.notas || '',
       estado_inscripcion: p.estado_inscripcion || 'pre_inscrito',
+      estado_pago: p.estado_pago || 'pendiente',
       numero_asiento: p.numero_asiento || '',
     });
     setShowEditModal(true);
@@ -179,7 +181,7 @@ export default function VendorEventPage() {
         empresa: partForm.empresa || null,
         monto_pagado: Number(partForm.monto_pagado) || 0,
         estado_inscripcion: partForm.estado_inscripcion,
-        estado_pago: Number(partForm.monto_pagado) > 0 ? 'pagado' : 'pendiente',
+        estado_pago: partForm.estado_pago,
         cupos_adicionales: Number(partForm.cupos_adicionales) || 0,
         categoria: partForm.categoria || null,
         notas: partForm.notas || null,
@@ -345,7 +347,7 @@ export default function VendorEventPage() {
 
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-gray-900">Todos los Participantes ({participants.length})</h3>
-            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', numero_asiento: '' }); }}>
+            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', numero_asiento: '' }); }}>
               <Plus className="h-4 w-4 mr-1" />Inscribir Cliente
             </Button>
           </div>
@@ -581,14 +583,26 @@ export default function VendorEventPage() {
                 <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
                 <Input label="N° Asiento" value={partForm.numero_asiento} onChange={e => setPartForm(p => ({ ...p, numero_asiento: e.target.value }))} placeholder="Ej: A1, 12" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
-                <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                  <option value="pre_inscrito">Pre-inscrito</option>
-                  <option value="confirmado">Confirmado</option>
-                  <option value="lista_espera">Lista de espera</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
+                  <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                    <option value="pre_inscrito">Pre-inscrito</option>
+                    <option value="confirmado">Confirmado</option>
+                    <option value="lista_espera">Lista de espera</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado pago</label>
+                  <select value={partForm.estado_pago} onChange={e => setPartForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                    <option value="pendiente">Pendiente</option>
+                    <option value="parcial">Parcial</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="reembolsado">Reembolsado</option>
+                    <option value="exento">Exento</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
@@ -628,14 +642,26 @@ export default function VendorEventPage() {
             <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
             <Input label="N° Asiento" value={partForm.numero_asiento} onChange={e => setPartForm(p => ({ ...p, numero_asiento: e.target.value }))} placeholder="Ej: A1, 12" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
-            <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-              <option value="pre_inscrito">Pre-inscrito</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="lista_espera">Lista de espera</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
+              <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                <option value="pre_inscrito">Pre-inscrito</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="lista_espera">Lista de espera</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado pago</label>
+              <select value={partForm.estado_pago} onChange={e => setPartForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
+                <option value="pendiente">Pendiente</option>
+                <option value="parcial">Parcial</option>
+                <option value="pagado">Pagado</option>
+                <option value="reembolsado">Reembolsado</option>
+                <option value="exento">Exento</option>
+              </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
