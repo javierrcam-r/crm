@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -19,6 +19,12 @@ import {
   Send,
   Target,
   Edit,
+  Sparkles,
+  Mic,
+  MicOff,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -47,6 +53,7 @@ import {
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import VoiceDictate from '@/components/ui/VoiceDictate';
 
 export default function VisitaDetailPage() {
   const params = useParams();
@@ -80,6 +87,42 @@ export default function VisitaDetailPage() {
   const [newScheduledAt, setNewScheduledAt] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [newComment, setNewComment] = useState('');
+
+  // AI completion states
+  const [aiInput, setAiInput] = useState('');
+  const [aiParsing, setAiParsing] = useState(false);
+  const [aiFilled, setAiFilled] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [aiListening, setAiListening] = useState(false);
+
+  const parseWithAI = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+    setAiParsing(true);
+    try {
+      const res = await fetch('/api/parse-visit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          customerName: visit?.customer?.nombre || '',
+          visitObjective: visit?.objetivo || '',
+        }),
+      });
+      if (!res.ok) throw new Error('Error del servidor');
+      const data = await res.json();
+      if (data.resultado) setResultado(data.resultado);
+      if (data.observaciones) setObservaciones(data.observaciones);
+      if (data.nextAction) setNextAction(data.nextAction);
+      if (data.nextVisitDate) setNextVisitAt(data.nextVisitDate);
+      setAiFilled(true);
+      setShowDetails(true);
+      toast.success('Campos completados con IA');
+    } catch {
+      toast.error('Error al procesar con IA');
+    } finally {
+      setAiParsing(false);
+    }
+  }, [visit]);
 
   const visitId = params.id as string;
 
@@ -615,13 +658,18 @@ export default function VisitaDetailPage() {
             onChange={(e) => setEditFormData({ ...editFormData, scheduled_at: e.target.value })}
             required
           />
-          <Textarea
-            label="Objetivo de la Visita"
-            value={editFormData.objetivo}
-            onChange={(e) => setEditFormData({ ...editFormData, objetivo: e.target.value })}
-            placeholder="¿Cuál es el propósito de esta visita?"
-            rows={3}
-          />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-200">Objetivo de la Visita</label>
+              <VoiceDictate size="sm" onTranscript={(t) => setEditFormData(prev => ({ ...prev, objetivo: (prev.objetivo ? prev.objetivo + ' ' : '') + t }))} />
+            </div>
+            <Textarea
+              value={editFormData.objetivo}
+              onChange={(e) => setEditFormData({ ...editFormData, objetivo: e.target.value })}
+              placeholder="¿Cuál es el propósito de esta visita?"
+              rows={3}
+            />
+          </div>
           <Input
             label="Ubicación / Dirección"
             value={editFormData.location_text}
@@ -672,13 +720,18 @@ export default function VisitaDetailPage() {
         size="lg"
       >
         <div className="p-6 space-y-4">
-          <Textarea
-            label="Escribe tus comentarios u observaciones"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Anota lo que ocurrió en la visita, información importante del cliente, productos de interés, etc."
-            rows={6}
-          />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-200">Escribe tus comentarios u observaciones</label>
+              <VoiceDictate size="sm" onTranscript={(t) => setNewComment(prev => prev ? prev + ' ' + t : t)} />
+            </div>
+            <Textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Anota lo que ocurrió en la visita, información importante del cliente, productos de interés, etc."
+              rows={6}
+            />
+          </div>
           <p className="text-xs text-gray-400">
             Estos comentarios quedarán guardados en el historial de la visita.
           </p>
@@ -693,48 +746,137 @@ export default function VisitaDetailPage() {
         </div>
       </Modal>
 
-      {/* Completar Modal */}
+      {/* Completar Modal - AI Powered */}
       <Modal
         isOpen={showCompleteModal}
-        onClose={() => setShowCompleteModal(false)}
+        onClose={() => { setShowCompleteModal(false); setAiFilled(false); setAiInput(''); setShowDetails(false); }}
         title="Completar Visita"
         size="lg"
       >
         <div className="p-6 space-y-4">
-          <Textarea
-            label="Resultado de la Visita *"
-            value={resultado}
-            onChange={(e) => setResultado(e.target.value)}
-            placeholder="Describe el resultado de la visita..."
-            rows={3}
-          />
-          <Textarea
-            label="Observaciones adicionales"
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            placeholder="Observaciones adicionales..."
-            rows={3}
-          />
-          <Input
-            label="Próxima Acción"
-            value={nextAction}
-            onChange={(e) => setNextAction(e.target.value)}
-            placeholder="¿Qué hacer después?"
-          />
-          <Input
-            label="Programar Siguiente Visita"
-            type="datetime-local"
-            value={nextVisitAt}
-            onChange={(e) => setNextVisitAt(e.target.value)}
-          />
-          <p className="text-xs text-gray-400">
-            Si programas una siguiente visita, se creará automáticamente al completar.
-          </p>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button variant="secondary" onClick={() => setShowCompleteModal(false)}>
+          {/* AI Input Zone */}
+          <div className="rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-500/5 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-indigo-500" />
+              <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Describe qué pasó en la visita</span>
+            </div>
+            <p className="text-xs text-indigo-500/70 dark:text-indigo-400/60 mb-3">
+              Dicta o escribe libremente. La IA llenará los campos automáticamente.
+            </p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <textarea
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  placeholder='Ej: "Hablé con el gerente, le interesó el catálogo nuevo, quedamos en reunirnos la próxima semana para cerrar el pedido..."'
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-white dark:bg-dark-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && e.ctrlKey && aiInput.trim()) parseWithAI(aiInput); }}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <AiVoiceButton
+                  listening={aiListening}
+                  onToggle={(listening, transcript) => {
+                    setAiListening(listening);
+                    if (transcript) setAiInput(prev => prev ? prev + ' ' + transcript : transcript);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => parseWithAI(aiInput)}
+                  disabled={!aiInput.trim() || aiParsing}
+                  className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="Procesar con IA (Ctrl+Enter)"
+                >
+                  {aiParsing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          {aiFilled && (
+            <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span className="font-medium">Campos completados por IA — revisa y ajusta si es necesario</span>
+              <button type="button" onClick={() => setShowDetails(!showDetails)} className="ml-auto flex items-center gap-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                {showDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                <span>{showDetails ? 'Ocultar' : 'Ver'} campos</span>
+              </button>
+            </div>
+          )}
+
+          {/* Editable Fields - always visible if not AI filled, collapsible if AI filled */}
+          {(!aiFilled || showDetails) && (
+            <div className="space-y-3">
+              <Textarea
+                label="Resultado de la Visita *"
+                value={resultado}
+                onChange={(e) => setResultado(e.target.value)}
+                placeholder="Describe el resultado de la visita..."
+                rows={2}
+              />
+              <Textarea
+                label="Observaciones adicionales"
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+                placeholder="Observaciones adicionales..."
+                rows={2}
+              />
+              <Input
+                label="Próxima Acción"
+                value={nextAction}
+                onChange={(e) => setNextAction(e.target.value)}
+                placeholder="¿Qué hacer después?"
+              />
+              <Input
+                label="Programar Siguiente Visita"
+                type="datetime-local"
+                value={nextVisitAt}
+                onChange={(e) => setNextVisitAt(e.target.value)}
+              />
+              <p className="text-xs text-gray-400">
+                Si programas una siguiente visita, se creará automáticamente al completar.
+              </p>
+            </div>
+          )}
+
+          {/* Summary chips when collapsed */}
+          {aiFilled && !showDetails && (
+            <div className="space-y-2">
+              {resultado && (
+                <div className="px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+                  <p className="text-[10px] uppercase font-semibold text-emerald-500 mb-0.5">Resultado</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{resultado}</p>
+                </div>
+              )}
+              {observaciones && (
+                <div className="px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+                  <p className="text-[10px] uppercase font-semibold text-blue-500 mb-0.5">Observaciones</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{observaciones}</p>
+                </div>
+              )}
+              {nextAction && (
+                <div className="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                  <p className="text-[10px] uppercase font-semibold text-amber-500 mb-0.5">Próxima acción</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{nextAction}</p>
+                </div>
+              )}
+              {nextVisitAt && (
+                <div className="px-3 py-2 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20">
+                  <p className="text-[10px] uppercase font-semibold text-purple-500 mb-0.5">Siguiente visita</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{new Date(nextVisitAt).toLocaleString('es-EC', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Button variant="secondary" onClick={() => { setShowCompleteModal(false); setAiFilled(false); setAiInput(''); setShowDetails(false); }}>
               Cancelar
             </Button>
-            <Button variant="success" onClick={handleComplete} loading={actionLoading}>
+            <Button variant="success" onClick={handleComplete} loading={actionLoading} disabled={!resultado.trim()}>
               Completar Visita
             </Button>
           </div>
@@ -774,13 +916,18 @@ export default function VisitaDetailPage() {
         size="sm"
       >
         <div className="p-6 space-y-4">
-          <Textarea
-            label="Motivo de Cancelación"
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            placeholder="¿Por qué se cancela la visita?"
-            rows={3}
-          />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-200">Motivo de Cancelación</label>
+              <VoiceDictate size="sm" onTranscript={(t) => setCancelReason(prev => prev ? prev + ' ' + t : t)} />
+            </div>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="¿Por qué se cancela la visita?"
+              rows={3}
+            />
+          </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
               Volver
@@ -814,5 +961,53 @@ export default function VisitaDetailPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+function AiVoiceButton({ listening, onToggle }: { listening: boolean; onToggle: (listening: boolean, transcript?: string) => void }) {
+  const [supported, setSupported] = useState(false);
+  const recRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    setSupported(!!SR);
+    return () => { recRef.current?.abort(); };
+  }, []);
+
+  const toggle = () => {
+    if (listening) {
+      recRef.current?.stop();
+      onToggle(false);
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.lang = 'es-EC';
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.onresult = (e: any) => {
+      let t = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+      if (t) onToggle(true, t);
+    };
+    rec.onend = () => onToggle(false);
+    rec.onerror = () => onToggle(false);
+    recRef.current = rec;
+    rec.start();
+    onToggle(true);
+  };
+
+  if (!supported) return null;
+
+  return (
+    <button type="button" onClick={toggle} title={listening ? 'Detener' : 'Dictar por voz'}
+      className={`p-2.5 rounded-xl transition-all relative ${listening
+        ? 'bg-red-500 text-white animate-pulse ring-2 ring-red-300 dark:ring-red-500/40'
+        : 'bg-gray-100 dark:bg-dark-500 text-gray-500 dark:text-gray-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/15 hover:text-indigo-600 dark:hover:text-indigo-400'
+      }`}>
+      {listening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+      {listening && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-400 animate-ping" />}
+    </button>
   );
 }

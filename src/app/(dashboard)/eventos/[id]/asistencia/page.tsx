@@ -15,6 +15,7 @@ import { InvitationDownloadButton } from '@/components/events/InvitationPDF';
 import SeatMapView from '@/components/events/SeatMapView';
 import { useAuth } from '@/contexts/AuthContext';
 import { fuzzySearch } from '@/lib/search';
+import VoiceSearch from '@/components/ui/VoiceSearch';
 import {
   getEvent, getEventParticipants, updateParticipant, getActiveUsers,
   type Event, type EventParticipant,
@@ -323,15 +324,18 @@ export default function EventAssistancePage() {
       {/* List Tab */}
       {tab === 'list' && (
         <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, email, teléfono..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, email, teléfono..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <VoiceSearch onResult={(text) => setSearchTerm(text)} />
           </div>
 
           {/* Filter buttons */}

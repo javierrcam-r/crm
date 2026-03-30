@@ -18,6 +18,7 @@ import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { getOrders, getOrder, type Order } from '@/lib/services/orders';
 import { fuzzySearch } from '@/lib/search';
+import VoiceSearch from '@/components/ui/VoiceSearch';
 import {
   formatDate,
   formatCurrency,
@@ -313,13 +314,16 @@ export default function PedidosPage() {
       {/* Search and Filters */}
       <Card padding="sm">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Buscar por cliente..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              icon={<Search className="h-4 w-4" />}
-            />
+          <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar por cliente..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                icon={<Search className="h-4 w-4" />}
+              />
+            </div>
+            <VoiceSearch onResult={(text) => setSearch(text)} />
           </div>
           <Button
             variant="secondary"

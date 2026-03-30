@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
+import VoiceDictate from '@/components/ui/VoiceDictate';
 import { getCustomers, type Customer } from '@/lib/services/customers';
 import { createVisit } from '@/lib/services/visits';
 import { isDateBlocked } from '@/lib/services/blockedDays';
@@ -267,13 +268,18 @@ function NuevaVisitaContent() {
               onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
               required
             />
-            <Textarea
-              label="Objetivo de la Visita"
-              value={formData.objetivo || ''}
-              onChange={(e) => setFormData({ ...formData, objetivo: e.target.value })}
-              placeholder="¿Cuál es el propósito de esta visita?"
-              rows={3}
-            />
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-200">Objetivo de la Visita</label>
+                <VoiceDictate size="sm" onTranscript={(t) => setFormData(prev => ({ ...prev, objetivo: (prev.objetivo || '') + (prev.objetivo ? ' ' : '') + t }))} />
+              </div>
+              <Textarea
+                value={formData.objetivo || ''}
+                onChange={(e) => setFormData({ ...formData, objetivo: e.target.value })}
+                placeholder="¿Cuál es el propósito de esta visita?"
+                rows={3}
+              />
+            </div>
             <Input
               label="Ubicación / Dirección"
               value={formData.location_text || ''}

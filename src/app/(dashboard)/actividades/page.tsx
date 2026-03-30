@@ -37,6 +37,7 @@ import Modal from '@/components/ui/Modal';
 import ActivityReminder, { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { useAuth } from '@/contexts/AuthContext';
 import { fuzzySearch } from '@/lib/search';
+import VoiceSearch from '@/components/ui/VoiceSearch';
 import { 
   getActivities, 
   createActivity, 
@@ -678,15 +679,18 @@ export default function ActividadesPage() {
         </div>
         
         <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-          <div className="relative flex-1 sm:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-gray-200 dark:border-dark-500 rounded-lg text-sm w-full sm:w-48 bg-white dark:bg-dark-600 text-gray-900 dark:text-white"
-            />
+          <div className="flex items-center gap-1.5 flex-1 sm:flex-none">
+            <div className="relative flex-1 sm:flex-none">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 border border-gray-200 dark:border-dark-500 rounded-lg text-sm w-full sm:w-48 bg-white dark:bg-dark-600 text-gray-900 dark:text-white"
+              />
+            </div>
+            <VoiceSearch onResult={(text) => setSearchTerm(text)} />
           </div>
 
           <select

@@ -15,6 +15,7 @@ import EventsDashboard from '@/components/events/EventsDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEvents, getVendorEvents, getAllEventExpenses, getAllEventParticipants, type Event, type EventStatus, type EventType, type EventExpense, type EventParticipant } from '@/lib/services/events';
 import { fuzzySearch } from '@/lib/search';
+import VoiceSearch from '@/components/ui/VoiceSearch';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
@@ -171,15 +172,18 @@ export default function EventosPage() {
       {/* Filters */}
       <Card>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar evento..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500"
-            />
+          <div className="relative flex-1 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar evento..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <VoiceSearch onResult={(text) => setSearchTerm(text)} />
           </div>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="px-3 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white">
             <option value="">Todos los estados</option>
