@@ -2,26 +2,16 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  FileDown, TrendingUp, Package, ShoppingCart, CheckCircle2, XCircle, Ban,
-  Clock, BarChart3, Search, MapPin, Target, MessageSquare,
+  FileDown, CheckCircle2, XCircle, Ban,
+  Clock, BarChart3, Search, Target, MessageSquare,
   Eye, Sparkles, Loader2, Calendar, ArrowRight, RefreshCw, X,
   ChevronLeft, ChevronRight, CalendarDays, Zap,
 } from 'lucide-react';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
-import {
-  getDailySummary,
-  getTopProducts,
-  getOrders,
-  type Order,
-} from '@/lib/services/orders';
 import { getCustomers, type Customer } from '@/lib/services/customers';
 import { getVisits, type Visit } from '@/lib/services/visits';
-import { formatDate, formatCurrency, orderStatusLabels, exportToCSV } from '@/lib/utils';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, addMonths, subWeeks, addWeeks } from 'date-fns';
+import { formatDate, exportToCSV } from '@/lib/utils';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths, addMonths, subWeeks, addWeeks, subYears, addYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -36,7 +26,7 @@ const STATUS_CFG: Record<string, { label: string; color: string; colorLight: str
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-type PeriodMode = 'month' | 'week' | 'custom';
+type PeriodMode = 'year' | 'month' | 'week' | 'custom';
 
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
@@ -82,10 +72,9 @@ function GlassProgress({ label, value, max, color }: { label: string; value: num
 
 export default function ReportesPage() {
   const { userProfile } = useAuth();
-  const [tab, setTab] = useState<'visitas' | 'pedidos'>('visitas');
   const [loading, setLoading] = useState(true);
 
-  const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('year');
   const [refDate, setRefDate] = useState(new Date());
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -93,6 +82,11 @@ export default function ReportesPage() {
   const { dateFrom, dateTo, periodLabel } = useMemo(() => {
     if (periodMode === 'custom' && customFrom && customTo) {
       return { dateFrom: customFrom, dateTo: customTo, periodLabel: `${customFrom} — ${customTo}` };
+    }
+    if (periodMode === 'year') {
+      const s = startOfYear(refDate);
+      const e = endOfYear(refDate);
+      return { dateFrom: format(s, 'yyyy-MM-dd'), dateTo: format(e, 'yyyy-MM-dd'), periodLabel: format(refDate, "yyyy") };
     }
     if (periodMode === 'week') {
       const s = startOfWeek(refDate, { weekStartsOn: 1 });
@@ -105,15 +99,15 @@ export default function ReportesPage() {
   }, [periodMode, refDate, customFrom, customTo]);
 
   const navigate = (dir: -1 | 1) => {
-    setRefDate(d => periodMode === 'week' ? (dir === -1 ? subWeeks(d, 1) : addWeeks(d, 1)) : (dir === -1 ? subMonths(d, 1) : addMonths(d, 1)));
+    setRefDate(d => {
+      if (periodMode === 'year') return dir === -1 ? subYears(d, 1) : addYears(d, 1);
+      if (periodMode === 'week') return dir === -1 ? subWeeks(d, 1) : addWeeks(d, 1);
+      return dir === -1 ? subMonths(d, 1) : addMonths(d, 1);
+    });
   };
 
   const [visits, setVisits] = useState<Visit[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [periodOrders, setPeriodOrders] = useState<Order[]>([]);
-  const [topProducts, setTopProducts] = useState<any[]>([]);
-  const [dailyOrders, setDailyOrders] = useState<Order[]>([]);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [clientSearch, setClientSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
@@ -127,13 +121,8 @@ export default function ReportesPage() {
     try { setCustomers(await getCustomers()); } catch {}
   }, []);
 
-  useEffect(() => { Promise.all([loadVisits(), loadCustomers(), loadPeriodOrders(), loadTopProducts()]).finally(() => setLoading(false)); }, []);
+  useEffect(() => { Promise.all([loadVisits(), loadCustomers()]).finally(() => setLoading(false)); }, []);
   useEffect(() => { loadVisits(); }, [dateFrom, dateTo, loadVisits]);
-
-  const loadPeriodOrders = async () => { try { setPeriodOrders(await getOrders({ date_from: dateFrom, date_to: dateTo })); } catch {} };
-  const loadTopProducts = async () => { try { setTopProducts(await getTopProducts(30)); } catch {} };
-  useEffect(() => { loadPeriodOrders(); }, [dateFrom, dateTo]);
-  useEffect(() => { (async () => { try { setDailyOrders(await getDailySummary(selectedDate)); } catch {} })(); }, [selectedDate]);
 
   const byStatus = useMemo(() => { const m: Record<string, number> = {}; visits.forEach(v => { m[v.status] = (m[v.status] || 0) + 1; }); return m; }, [visits]);
   const totalVisits = visits.length;
@@ -170,13 +159,6 @@ export default function ReportesPage() {
     toast.success('Exportado');
   };
 
-  const exportPeriodOrders = () => {
-    if (periodOrders.length === 0) { toast.error('No hay datos'); return; }
-    exportToCSV(periodOrders.map(o => ({ fecha: formatDate(o.order_date), cliente: o.customer?.nombre || '', estado: orderStatusLabels[o.status], subtotal: o.subtotal, bonificado: o.total_bonificado, total: o.total })),
-      `pedidos_${dateFrom}_${dateTo}`, [{ key: 'fecha', label: 'Fecha' }, { key: 'cliente', label: 'Cliente' }, { key: 'estado', label: 'Estado' }, { key: 'subtotal', label: 'Subtotal' }, { key: 'bonificado', label: 'Bonificado' }, { key: 'total', label: 'Total' }]);
-    toast.success('Exportado');
-  };
-
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="relative"><div className="w-10 h-10 rounded-xl bg-indigo-500/20 animate-pulse" /><div className="absolute inset-0 rounded-xl border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" /></div>
@@ -207,36 +189,21 @@ export default function ReportesPage() {
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/15 dark:via-indigo-500/25 to-transparent" />
         <div className="relative p-3 sm:p-4 space-y-3">
           {/* Mode selector */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {([
-              { key: 'month' as PeriodMode, label: 'Mes', icon: CalendarDays },
-              { key: 'week' as PeriodMode, label: 'Semana', icon: Calendar },
+              { key: 'year' as PeriodMode, label: 'Año', icon: CalendarDays },
+              { key: 'month' as PeriodMode, label: 'Mes', icon: Calendar },
+              { key: 'week' as PeriodMode, label: 'Semana', icon: Clock },
               { key: 'custom' as PeriodMode, label: 'Rango', icon: ArrowRight },
             ]).map(m => (
               <button key={m.key} onClick={() => setPeriodMode(m.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${periodMode === m.key
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${periodMode === m.key
                   ? 'bg-indigo-50 dark:bg-indigo-600/25 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40'
                   : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 border border-transparent hover:border-gray-200 dark:hover:border-slate-700'}`}>
                 <m.icon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{m.label}</span>
               </button>
             ))}
-
-            {/* Tabs */}
-            <div className="ml-auto flex gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5 border border-gray-200 dark:border-slate-700/50">
-              {[
-                { key: 'visitas' as const, label: 'Visitas', icon: MapPin },
-                { key: 'pedidos' as const, label: 'Pedidos', icon: ShoppingCart },
-              ].map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all ${tab === t.key
-                    ? 'bg-white dark:bg-indigo-600/30 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'}`}>
-                  <t.icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t.label}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Period controls */}
@@ -245,19 +212,19 @@ export default function ReportesPage() {
               <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize min-w-[140px] text-center">{periodLabel}</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize min-w-[120px] sm:min-w-[140px] text-center">{periodLabel}</span>
               <button onClick={() => navigate(1)} className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white transition-all">
                 <ChevronRight className="w-4 h-4" />
               </button>
 
-              {periodMode === 'month' && (
-                <div className="flex gap-1 ml-2 overflow-x-auto pb-1 sm:pb-0">
+              {(periodMode === 'month' || periodMode === 'year') && (
+                <div className="flex gap-1 ml-1 sm:ml-2 overflow-x-auto pb-1 sm:pb-0">
                   {MONTHS.map((m, i) => {
-                    const isActive = refDate.getMonth() === i && refDate.getFullYear() === currentYear;
-                    const isCurrent = currentMonth === i;
+                    const isActive = periodMode === 'month' && refDate.getMonth() === i && refDate.getFullYear() === currentYear;
+                    const isCurrent = currentMonth === i && refDate.getFullYear() === currentYear;
                     return (
-                      <button key={m} onClick={() => setRefDate(new Date(currentYear, i, 1))}
-                        className={`px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-medium transition-all whitespace-nowrap ${isActive
+                      <button key={m} onClick={() => { setPeriodMode('month'); setRefDate(new Date(refDate.getFullYear(), i, 1)); }}
+                        className={`px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-medium transition-all whitespace-nowrap ${isActive
                           ? 'bg-indigo-50 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40'
                           : isCurrent
                           ? 'text-gray-700 dark:text-slate-300 border border-gray-300 dark:border-slate-600'
@@ -281,220 +248,142 @@ export default function ReportesPage() {
         </div>
       </div>
 
-      {tab === 'visitas' && (
-        <>
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
-            <GlassStat icon={BarChart3} label="Total" value={totalVisits} color="text-white" glow="bg-indigo-500" />
-            {Object.entries(STATUS_CFG).map(([key, cfg]) => (
-              <GlassStat key={key} icon={cfg.icon} label={cfg.label} value={byStatus[key] || 0}
-                sub={totalVisits > 0 ? `${Math.round(((byStatus[key] || 0) / totalVisits) * 100)}%` : '0%'}
-                color={cfg.color} glow={cfg.dot} />
-            ))}
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+        <GlassStat icon={BarChart3} label="Total" value={totalVisits} color="text-white" glow="bg-indigo-500" />
+        {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+          <GlassStat key={key} icon={cfg.icon} label={cfg.label} value={byStatus[key] || 0}
+            sub={totalVisits > 0 ? `${Math.round(((byStatus[key] || 0) / totalVisits) * 100)}%` : '0%'}
+            color={cfg.color} glow={cfg.dot} />
+        ))}
+      </div>
+
+      {/* Performance bars */}
+      <GlassCard className="p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Rendimiento</h2>
+          <button onClick={exportVisits} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all">
+            <FileDown className="w-3.5 h-3.5" /> CSV
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <GlassProgress label="Tasa de completación" value={byStatus['completada'] || 0} max={totalVisits} color="text-emerald-500 dark:text-emerald-400" />
+          <GlassProgress label="No atendieron" value={byStatus['no_atendio'] || 0} max={totalVisits} color="text-amber-500 dark:text-amber-400" />
+          <GlassProgress label="Con resultado" value={withResult} max={totalVisits} color="text-blue-500 dark:text-blue-400" />
+        </div>
+      </GlassCard>
+
+      {/* Client section */}
+      <GlassCard className="p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Historial por Cliente</h2>
+            {selectedCustomer && (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs border border-indigo-200 dark:border-indigo-500/20">
+                {selectedCustomer.nombre}
+                <button onClick={() => { setSelectedCustomerId(null); setAiSummary(null); }} className="hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
           </div>
+          <div className="relative w-full sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
+            <input type="text" value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Buscar cliente..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+          </div>
+        </div>
 
-          {/* Performance bars */}
-          <GlassCard className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Rendimiento</h2>
-              <button onClick={exportVisits} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all">
-                <FileDown className="w-3.5 h-3.5" /> CSV
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-              <GlassProgress label="Tasa de completación" value={byStatus['completada'] || 0} max={totalVisits} color="text-emerald-500 dark:text-emerald-400" />
-              <GlassProgress label="No atendieron" value={byStatus['no_atendio'] || 0} max={totalVisits} color="text-amber-500 dark:text-amber-400" />
-              <GlassProgress label="Con resultado" value={withResult} max={totalVisits} color="text-blue-500 dark:text-blue-400" />
-            </div>
-          </GlassCard>
-
-          {/* Client section */}
-          <GlassCard className="p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Historial por Cliente</h2>
-                {selectedCustomer && (
-                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs border border-indigo-200 dark:border-indigo-500/20">
-                    {selectedCustomer.nombre}
-                    <button onClick={() => { setSelectedCustomerId(null); setAiSummary(null); }} className="hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-              </div>
-              <div className="relative w-full sm:w-56">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
-                <input type="text" value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Buscar cliente..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
-              </div>
+        {!selectedCustomerId ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-2">
+            {filteredCustomers.slice(0, 30).map(c => {
+              const cv = visits.filter(v => v.customer_id === c.id);
+              const comp = cv.filter(v => v.status === 'completada').length;
+              return (
+                <button key={c.id} onClick={() => { setSelectedCustomerId(c.id); setAiSummary(null); }}
+                  className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-gray-100 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-500/40 bg-gray-50/50 dark:bg-slate-800/50 hover:bg-indigo-50/50 dark:hover:bg-slate-800 text-left transition-all group">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 group-hover:border-indigo-300 dark:group-hover:border-indigo-500/40 transition-colors">
+                    <span className="text-xs font-bold text-gray-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{cv.length}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{c.nombre}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500">{c.ciudad || 'Sin ciudad'} · {comp}/{cv.length} completadas</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 shrink-0 transition-colors" />
+                </button>
+              );
+            })}
+            {filteredCustomers.length === 0 && <p className="col-span-full text-center text-xs text-gray-400 dark:text-slate-500 py-8">Sin clientes con visitas en este período</p>}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(STATUS_CFG).map(([key, cfg]) => {
+                const count = customerVisits.filter(v => v.status === key).length;
+                if (count === 0) return null;
+                return <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border bg-gradient-to-r dark:${cfg.glass} ${cfg.glassLight} dark:${cfg.color} ${cfg.colorLight}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} /> {cfg.label}: {count}
+                </span>;
+              })}
             </div>
 
-            {!selectedCustomerId ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-2">
-                {filteredCustomers.slice(0, 30).map(c => {
-                  const cv = visits.filter(v => v.customer_id === c.id);
-                  const comp = cv.filter(v => v.status === 'completada').length;
+            {/* Timeline */}
+            <div className="relative">
+              <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-indigo-400/40 dark:from-indigo-500/40 via-gray-200 dark:via-slate-700 to-transparent" />
+              <div className="space-y-0.5">
+                {customerVisits.map(v => {
+                  const cfg = STATUS_CFG[v.status] || STATUS_CFG['programada'];
+                  const d = new Date(v.scheduled_at);
                   return (
-                    <button key={c.id} onClick={() => { setSelectedCustomerId(c.id); setAiSummary(null); }}
-                      className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border border-gray-100 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-500/40 bg-gray-50/50 dark:bg-slate-800/50 hover:bg-indigo-50/50 dark:hover:bg-slate-800 text-left transition-all group">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 group-hover:border-indigo-300 dark:group-hover:border-indigo-500/40 transition-colors">
-                        <span className="text-xs font-bold text-gray-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{cv.length}</span>
+                    <button key={v.id} onClick={() => setSelectedVisit(v)}
+                      className="relative w-full flex items-start gap-2.5 pl-1 pr-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/70 text-left transition-all group">
+                      <div className="relative z-10 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 group-hover:border-indigo-400 dark:group-hover:border-indigo-400/60 transition-colors">
+                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{c.nombre}</p>
-                        <p className="text-[10px] text-gray-400 dark:text-slate-500">{c.ciudad || 'Sin ciudad'} · {comp}/{cv.length} completadas</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-semibold text-gray-700 dark:text-slate-200">{format(d, "d MMM yyyy", { locale: es })}</span>
+                          <span className="text-[9px] text-gray-400 dark:text-slate-500">{format(d, "HH:mm")}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border bg-gradient-to-r font-medium dark:${cfg.glass} ${cfg.glassLight} dark:${cfg.color} ${cfg.colorLight}`}>{cfg.label}</span>
+                        </div>
+                        {v.objetivo && <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 truncate"><Target className="w-2.5 h-2.5 inline mr-0.5" />{v.objetivo}</p>}
+                        {v.resultado && <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 truncate"><MessageSquare className="w-2.5 h-2.5 inline mr-0.5" />{v.resultado}</p>}
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 shrink-0 transition-colors" />
+                      <Eye className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 shrink-0 mt-1 transition-colors" />
                     </button>
                   );
                 })}
-                {filteredCustomers.length === 0 && <p className="col-span-full text-center text-xs text-gray-400 dark:text-slate-500 py-8">Sin clientes con visitas en este período</p>}
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-1.5">
-                  {Object.entries(STATUS_CFG).map(([key, cfg]) => {
-                    const count = customerVisits.filter(v => v.status === key).length;
-                    if (count === 0) return null;
-                    return <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border bg-gradient-to-r dark:${cfg.glass} ${cfg.glassLight} dark:${cfg.color} ${cfg.colorLight}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} /> {cfg.label}: {count}
-                    </span>;
-                  })}
-                </div>
+              {customerVisits.length === 0 && <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6 pl-6">Sin visitas en este período</p>}
+            </div>
 
-                {/* Timeline */}
-                <div className="relative">
-                  <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-indigo-400/40 dark:from-indigo-500/40 via-gray-200 dark:via-slate-700 to-transparent" />
-                  <div className="space-y-0.5">
-                    {customerVisits.map(v => {
-                      const cfg = STATUS_CFG[v.status] || STATUS_CFG['programada'];
-                      const d = new Date(v.scheduled_at);
-                      return (
-                        <button key={v.id} onClick={() => setSelectedVisit(v)}
-                          className="relative w-full flex items-start gap-2.5 pl-1 pr-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/70 text-left transition-all group">
-                          <div className="relative z-10 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 group-hover:border-indigo-400 dark:group-hover:border-indigo-400/60 transition-colors">
-                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[11px] font-semibold text-gray-700 dark:text-slate-200">{format(d, "d MMM yyyy", { locale: es })}</span>
-                              <span className="text-[9px] text-gray-400 dark:text-slate-500">{format(d, "HH:mm")}</span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded border bg-gradient-to-r font-medium dark:${cfg.glass} ${cfg.glassLight} dark:${cfg.color} ${cfg.colorLight}`}>{cfg.label}</span>
-                            </div>
-                            {v.objetivo && <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 truncate"><Target className="w-2.5 h-2.5 inline mr-0.5" />{v.objetivo}</p>}
-                            {v.resultado && <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 truncate"><MessageSquare className="w-2.5 h-2.5 inline mr-0.5" />{v.resultado}</p>}
-                          </div>
-                          <Eye className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 shrink-0 mt-1 transition-colors" />
-                        </button>
-                      );
-                    })}
+            {/* AI Analysis */}
+            <div className="relative rounded-xl overflow-hidden border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/80 dark:to-slate-900">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/30 dark:via-indigo-400/40 to-transparent" />
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full blur-3xl" />
+              <div className="relative p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded-md bg-indigo-100 dark:bg-indigo-600/30"><Sparkles className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" /></div>
+                    <h3 className="text-xs font-semibold text-gray-900 dark:text-white">Análisis IA</h3>
                   </div>
-                  {customerVisits.length === 0 && <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6 pl-6">Sin visitas en este período</p>}
+                  <button onClick={() => loadAiSummary(selectedCustomerId!)} disabled={aiLoading}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-600/20 disabled:opacity-50 transition-all">
+                    {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                    {aiLoading ? 'Analizando...' : aiSummary ? 'Regenerar' : 'Generar'}
+                  </button>
                 </div>
-
-                {/* AI Analysis */}
-                <div className="relative rounded-xl overflow-hidden border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/80 dark:to-slate-900">
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/30 dark:via-indigo-400/40 to-transparent" />
-                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full blur-3xl" />
-                  <div className="relative p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-indigo-100 dark:bg-indigo-600/30"><Sparkles className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" /></div>
-                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white">Análisis IA</h3>
-                      </div>
-                      <button onClick={() => loadAiSummary(selectedCustomerId!)} disabled={aiLoading}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-600/20 disabled:opacity-50 transition-all">
-                        {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-                        {aiLoading ? 'Analizando...' : aiSummary ? 'Regenerar' : 'Generar'}
-                      </button>
-                    </div>
-                    {aiSummary ? (
-                      <div className="space-y-2.5">
-                        <div><p className="text-[9px] uppercase font-bold text-indigo-500 dark:text-indigo-400 tracking-wider mb-1">Resumen Ejecutivo</p><p className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">{aiSummary.summary}</p></div>
-                        {aiSummary.recommendation && <div><p className="text-[9px] uppercase font-bold text-purple-500 dark:text-purple-400 tracking-wider mb-1">Recomendación</p><p className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">{aiSummary.recommendation}</p></div>}
-                      </div>
-                    ) : !aiLoading ? <p className="text-[11px] text-gray-400 dark:text-slate-500">Genera un resumen ejecutivo y recomendación con IA.</p> : null}
+                {aiSummary ? (
+                  <div className="space-y-2.5">
+                    <div><p className="text-[9px] uppercase font-bold text-indigo-500 dark:text-indigo-400 tracking-wider mb-1">Resumen Ejecutivo</p><p className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">{aiSummary.summary}</p></div>
+                    {aiSummary.recommendation && <div><p className="text-[9px] uppercase font-bold text-purple-500 dark:text-purple-400 tracking-wider mb-1">Recomendación</p><p className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">{aiSummary.recommendation}</p></div>}
                   </div>
-                </div>
+                ) : !aiLoading ? <p className="text-[11px] text-gray-400 dark:text-slate-500">Genera un resumen ejecutivo y recomendación con IA.</p> : null}
               </div>
-            )}
-          </GlassCard>
-        </>
-      )}
-
-      {tab === 'pedidos' && (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            <GlassStat icon={ShoppingCart} label="Pedidos" value={periodOrders.length} color="text-white" glow="bg-indigo-500" />
-            <GlassStat icon={TrendingUp} label="Total Ventas" value={formatCurrency(periodOrders.reduce((s, o) => s + o.total, 0))} color="text-emerald-400" glow="bg-emerald-400" />
-            <GlassStat icon={CheckCircle2} label="Entregados" value={periodOrders.filter(o => o.status === 'entregado').length} color="text-blue-400" glow="bg-blue-400" />
-            <GlassStat icon={Package} label="Promedio" value={periodOrders.length > 0 ? formatCurrency(periodOrders.reduce((s, o) => s + o.total, 0) / periodOrders.length) : '$0'} color="text-purple-400" glow="bg-purple-400" />
+            </div>
           </div>
-
-          <GlassCard className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Resumen del Día</h2>
-              <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-                className="px-2.5 py-1 rounded-lg text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:border-indigo-500 focus:outline-none dark:[color-scheme:dark]" />
-            </div>
-            {dailyOrders.length === 0 ? <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6">Sin pedidos</p> : (
-              <div className="space-y-1.5">
-                {dailyOrders.map(o => (
-                  <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50 bg-gray-50/50 dark:bg-slate-800/50">
-                    <div className="min-w-0"><p className="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">{o.customer?.nombre}</p><p className="text-[10px] text-gray-400 dark:text-slate-500">{o.items?.length || 0} productos</p></div>
-                    <div className="text-right shrink-0"><p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(o.total)}</p>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${o.status === 'entregado' ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15' : 'text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
-
-          <GlassCard className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Pedidos del Período</h2>
-              <button onClick={exportPeriodOrders} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all">
-                <FileDown className="w-3.5 h-3.5" /> Exportar
-              </button>
-            </div>
-            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700/50">
-              <table className="w-full text-xs">
-                <thead><tr className="border-b border-gray-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-800/50">
-                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Fecha</th>
-                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Cliente</th>
-                  <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Estado</th>
-                  <th className="px-3 py-2.5 text-right text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Total</th>
-                </tr></thead>
-                <tbody>
-                  {periodOrders.slice(0, 30).map(o => (
-                    <tr key={o.id} className="border-b border-gray-100 dark:border-slate-800 hover:bg-gray-50/50 dark:hover:bg-slate-800/60">
-                      <td className="px-3 py-2 text-gray-500 dark:text-slate-400">{formatDate(o.order_date)}</td>
-                      <td className="px-3 py-2 font-medium text-gray-700 dark:text-slate-200">{o.customer?.nombre}</td>
-                      <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.status === 'entregado' ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15' : o.status === 'confirmado' ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15' : 'text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/50'}`}>{orderStatusLabels[o.status]}</span></td>
-                      <td className="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(o.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
-
-          <GlassCard className="p-4 sm:p-5">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Top Productos (30 días)</h2>
-            {topProducts.length === 0 ? <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6">Sin datos</p> : (
-              <div className="space-y-1.5">
-                {topProducts.slice(0, 10).map((p, i) => (
-                  <div key={p.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50 bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-                    <span className={`w-6 h-6 flex items-center justify-center rounded-md text-[10px] font-bold ${i < 3 ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border border-gray-200 dark:border-slate-700'}`}>{i + 1}</span>
-                    <div className="flex-1 min-w-0"><p className="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">{p.name}</p><p className="text-[10px] text-gray-400 dark:text-slate-500">{p.sku}</p></div>
-                    <div className="text-right shrink-0"><p className="text-xs font-bold text-gray-700 dark:text-slate-200">{p.totalQty} uds</p><p className="text-[10px] text-emerald-600 dark:text-emerald-400">{formatCurrency(p.totalAmount)}</p></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
-        </>
-      )}
+        )}
+      </GlassCard>
 
       {/* Visit Detail Modal */}
       {selectedVisit && (
@@ -513,7 +402,6 @@ export default function ReportesPage() {
               { label: 'Objetivo', value: selectedVisit.objetivo, icon: Target },
               { label: 'Resultado', value: selectedVisit.resultado, icon: CheckCircle2 },
               { label: 'Observaciones', value: selectedVisit.observaciones, icon: MessageSquare },
-              { label: 'Ubicación', value: selectedVisit.location_text || selectedVisit.customer?.direccion, icon: MapPin },
               { label: 'Siguiente acción', value: selectedVisit.next_action, icon: ArrowRight },
             ].filter(f => f.value).map(f => (
               <div key={f.label} className="p-3 rounded-xl bg-gray-50 dark:bg-dark-600">
