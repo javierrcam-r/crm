@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Users, Target, CheckCircle, Clock,
-  Plus, Trash2, Edit, AlertTriangle, DollarSign, X, Eye, QrCode, Download, FileText
+  Plus, Trash2, Edit, AlertTriangle, DollarSign, X, Eye, QrCode, Download, FileText, Filter, Search
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { InvitationDownloadButton } from '@/components/events/InvitationPDF';
@@ -51,6 +51,14 @@ export default function VendorEventPage() {
   const [partForm, setPartForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', numero_asiento: '' });
   const [qrParticipant, setQrParticipant] = useState<EventParticipant | null>(null);
 
+  // Participant filters
+  const [partSearch, setPartSearch] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterPago, setFilterPago] = useState('');
+  const [filterInscripcion, setFilterInscripcion] = useState('');
+  const [filterRegistradoPor, setFilterRegistradoPor] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
@@ -93,6 +101,33 @@ export default function VendorEventPage() {
   };
   const myParticipants = participants.filter(p => isMyParticipant(p));
   const othersParticipants = participants.filter(p => !isMyParticipant(p));
+
+  const uniqueCategories = useMemo(() => [...new Set(participants.map(p => p.categoria).filter(Boolean))] as string[], [participants]);
+  const uniqueRegistrants = useMemo(() => {
+    const ids = [...new Set(participants.map(p => p.registered_by).filter(Boolean))] as string[];
+    return ids.map(id => ({ id, name: getUserName(id) }));
+  }, [participants, allUsers]);
+
+  const filteredParticipants = useMemo(() => {
+    return participants.filter(p => {
+      if (partSearch) {
+        const q = partSearch.toLowerCase();
+        const match = (p.nombre || '').toLowerCase().includes(q)
+          || (p.email || '').toLowerCase().includes(q)
+          || (p.telefono || '').toLowerCase().includes(q)
+          || (p.empresa || '').toLowerCase().includes(q);
+        if (!match) return false;
+      }
+      if (filterCategoria && p.categoria !== filterCategoria) return false;
+      if (filterPago && p.estado_pago !== filterPago) return false;
+      if (filterInscripcion && p.estado_inscripcion !== filterInscripcion) return false;
+      if (filterRegistradoPor && p.registered_by !== filterRegistradoPor) return false;
+      return true;
+    });
+  }, [participants, partSearch, filterCategoria, filterPago, filterInscripcion, filterRegistradoPor]);
+
+  const hasActiveFilters = !!(partSearch || filterCategoria || filterPago || filterInscripcion || filterRegistradoPor);
+  const clearAllFilters = () => { setPartSearch(''); setFilterCategoria(''); setFilterPago(''); setFilterInscripcion(''); setFilterRegistradoPor(''); };
 
   const filteredCustomers = customerSearch.trim()
     ? searchCustomers(myCustomers, customerSearch)
@@ -345,18 +380,72 @@ export default function VendorEventPage() {
             </Card>
           )}
 
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-gray-900">Todos los Participantes ({participants.length})</h3>
-            <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', numero_asiento: '' }); }}>
-              <Plus className="h-4 w-4 mr-1" />Inscribir Cliente
-            </Button>
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                Todos los Participantes ({hasActiveFilters ? `${filteredParticipants.length}/${participants.length}` : participants.length})
+              </h3>
+              <div className="flex gap-2">
+                <Button size="sm" variant={showFilters ? 'primary' : 'secondary'} onClick={() => setShowFilters(!showFilters)}>
+                  <Filter className="h-3.5 w-3.5 mr-1" />{showFilters ? 'Ocultar' : 'Filtros'}
+                  {hasActiveFilters && <span className="ml-1 w-4 h-4 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center">!</span>}
+                </Button>
+                <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', numero_asiento: '' }); }}>
+                  <Plus className="h-4 w-4 mr-1" />Inscribir
+                </Button>
+              </div>
+            </div>
+
+            {showFilters && (
+              <Card className="!p-3">
+                <div className="flex flex-col gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <input type="text" value={partSearch} onChange={e => setPartSearch(e.target.value)} placeholder="Buscar por nombre, email, teléfono, empresa..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-dark-500 rounded-lg text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 dark:border-dark-500 rounded-lg text-xs bg-white dark:bg-dark-600 text-gray-700 dark:text-gray-200">
+                      <option value="">Categoría: Todas</option>
+                      {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <select value={filterPago} onChange={e => setFilterPago(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 dark:border-dark-500 rounded-lg text-xs bg-white dark:bg-dark-600 text-gray-700 dark:text-gray-200">
+                      <option value="">Pago: Todos</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="parcial">Parcial</option>
+                      <option value="pagado">Pagado</option>
+                      <option value="reembolsado">Reembolsado</option>
+                      <option value="exento">Exento</option>
+                    </select>
+                    <select value={filterInscripcion} onChange={e => setFilterInscripcion(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 dark:border-dark-500 rounded-lg text-xs bg-white dark:bg-dark-600 text-gray-700 dark:text-gray-200">
+                      <option value="">Inscripción: Todas</option>
+                      <option value="pre_inscrito">Pre-inscrito</option>
+                      <option value="confirmado">Confirmado</option>
+                      <option value="lista_espera">Lista espera</option>
+                      <option value="cancelado">Cancelado</option>
+                    </select>
+                    <select value={filterRegistradoPor} onChange={e => setFilterRegistradoPor(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 dark:border-dark-500 rounded-lg text-xs bg-white dark:bg-dark-600 text-gray-700 dark:text-gray-200">
+                      <option value="">Registrado por: Todos</option>
+                      {uniqueRegistrants.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  </div>
+                  {hasActiveFilters && (
+                    <div className="flex justify-end">
+                      <button onClick={clearAllFilters} className="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium flex items-center gap-1">
+                        <X className="h-3 w-3" /> Limpiar filtros
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
 
           {/* Mobile card layout */}
           <div className="md:hidden space-y-2">
-            {participants.length === 0 ? (
-              <Card><p className="text-center py-4 text-gray-500 text-sm">Sin participantes aún</p></Card>
-            ) : participants.map(p => {
+            {filteredParticipants.length === 0 ? (
+              <Card><p className="text-center py-4 text-gray-500 text-sm">{hasActiveFilters ? 'Sin resultados para estos filtros' : 'Sin participantes aún'}</p></Card>
+            ) : filteredParticipants.map(p => {
               const isMine = isMyParticipant(p);
               return (
                 <Card key={p.id} className={isMine ? 'border-indigo-200 bg-indigo-50/20' : ''} padding="none">
@@ -413,9 +502,9 @@ export default function VendorEventPage() {
                   <th className="text-center px-4 py-3 w-20">Acción</th>
                 </tr></thead>
                 <tbody className="divide-y">
-                  {participants.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-8 text-gray-500">Sin participantes aún</td></tr>
-                  ) : participants.map(p => {
+                  {filteredParticipants.length === 0 ? (
+                    <tr><td colSpan={8} className="text-center py-8 text-gray-500">{hasActiveFilters ? 'Sin resultados para estos filtros' : 'Sin participantes aún'}</td></tr>
+                  ) : filteredParticipants.map(p => {
                     const isMine = isMyParticipant(p);
                     return (
                       <tr key={p.id} className={`hover:bg-gray-50 ${isMine ? 'bg-indigo-50/30' : ''}`}>
