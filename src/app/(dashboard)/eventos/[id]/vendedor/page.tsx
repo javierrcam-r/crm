@@ -26,6 +26,7 @@ import { getCustomers, type Customer } from '@/lib/services/customers';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { exportParticipantsToExcel } from '@/lib/exportParticipants';
 
 export default function VendorEventPage() {
   const params = useParams();
@@ -390,6 +391,11 @@ export default function VendorEventPage() {
                   <Filter className="h-3.5 w-3.5 mr-1" />{showFilters ? 'Ocultar' : 'Filtros'}
                   {hasActiveFilters && <span className="ml-1 w-4 h-4 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center">!</span>}
                 </Button>
+                {event && participants.length > 0 && (
+                  <Button size="sm" variant="secondary" onClick={() => exportParticipantsToExcel({ event, participants: filteredParticipants, getUserName })}>
+                    <Download className="h-3.5 w-3.5 mr-1" />Excel
+                  </Button>
+                )}
                 <Button size="sm" onClick={() => { setShowAddModal(true); setSelectedCustomer(null); setPartForm({ nombre: '', email: '', telefono: '', empresa: '', monto_pagado: event?.precio_por_persona ? String(event.precio_por_persona) : '0', cupos_adicionales: '0', categoria: '', notas: '', estado_inscripcion: 'pre_inscrito', estado_pago: 'pendiente', numero_asiento: '' }); }}>
                   <Plus className="h-4 w-4 mr-1" />Inscribir
                 </Button>

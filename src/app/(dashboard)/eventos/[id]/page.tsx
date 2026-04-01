@@ -30,6 +30,7 @@ import {
 import { format, differenceInDays, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { exportParticipantsToExcel } from '@/lib/exportParticipants';
 
 type Tab = 'general' | 'presupuesto' | 'actividades' | 'participantes' | 'venue' | 'kpis';
 
@@ -631,7 +632,14 @@ export default function EventDetailPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-gray-900">Participantes ({participants.length})</h3>
-            <Button size="sm" onClick={() => openParticipantModal()}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
+            <div className="flex gap-2">
+              {participants.length > 0 && (
+                <Button size="sm" variant="secondary" onClick={() => exportParticipantsToExcel({ event, participants, getUserName })}>
+                  <Download className="h-3.5 w-3.5 mr-1" />Excel
+                </Button>
+              )}
+              <Button size="sm" onClick={() => openParticipantModal()}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
+            </div>
           </div>
 
           {/* Resumen por categorías */}
