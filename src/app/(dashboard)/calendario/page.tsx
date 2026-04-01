@@ -216,14 +216,15 @@ export default function CalendarioPage() {
       setStrategicObjectives(stratObjData);
 
       // Filtrar visitas por usuario si hay filtro activo
-      // filterByUser es users_profile.id, pero visit.user_id es auth UUID
+      // filterByUser es users_profile.id, pero visit.user_id puede ser auth UUID o profile ID
       let filteredVisits = visitsData;
       let filteredPending = pendingData;
       if (filterByUser && isSup) {
         const selectedUser = allUsers.find(u => u.id === filterByUser);
         const authUid = (selectedUser as any)?.user_id || filterByUser;
-        filteredVisits = visitsData.filter(v => v.user_id === authUid);
-        filteredPending = pendingData.filter(v => v.user_id === authUid);
+        const matchIds = new Set([filterByUser, authUid].filter(Boolean));
+        filteredVisits = visitsData.filter(v => matchIds.has(v.user_id));
+        filteredPending = pendingData.filter(v => matchIds.has(v.user_id));
       }
       
       setVisits(filteredVisits);
