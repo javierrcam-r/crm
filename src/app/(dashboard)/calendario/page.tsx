@@ -223,8 +223,9 @@ export default function CalendarioPage() {
         const selectedUser = allUsers.find(u => u.id === filterByUser);
         const authUid = (selectedUser as any)?.user_id || filterByUser;
         const matchIds = new Set([filterByUser, authUid].filter(Boolean));
-        filteredVisits = visitsData.filter(v => matchIds.has(v.user_id));
-        filteredPending = pendingData.filter(v => matchIds.has(v.user_id));
+        const matchVisit = (v: any) => matchIds.has(v.user_id) || (!v.user_id && v.customer?.user_id && matchIds.has(v.customer.user_id));
+        filteredVisits = visitsData.filter(matchVisit);
+        filteredPending = pendingData.filter(matchVisit);
       }
       
       setVisits(filteredVisits);

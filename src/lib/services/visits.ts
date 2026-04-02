@@ -11,7 +11,7 @@ export async function getVisits(filters?: VisitFilters) {
     .from('visits')
     .select(`
       *,
-      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud)
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud, user_id)
     `)
     .is('deleted_at', null)
     .order('scheduled_at', { ascending: true });
@@ -97,7 +97,7 @@ export async function getPendingVisits() {
     .from('visits')
     .select(`
       *,
-      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud)
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud, user_id)
     `)
     .is('deleted_at', null)
     .eq('status', 'programada')
@@ -174,11 +174,12 @@ export async function createVisitFromReschedule(
   newScheduledAt: string
 ): Promise<Visit> {
   const supabase = getSupabaseClient();
+  const userId = originalVisit.user_id || getCurrentUserId();
   const { data, error } = await supabase
     .from('visits')
     .insert({
       customer_id: originalVisit.customer_id,
-      user_id: originalVisit.user_id,
+      user_id: userId,
       scheduled_at: newScheduledAt,
       status: 'programada',
       objetivo: originalVisit.objetivo || 'Visita reprogramada',
