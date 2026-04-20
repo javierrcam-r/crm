@@ -13,6 +13,7 @@ import {
   Building,
   UserPlus,
   UserX,
+  IdCard,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -246,6 +247,18 @@ export default function ClientesPage() {
                       </div>
                     )}
                   </div>
+
+                  {customer.num_identificacion && (
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-300">
+                      <IdCard className="h-4 w-4" />
+                      <span className="font-mono text-xs">{customer.num_identificacion}</span>
+                      {customer.tipo_identificacion && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-dark-600 text-gray-500 dark:text-gray-400 font-medium">
+                          {customer.tipo_identificacion === 'R' ? 'RUC' : customer.tipo_identificacion === 'C' ? 'CI' : customer.tipo_identificacion}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {customer.etiquetas && customer.etiquetas.length > 0 && (
                     <div className="mt-4 pt-3 border-t border-gray-100 dark:border-dark-500">

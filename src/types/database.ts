@@ -37,6 +37,10 @@ export interface Customer {
   categoria_compra: string | null;
   latitud: number | null;
   longitud: number | null;
+  codigo_cliente_ventas: number | null;
+  num_identificacion: string | null;
+  tipo_identificacion: string | null;
+  fecha_nacimiento: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -58,6 +62,10 @@ export interface CustomerInsert {
   categoria_compra?: string | null;
   latitud?: number | null;
   longitud?: number | null;
+  codigo_cliente_ventas?: number | null;
+  num_identificacion?: string | null;
+  tipo_identificacion?: string | null;
+  fecha_nacimiento?: string | null;
 }
 
 export interface CustomerUpdate extends Partial<CustomerInsert> {}
@@ -490,4 +498,45 @@ export interface SalesGoalInsert {
 export interface SalesGoalUpdate {
   meta_cantidad?: number;
   meta_valor?: number;
+}
+
+// =====================================================
+// VENTAS RESUMEN MENSUAL (sincronizado desde base ventas)
+// =====================================================
+export interface VentasResumenMensual {
+  id: string;
+  anio: number;
+  mes: number;
+  codigo_vendedor: number;
+  codcomprobante: number;
+  num_ventas: number;
+  total_ventas: number;
+  total_sin_iva: number;
+  total_iva: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VentasResumenConVendedor extends VentasResumenMensual {
+  vendedor_nombre?: string;
+  vendedor_id?: string;
+}
+
+export interface VentasClienteMensual {
+  id: string;
+  anio: number;
+  mes: number;
+  codigo_cliente: number;
+  codigo_vendedor: number;
+  num_ventas: number;
+  total_ventas: number;
+  total_sin_iva: number;
+  total_iva: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VentasClienteConNombre extends VentasClienteMensual {
+  cliente_nombre?: string;
+  vendedor_nombre?: string;
 }

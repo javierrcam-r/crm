@@ -22,6 +22,7 @@ import {
   UserCheck,
   Palmtree,
   Sparkles,
+  DollarSign,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -41,6 +42,7 @@ const vendedorNavigation = [
   { key: 'productos', name: 'Productos', href: '/productos', icon: Package },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
   { key: 'reportes', name: 'Reportes', href: '/reportes', icon: BarChart3 },
+  { key: 'resumen_ventas', name: 'Resumen Ventas', href: '/resumen-ventas', icon: DollarSign },
 ];
 
 const adminNavigation = [
@@ -56,6 +58,7 @@ const supervisorNavigation = [
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
   { key: 'metas', name: 'Metas de Ventas', href: '/supervisores/metas', icon: BarChart3 },
+  { key: 'resumen_ventas', name: 'Resumen Ventas', href: '/resumen-ventas', icon: DollarSign },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
   { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];
@@ -68,6 +71,7 @@ const supervisorN1Navigation = [
   { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
   { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
   { key: 'metas', name: 'Metas de Ventas', href: '/supervisores/metas', icon: BarChart3 },
+  { key: 'resumen_ventas', name: 'Resumen Ventas', href: '/resumen-ventas', icon: DollarSign },
   { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
   { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];

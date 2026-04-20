@@ -22,6 +22,7 @@ export const ALL_MENU_ITEMS = [
   { key: 'vendedores', label: 'Ver Vendedores' },
   { key: 'gestion_clientes', label: 'Gestión Clientes' },
   { key: 'usuarios', label: 'Usuarios' },
+  { key: 'resumen_ventas', label: 'Resumen Ventas' },
   { key: 'configuracion', label: 'Configuración' },
 ];
 

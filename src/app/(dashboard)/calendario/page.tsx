@@ -24,7 +24,9 @@ import {
   Target,
   Filter,
   CalendarOff,
+  Sparkles,
 } from 'lucide-react';
+import CalendIAModal from '@/components/calendar/CalendIAModal';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -122,6 +124,7 @@ export default function CalendarioPage() {
   const [selectedDayMobile, setSelectedDayMobile] = useState<Date | null>(null);
   const [calendarFilter, setCalendarFilter] = useState<CalendarFilterType>('todos');
   const [blockedDaysSet, setBlockedDaysSet] = useState<Set<string>>(new Set());
+  const [showCalendIA, setShowCalendIA] = useState(false);
 
   // Detectar móvil
   useEffect(() => {
@@ -653,6 +656,14 @@ export default function CalendarioPage() {
             </p>
           </div>
           <div className="flex gap-1.5 sm:gap-2">
+            <button
+              onClick={() => setShowCalendIA(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs sm:text-sm font-medium hover:from-violet-600 hover:to-indigo-700 transition-all shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">CalendIA</span>
+              <span className="sm:hidden">IA</span>
+            </button>
             <Link href="/calendario/nueva-actividad">
               <Button size={isMobile ? 'sm' : 'md'} icon={<Plus className="h-4 w-4" />}>
                 <span className="hidden sm:inline">Actividad Diaria</span>
@@ -2611,6 +2622,12 @@ export default function CalendarioPage() {
           </div>
         )}
       </Modal>
+
+      <CalendIAModal
+        isOpen={showCalendIA}
+        onClose={() => setShowCalendIA(false)}
+        onVisitCreated={() => loadData()}
+      />
     </div>
   );
 }

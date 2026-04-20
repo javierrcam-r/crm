@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CreditCard, Tag, MapPin, Link2, CheckCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, CreditCard, Tag, MapPin, Link2, CheckCircle, ExternalLink, Hash } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -36,6 +36,7 @@ export default function EditarClientePage() {
     categoria_compra: '',
     latitud: null,
     longitud: null,
+    codigo_cliente_ventas: null,
   });
   const [estado, setEstado] = useState('prospecto');
   const [etiquetasText, setEtiquetasText] = useState('');
@@ -77,6 +78,7 @@ export default function EditarClientePage() {
         categoria_compra: customer.categoria_compra || '',
         latitud: customer.latitud,
         longitud: customer.longitud,
+        codigo_cliente_ventas: customer.codigo_cliente_ventas,
       });
       setEtiquetasText(customer.etiquetas?.join(', ') || '');
     } catch (error) {
@@ -436,6 +438,14 @@ export default function EditarClientePage() {
               onChange={(e) => setFormData({ ...formData, categoria_compra: e.target.value })}
               placeholder="Ej: Cosmética, Farmacia, Limpieza..."
               icon={<Tag className="h-4 w-4" />}
+            />
+            <Input
+              label="Código Sistema Ventas"
+              type="number"
+              value={formData.codigo_cliente_ventas ?? ''}
+              onChange={(e) => setFormData({ ...formData, codigo_cliente_ventas: e.target.value ? parseInt(e.target.value) : null })}
+              placeholder="Código del cliente en el sistema de ventas externo"
+              icon={<Hash className="h-4 w-4" />}
             />
           </div>
 

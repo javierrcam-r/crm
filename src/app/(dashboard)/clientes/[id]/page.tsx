@@ -19,6 +19,9 @@ import {
   Star,
   Tag,
   Plus,
+  IdCard,
+  Cake,
+  Hash,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -326,12 +329,62 @@ export default function ClienteDetailPage() {
             </div>
           </Card>
 
+          {/* Datos Fiscales / Identificación */}
+          {(customer.num_identificacion || customer.codigo_cliente_ventas || customer.fecha_nacimiento) && (
+            <Card>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <IdCard className="h-5 w-5 text-indigo-500" />
+                Identificación
+              </h2>
+
+              <div className="space-y-4">
+                {customer.num_identificacion && (
+                  <div className="flex items-center gap-3">
+                    <IdCard className="h-5 w-5 text-gray-400" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {customer.tipo_identificacion === 'R' ? 'RUC' : customer.tipo_identificacion === 'C' ? 'Cédula' : 'Identificación'}
+                      </p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white font-mono">
+                        {customer.num_identificacion}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {customer.fecha_nacimiento && (
+                  <div className="flex items-center gap-3">
+                    <Cake className="h-5 w-5 text-gray-400" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Fecha de Nacimiento</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {formatDate(customer.fecha_nacimiento)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {customer.codigo_cliente_ventas && (
+                  <div className="flex items-center gap-3">
+                    <Hash className="h-5 w-5 text-gray-400" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Código Sistema Ventas</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {customer.codigo_cliente_ventas}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Stats */}
           <Card>
-            <h3 className="text-sm font-semibold text-gray-500 mb-4">Resumen</h3>
-            <div className="text-center p-3 rounded-lg bg-gray-50">
-              <p className="text-2xl font-bold text-gray-900">{visits.length}</p>
-              <p className="text-xs text-gray-500">Visitas</p>
+            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4">Resumen</h3>
+            <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-dark-800">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{visits.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Visitas</p>
             </div>
           </Card>
         </div>
