@@ -1,9 +1,35 @@
+# syntax=docker/dockerfile:1.6
 # =====================================================
-# CRM Camila Fernández - Dockerfile
-# Solo empaqueta el build standalone de Next.js
-# (el build se hace localmente con `npm run build`)
+# CRM Camila Fernández - Dockerfile (multi-stage)
+# Builds Next.js inside the container (works on Fly.io Depot & local)
 # =====================================================
 
+# ===== Stage 1: deps =====
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --prefer-offline --no-audit --no-fund --loglevel=error
+
+# ===== Stage 2: builder =====
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Build-time public env vars (baked into Next.js client bundle)
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build
+
+# ===== Stage 3: runner =====
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -13,16 +39,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-COPY public ./public
-COPY .next/standalone ./
-COPY .next/static ./.next/static
-
-RUN chown -R nextjs:nodejs /app
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
 EXPOSE 3000
-
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 

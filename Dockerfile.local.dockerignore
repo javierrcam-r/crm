@@ -1,68 +1,56 @@
 # =====================================================
-# CRM Camila Fernández - Docker Ignore
+# Dockerignore for Dockerfile.local (fast local packaging)
+# Unlike the main .dockerignore, this one does NOT ignore .next
+# because Dockerfile.local copies the pre-built standalone output.
 # =====================================================
 
-# Dependencias
 node_modules
 .pnp
 .pnp.js
 
-# Testing
 coverage
 .nyc_output
 
-# Next.js
-.next
+# NOTE: .next NOT ignored here (needed by Dockerfile.local)
 out
 
-# Producción
 build
 dist
 
-# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Variables de entorno locales
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Editor/IDE
 .vscode
 .idea
 *.swp
 *.swo
 *~
 
-# OS
 .DS_Store
 Thumbs.db
 
-# Git
 .git
 .gitignore
 
-# Docker
-Dockerfile
+Dockerfile*
 docker-compose*.yml
-.dockerignore
+.dockerignore*
 
-# Documentación innecesaria para el build
 *.md
 !README.md
 LICENSE
 
-# Supabase migrations (ya están en la DB)
 supabase/
 
-# Archivos de prueba
 **/*.test.js
 **/*.test.ts
 **/*.spec.js
 **/*.spec.ts
 __tests__
-

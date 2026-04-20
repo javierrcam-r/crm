@@ -1,0 +1,30 @@
+# =====================================================
+# CRM Camila Fernández - Dockerfile.local
+# Fast local packaging: assumes `npm run build` has been run locally
+# and only copies the Next.js standalone output.
+# Used by docker-compose for quick rebuilds on Windows.
+# For Fly.io deploys, see the main Dockerfile (multi-stage build).
+# =====================================================
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+COPY public ./public
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
