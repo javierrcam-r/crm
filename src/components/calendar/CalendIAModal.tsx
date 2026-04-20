@@ -133,7 +133,7 @@ function CustomerPicker({ customers, onChange, onClose }: { customers: Customer[
   }, [query, customers]);
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-dark-700 border border-gray-200 dark:border-dark-500 rounded-xl shadow-xl overflow-hidden">
+    <div className="mt-1 bg-white dark:bg-dark-700 border border-gray-200 dark:border-dark-500 rounded-xl shadow-lg overflow-hidden">
       <input
         ref={ref}
         value={query}
@@ -141,7 +141,7 @@ function CustomerPicker({ customers, onChange, onClose }: { customers: Customer[
         placeholder="Buscar cliente..."
         className="w-full px-3 py-2 text-sm border-b border-gray-200 dark:border-dark-500 bg-gray-50 dark:bg-dark-600 text-gray-900 dark:text-white focus:outline-none"
       />
-      <div className="max-h-48 overflow-y-auto">
+      <div className="max-h-40 overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="px-3 py-3 text-xs text-gray-400">Sin resultados</div>
         ) : (
@@ -465,14 +465,14 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
   const allCreated = items.length > 0 && items.every(v => v.created);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-dark-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg h-[92vh] sm:h-auto sm:max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-dark-800 w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-lg sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3.5 sm:px-5 py-3 sm:py-4 border-b border-gray-200 dark:border-dark-600 bg-gradient-to-r from-violet-500/10 to-indigo-500/10 dark:from-violet-500/5 dark:to-indigo-500/5">
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-200 dark:border-dark-600 bg-gradient-to-r from-violet-500/10 to-indigo-500/10 dark:from-violet-500/5 dark:to-indigo-500/5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25 flex-shrink-0">
               <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
@@ -487,7 +487,7 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-3.5 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
           {step === 'input' && (
             <>
               <div className="space-y-1.5 sm:space-y-2">
@@ -584,7 +584,7 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
                 return (
                 <div
                   key={idx}
-                  className={`relative rounded-xl border p-2.5 sm:p-3 space-y-2 transition-all ${
+                  className={`rounded-xl border p-2.5 sm:p-3 space-y-2 transition-all ${
                     v.created
                       ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5'
                       : v.error
@@ -596,28 +596,8 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
                             : 'border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-700'
                   }`}
                 >
-                  {v.created && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-md">
-                      <Check className="h-3.5 w-3.5 text-white" />
-                    </div>
-                  )}
-                  {v.creating && (
-                    <div className="absolute -top-2 -right-2">
-                      <Loader2 className="h-5 w-5 text-violet-500 animate-spin bg-white dark:bg-dark-800 rounded-full" />
-                    </div>
-                  )}
-                  {!v.created && !v.creating && (
-                    <button
-                      onClick={() => removeItem(idx)}
-                      className="absolute -top-2 -right-2 p-1 rounded-full bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-500 hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-500/20 text-gray-400 hover:text-red-500 transition-colors shadow-sm"
-                      title="Eliminar"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-
-                  {/* Type badge + toggle */}
-                  <div className="flex items-center flex-wrap gap-x-2 gap-y-1 -mt-0.5 pr-6">
+                  {/* Top row: type badge + toggle + status/close */}
+                  <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                       isActividad
                         ? 'bg-teal-100 dark:bg-teal-500/15 text-teal-700 dark:text-teal-400'
@@ -626,7 +606,7 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
                       {isActividad ? <ClipboardList className="h-3 w-3" /> : <Users className="h-3 w-3" />}
                       {isActividad ? 'Actividad' : 'Visita'}
                     </span>
-                    {!v.created && (
+                    {!v.created && !v.creating && (
                       <button
                         onClick={() => toggleItemType(idx)}
                         className="text-[10px] text-gray-400 hover:text-violet-500 underline decoration-dotted transition-colors"
@@ -635,6 +615,25 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
                         cambiar a {isActividad ? 'visita' : 'actividad'}
                       </button>
                     )}
+                    <div className="ml-auto flex-shrink-0">
+                      {v.created && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                          <Check className="h-3.5 w-3.5" /> Creada
+                        </span>
+                      )}
+                      {v.creating && (
+                        <Loader2 className="h-4 w-4 text-violet-500 animate-spin" />
+                      )}
+                      {!v.created && !v.creating && (
+                        <button
+                          onClick={() => removeItem(idx)}
+                          className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/20 text-gray-400 hover:text-red-500 transition-colors"
+                          title="Eliminar"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Primary row: customer OR title */}
@@ -651,13 +650,13 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
                       />
                     </div>
                   ) : (
-                    <div className="relative">
+                    <div>
                       <button
                         type="button"
                         onClick={() => !v.created && setEditingCustomerIdx(editingCustomerIdx === idx ? null : idx)}
                         disabled={v.created}
-                        className={`w-full flex items-center gap-2 px-2 py-1.5 -mx-1 rounded-lg text-left ${
-                          v.created ? '' : 'hover:bg-gray-100 dark:hover:bg-dark-600 cursor-pointer'
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left border border-gray-200 dark:border-dark-500 bg-gray-50 dark:bg-dark-600 ${
+                          v.created ? 'opacity-60' : 'hover:bg-gray-100 dark:hover:bg-dark-600 cursor-pointer'
                         }`}
                       >
                         <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -830,7 +829,7 @@ export default function CalendIAModal({ isOpen, onClose, onVisitCreated }: Calen
         </div>
 
         {/* Footer */}
-        <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 border-t border-gray-200 dark:border-dark-600 flex items-center justify-between gap-2 sm:gap-3 pb-[max(env(safe-area-inset-bottom),0.625rem)] sm:pb-3">
+        <div className="px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-dark-600 flex items-center justify-between gap-2 sm:gap-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
           {step === 'input' ? (
             <>
               <p className="text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500 truncate">
