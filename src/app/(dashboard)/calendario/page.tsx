@@ -648,29 +648,30 @@ export default function CalendarioPage() {
     <div className="space-y-4 md:space-y-6 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+          <div className="min-w-0">
             <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Calendario</h1>
             <p className="text-gray-500 dark:text-gray-300 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
               Gestiona tus actividades diarias, visitas y eventos estratégicos
             </p>
           </div>
-          <div className="flex gap-1.5 sm:gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setShowCalendIA(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs sm:text-sm font-medium hover:from-violet-600 hover:to-indigo-700 transition-all shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs sm:text-sm font-medium hover:from-violet-600 hover:to-indigo-700 transition-all shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 flex-shrink-0"
+              title="CalendIA"
             >
               <Sparkles className="h-4 w-4" />
               <span className="hidden sm:inline">CalendIA</span>
               <span className="sm:hidden">IA</span>
             </button>
-            <Link href="/calendario/nueva-actividad">
+            <Link href="/calendario/nueva-actividad" className="flex-shrink-0">
               <Button size={isMobile ? 'sm' : 'md'} icon={<Plus className="h-4 w-4" />}>
                 <span className="hidden sm:inline">Actividad Diaria</span>
                 <span className="sm:hidden">Actividad</span>
               </Button>
             </Link>
-            <Link href="/calendario/nueva">
+            <Link href="/calendario/nueva" className="flex-shrink-0">
               <Button variant="secondary" size={isMobile ? 'sm' : 'md'} icon={<Plus className="h-4 w-4" />}>
                 <span className="hidden sm:inline">Nueva Visita</span>
                 <span className="sm:hidden">Visita</span>
