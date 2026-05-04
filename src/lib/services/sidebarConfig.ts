@@ -31,6 +31,7 @@ export const ALL_ROLES = [
   { key: 'supervisor', label: 'Supervisor' },
   { key: 'supervisor_nivel1', label: 'Supervisor N1' },
   { key: 'supervisor_vendedor', label: 'Sup. + Vendedor' },
+  { key: 'vendedor_tecnico', label: 'Vendedor + Técnico' },
   { key: 'marketing', label: 'Marketing' },
   { key: 'tecnico', label: 'Técnico' },
   { key: 'event_assistant', label: 'Asist. Evento' },

@@ -67,7 +67,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (userProfile) {
       const rol = userProfile.rol;
-      // VENDEDOR y SUPERVISOR_VENDEDOR tienen acceso al dashboard
+      // VENDEDOR, SUPERVISOR_VENDEDOR y VENDEDOR_TECNICO tienen acceso al dashboard
       if (rol === 'admin' || rol === 'supervisor' || rol === 'supervisor_nivel1') {
         router.replace('/supervisores');
       } else if (rol === 'marketing' || rol === 'tecnico') {
@@ -79,14 +79,14 @@ export default function DashboardPage() {
   }, [userProfile, router]);
 
   useEffect(() => {
-    // Cargar datos si es vendedor o supervisor_vendedor
-    if (userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor') {
+    // Cargar datos si es vendedor, supervisor_vendedor o vendedor_tecnico
+    if (userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'vendedor_tecnico') {
       loadData();
     }
   }, [userProfile]);
 
   useEffect(() => {
-    if (userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor') {
+    if (userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'vendedor_tecnico') {
       loadDayData(selectedDate);
     }
   }, [selectedDate, userProfile]);

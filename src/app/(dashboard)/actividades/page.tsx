@@ -62,6 +62,7 @@ const tipoLabels: Record<ActivityType, string> = {
   tarea: 'Tarea',
   seguimiento: 'Seguimiento',
   capacitacion: 'Capacitación',
+  tecnico: 'Técnico',
   otro: 'Otro'
 };
 
@@ -70,6 +71,7 @@ const tipoColors: Record<ActivityType, string> = {
   tarea: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
   seguimiento: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
   capacitacion: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  tecnico: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 ring-1 ring-amber-400',
   otro: 'bg-gray-100 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300'
 };
 
@@ -1158,6 +1160,7 @@ export default function ActividadesPage() {
                     supervisor: 'bg-green-100 text-green-700',
                     supervisor_nivel1: 'bg-purple-100 text-purple-700',
                     supervisor_vendedor: 'bg-indigo-100 text-indigo-700',
+                    vendedor_tecnico: 'bg-amber-100 text-amber-800',
                     marketing: 'bg-emerald-100 text-emerald-700',
                     tecnico: 'bg-amber-100 text-amber-700'
                   };
@@ -1189,8 +1192,9 @@ export default function ActividadesPage() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-gray-900">{user.nombre_completo}</p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700'}`}>
-                            {user.rol === 'supervisor_nivel1' ? 'Sup. N1' : 
+                            {user.rol === 'supervisor_nivel1' ? 'Sup. N1' :
                             user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' :
+                            user.rol === 'vendedor_tecnico' ? 'Vend.+Téc.' :
                             user.rol === 'marketing' ? 'Marketing' :
                             user.rol === 'tecnico' ? 'Técnico' : user.rol}
                           </span>

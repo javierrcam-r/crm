@@ -188,8 +188,16 @@ function NuevaActividadContent() {
     }
   };
 
+  const isTecnicoCapable = userProfile?.rol === 'tecnico'
+    || userProfile?.rol === 'vendedor_tecnico'
+    || userProfile?.rol === 'admin'
+    || userProfile?.rol === 'supervisor'
+    || userProfile?.rol === 'supervisor_nivel1'
+    || userProfile?.rol === 'supervisor_vendedor';
+
   const tipoOptions: { value: ActivityType; label: string }[] = [
     { value: 'tarea', label: 'Tarea' },
+    ...(isTecnicoCapable ? [{ value: 'tecnico' as ActivityType, label: 'Técnico' }] : []),
     { value: 'otro', label: 'Otro' }
   ];
 
@@ -447,6 +455,7 @@ function NuevaActividadContent() {
                     supervisor: 'bg-green-100 text-green-700',
                     supervisor_nivel1: 'bg-purple-100 text-purple-700',
                     supervisor_vendedor: 'bg-indigo-100 text-indigo-700',
+                    vendedor_tecnico: 'bg-amber-100 text-amber-800',
                     marketing: 'bg-emerald-100 text-emerald-700',
                     tecnico: 'bg-amber-100 text-amber-700'
                   };
@@ -478,8 +487,9 @@ function NuevaActividadContent() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-gray-900">{user.nombre_completo}</p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700'}`}>
-                            {user.rol === 'supervisor_nivel1' ? 'Sup. N1' : 
+                            {user.rol === 'supervisor_nivel1' ? 'Sup. N1' :
                             user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' :
+                            user.rol === 'vendedor_tecnico' ? 'Vend.+Téc.' :
                             user.rol === 'marketing' ? 'Marketing' :
                             user.rol === 'tecnico' ? 'Técnico' : user.rol}
                           </span>

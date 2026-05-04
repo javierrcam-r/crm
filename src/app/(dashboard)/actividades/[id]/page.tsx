@@ -56,6 +56,7 @@ const tipoLabels: Record<string, string> = {
   capacitacion: 'Capacitación',
   seguimiento: 'Seguimiento',
   tarea: 'Tarea',
+  tecnico: 'Técnico',
   otro: 'Otro',
 };
 

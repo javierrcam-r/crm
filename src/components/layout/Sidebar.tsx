@@ -143,8 +143,8 @@ export default function Sidebar() {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
-        {/* Quick Actions - Solo para vendedores */}
-        {userProfile?.rol === 'vendedor' && (
+        {/* Quick Actions - Solo para vendedores y vendedor+técnico */}
+        {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'vendedor_tecnico') && (
           <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-dark-700">
             <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
               Acciones Rápidas
@@ -171,8 +171,8 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="p-3 sm:p-4 space-y-1">
-          {/* Menú Principal - Para VENDEDORES y SUPERVISOR+VENDEDOR */}
-          {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor') && (
+          {/* Menú Principal - Para VENDEDORES, SUPERVISOR+VENDEDOR y VENDEDOR+TÉCNICO */}
+          {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'vendedor_tecnico') && (
             <>
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
                 Menú Principal
@@ -388,6 +388,11 @@ export default function Sidebar() {
             {userProfile?.rol === 'tecnico' && (
               <Badge variant="yellow" className="mt-1 text-[10px]">
                 Técnico
+              </Badge>
+            )}
+            {userProfile?.rol === 'vendedor_tecnico' && (
+              <Badge variant="yellow" className="mt-1 text-[10px]">
+                Vendedor + Técnico
               </Badge>
             )}
           </div>

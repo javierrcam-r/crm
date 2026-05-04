@@ -234,31 +234,40 @@ export default function CalendarioPage() {
       setVisits(filteredVisits);
       setPendingVisits(filteredPending);
       
-      // Obtener IDs de técnicos si el filtro está activo
+      // Obtener IDs de técnicos si el filtro está activo.
+      // "Tecnico puro" => todas sus actividades, visitas y eventos cuentan.
+      // "Vendedor + Técnico" => solo sus actividades CATEGORIZADAS como `tipo='tecnico'`
+      // cuentan; sus visitas/eventos siguen siendo trabajo de venta y NO se incluyen.
       let tecnicoIds: string[] = [];
       let tecnicoAuths: string[] = [];
       if (showTecnicoActivities) {
-        const tecUsers = allUsers.filter(u => u.rol === 'tecnico');
+        const tecUsers = allUsers.filter(u => u.rol === 'tecnico' || u.rol === 'vendedor_tecnico');
         tecnicoIds = tecUsers.map(u => u.id);
         tecnicoAuths = tecUsers.map(u => (u as any).user_id).filter(Boolean);
         setTecnicoUserIds(tecnicoIds);
         setTecnicoAuthIds(tecnicoAuths);
-        // Obtener eventos asignados a técnicos
-        const tecEventPromises = tecnicoIds.map(tid => getVendorEvents(tid).catch(() => []));
+
+        // Sólo técnicos puros aportan visitas/eventos al filtro técnico
+        const pureTecUsers = tecUsers.filter(u => u.rol === 'tecnico');
+        const pureTecnicoIds = pureTecUsers.map(u => u.id);
+        const pureTecnicoAuths = pureTecUsers.map(u => (u as any).user_id).filter(Boolean);
+
+        // Obtener eventos asignados a técnicos puros
+        const tecEventPromises = pureTecnicoIds.map(tid => getVendorEvents(tid).catch(() => []));
         const tecEventResults = await Promise.all(tecEventPromises);
         const allTecEventIds = new Set<string>();
         for (const evts of tecEventResults) {
           for (const evt of evts) allTecEventIds.add(evt.id);
         }
         setTecnicoEventIds(Array.from(allTecEventIds));
-        // Incluir visitas del técnico en las visitas mostradas
-        const tecnicoVisits = visitsData.filter(v => tecnicoAuths.includes(v.user_id));
+        // Incluir visitas del técnico puro en las visitas mostradas
+        const tecnicoVisits = visitsData.filter(v => pureTecnicoAuths.includes(v.user_id));
         for (const tv of tecnicoVisits) {
           if (!filteredVisits.some(fv => fv.id === tv.id)) {
             filteredVisits.push(tv);
           }
         }
-        const tecnicoPending = pendingData.filter(v => tecnicoAuths.includes(v.user_id));
+        const tecnicoPending = pendingData.filter(v => pureTecnicoAuths.includes(v.user_id));
         for (const tp of tecnicoPending) {
           if (!filteredPending.some(fp => fp.id === tp.id)) {
             filteredPending.push(tp);
@@ -272,6 +281,10 @@ export default function CalendarioPage() {
         setTecnicoEventIds([]);
       }
       
+      // Mapas auxiliares para clasificar al creador por rol
+      const userRolById = new Map<string, string>();
+      for (const u of allUsers) userRolById.set(u.id, u.rol);
+
       // Filtrar actividades según el rol
       const myActivities = activitiesData.filter(activity => {
         const isCreator = activity.created_by_user_id === currentId;
@@ -279,10 +292,17 @@ export default function CalendarioPage() {
           activity.participants.some(p => p.user_profile_id === currentId);
         
         if (showTecnicoActivities) {
-          const createdByTecnico = tecnicoIds.includes(activity.created_by_user_id || '');
-          const involvesTecnico = Array.isArray(activity.participants) &&
-            activity.participants.some(p => tecnicoIds.includes(p.user_profile_id));
-          if (createdByTecnico || involvesTecnico) return true;
+          const creatorRol = userRolById.get(activity.created_by_user_id || '') || '';
+          // Pure "tecnico" role: todas sus actividades cuentan
+          const createdByPureTecnico = creatorRol === 'tecnico';
+          // "vendedor_tecnico": solo cuentan las que él/ella categoriza como técnicas
+          const createdByVendedorTecnicoMarked = creatorRol === 'vendedor_tecnico' && activity.tipo === 'tecnico';
+          // Cualquier actividad cuyo tipo sea "tecnico" se considera categorizada como técnica
+          const isTipoTecnico = activity.tipo === 'tecnico';
+          // Participantes que sean técnicos puros también activan la visibilidad
+          const involvesPureTecnico = Array.isArray(activity.participants) &&
+            activity.participants.some(p => userRolById.get(p.user_profile_id) === 'tecnico');
+          if (createdByPureTecnico || createdByVendedorTecnicoMarked || isTipoTecnico || involvesPureTecnico) return true;
         }
         
         if (currentRol === 'admin') return true;
@@ -536,22 +556,62 @@ export default function CalendarioPage() {
     return getActivitiesForDay(date).filter(activity => !isActivityStrategic(activity));
   };
 
+  // Mapas auxiliares para resolver creador y rol de la actividad
+  const getUserById = (id: string | null | undefined) =>
+    id ? users.find(u => u.id === id) : undefined;
+
   const isActivityFromTecnico = (activity: Activity) => {
     if (!showTecnicoActivities) return false;
-    const createdByTecnico = tecnicoUserIds.includes(activity.created_by_user_id || '');
-    const involvesTecnico = Array.isArray(activity.participants) &&
-      activity.participants.some(p => tecnicoUserIds.includes(p.user_profile_id));
-    return createdByTecnico || involvesTecnico;
+    const creator = getUserById(activity.created_by_user_id);
+    const creatorRol = creator?.rol || '';
+    // Técnico puro: cuenta cualquier actividad suya
+    if (creatorRol === 'tecnico') return true;
+    // Vendedor + Técnico: sólo cuentan las actividades categorizadas como técnicas
+    if (creatorRol === 'vendedor_tecnico' && activity.tipo === 'tecnico') return true;
+    // Cualquier actividad cuyo tipo sea "tecnico" (la categoría manda)
+    if (activity.tipo === 'tecnico') return true;
+    // Si entre los participantes hay un técnico puro, también se muestra
+    const involvesPureTecnico = Array.isArray(activity.participants) &&
+      activity.participants.some(p => {
+        const u = getUserById(p.user_profile_id);
+        return u?.rol === 'tecnico';
+      });
+    return involvesPureTecnico;
+  };
+
+  // Devuelve el nombre del "técnico" responsable de la actividad para mostrar
+  // junto al badge en el calendario.
+  const getTecnicoNameForActivity = (activity: Activity): string | null => {
+    const creator = getUserById(activity.created_by_user_id);
+    if (creator && (creator.rol === 'tecnico' || creator.rol === 'vendedor_tecnico')) {
+      return creator.nombre_completo;
+    }
+    // Si el creador no es técnico, buscar entre participantes a un técnico puro
+    if (Array.isArray(activity.participants)) {
+      for (const p of activity.participants) {
+        const u = getUserById(p.user_profile_id);
+        if (u?.rol === 'tecnico' || u?.rol === 'vendedor_tecnico') {
+          return u.nombre_completo;
+        }
+      }
+    }
+    // Fallback: mostrar al creador (categorizada como técnica por alguien más)
+    return creator?.nombre_completo || null;
   };
 
   const isEventActivityFromTecnico = (ea: EventActivityWithEvent) => {
     if (!showTecnicoActivities) return false;
-    return tecnicoUserIds.includes(ea.responsable_id) || tecnicoEventIds.includes(ea.event_id);
+    // Sólo técnicos puros aportan eventos
+    const responsable = getUserById(ea.responsable_id);
+    if (responsable?.rol === 'tecnico') return true;
+    return tecnicoEventIds.includes(ea.event_id);
   };
 
   const isVisitFromTecnico = (visit: Visit) => {
     if (!showTecnicoActivities) return false;
-    return tecnicoAuthIds.includes(visit.user_id);
+    // Sólo técnicos puros (las visitas de vendedor_tecnico siguen siendo de venta)
+    const visitUser = users.find(u => (u as any).user_id === visit.user_id);
+    return visitUser?.rol === 'tecnico';
   };
 
   const getEventActivitiesForDay = (date: Date) => {
@@ -585,13 +645,17 @@ export default function CalendarioPage() {
   // Obtener clases de estilo para actividad (estratégica, diaria o técnico)
   const getActivityStyle = (activity: Activity, isStrategic: boolean) => {
     if (isActivityFromTecnico(activity)) {
+      const tecName = getTecnicoNameForActivity(activity);
+      // Acortar a primer + segundo nombre/apellido para no romper el layout
+      const shortName = tecName ? tecName.split(' ').slice(0, 2).join(' ') : '';
       return {
         bg: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-l-2 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60',
         bgLarge: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-l-4 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60',
         icon: '👷',
-        badge: 'Técnico',
+        badge: shortName ? `Téc: ${shortName}` : 'Técnico',
         badgeClass: 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200',
-        dotColor: 'bg-amber-500'
+        dotColor: 'bg-amber-500',
+        tecnicoName: tecName,
       };
     }
     if (isStrategic) {
@@ -601,7 +665,8 @@ export default function CalendarioPage() {
         icon: '⭐',
         badge: 'Obj. Estratégico',
         badgeClass: 'bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200',
-        dotColor: 'bg-purple-500'
+        dotColor: 'bg-purple-500',
+        tecnicoName: null as string | null,
       };
     }
     return {
@@ -610,7 +675,8 @@ export default function CalendarioPage() {
       icon: '📋',
       badge: 'Diaria',
       badgeClass: 'bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200',
-      dotColor: 'bg-blue-500'
+      dotColor: 'bg-blue-500',
+      tecnicoName: null as string | null,
     };
   };
 
@@ -2020,15 +2086,22 @@ export default function CalendarioPage() {
       >
         {selectedActivity && !isEditingActivity && (() => {
           const isStrategicActivity = isActivityStrategic(selectedActivity);
+          const isTecnicoActivity = selectedActivity.tipo === 'tecnico'
+            || isActivityFromTecnico(selectedActivity);
+          const tecnicoNameForDetail = isTecnicoActivity ? getTecnicoNameForActivity(selectedActivity) : null;
           return (
           <div className="space-y-4">
             {/* Tipo de actividad badge */}
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold ${
-              isStrategicActivity 
-                ? 'bg-purple-100 text-purple-800 border border-purple-200' 
-                : 'bg-blue-100 text-blue-800 border border-blue-200'
+              isTecnicoActivity
+                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                : isStrategicActivity 
+                  ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                  : 'bg-blue-100 text-blue-800 border border-blue-200'
             }`}>
-              {isStrategicActivity ? '⭐ Actividad Estratégica' : '📋 Actividad Diaria'}
+              {isTecnicoActivity
+                ? `👷 Actividad Técnica${tecnicoNameForDetail ? ` · ${tecnicoNameForDetail}` : ''}`
+                : isStrategicActivity ? '⭐ Actividad Estratégica' : '📋 Actividad Diaria'}
             </div>
 
             {/* Badges */}
@@ -2038,12 +2111,14 @@ export default function CalendarioPage() {
                 selectedActivity.tipo === 'capacitacion' ? 'bg-green-100 text-green-700' :
                 selectedActivity.tipo === 'seguimiento' ? 'bg-amber-100 text-amber-700' :
                 selectedActivity.tipo === 'tarea' ? 'bg-purple-100 text-purple-700' :
+                selectedActivity.tipo === 'tecnico' ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-400' :
                 'bg-gray-100 text-gray-700'
               }`}>
                 {selectedActivity.tipo === 'reunion' ? 'Reunión' :
                  selectedActivity.tipo === 'capacitacion' ? 'Capacitación' :
                  selectedActivity.tipo === 'seguimiento' ? 'Seguimiento' :
-                 selectedActivity.tipo === 'tarea' ? 'Tarea' : 'Otro'}
+                 selectedActivity.tipo === 'tarea' ? 'Tarea' :
+                 selectedActivity.tipo === 'tecnico' ? 'Técnico' : 'Otro'}
               </span>
               <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
                 selectedActivity.prioridad === 'urgente' ? 'bg-red-100 text-red-700' :
@@ -2364,6 +2439,7 @@ export default function CalendarioPage() {
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
                 >
                   <option value="tarea">Tarea</option>
+                  <option value="tecnico">Técnico</option>
                   <option value="otro">Otro</option>
                   <option value="reunion">Reunión</option>
                   <option value="capacitacion">Capacitación</option>
