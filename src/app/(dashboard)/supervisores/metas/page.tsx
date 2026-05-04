@@ -61,7 +61,8 @@ export default function MetasPage() {
 
   const isSupervisor = userProfile?.rol === 'admin' ||
     userProfile?.rol === 'supervisor' ||
-    userProfile?.rol === 'supervisor_nivel1';
+    userProfile?.rol === 'supervisor_nivel1' ||
+    userProfile?.rol === 'supervisor_vendedor';
 
   useEffect(() => {
     if (userProfile && !isSupervisor) {
