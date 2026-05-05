@@ -174,17 +174,17 @@ function NuevaVisitaContent() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/calendario">
           <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
             Volver
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nueva Visita</h1>
-          <p className="text-gray-500">Programa una visita a un cliente</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Nueva Visita</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">Programa una visita a un cliente</p>
         </div>
       </div>
 
@@ -193,24 +193,25 @@ function NuevaVisitaContent() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Cliente */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-dark-500 pb-2">
               Cliente
             </h3>
             {selectedCustomer ? (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50">
-                <div>
-                  <p className="font-semibold text-gray-900">{selectedCustomer.nombre}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-dark-800">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 dark:text-white break-words">{selectedCustomer.nombre}</p>
                   {selectedCustomer.telefono && (
-                    <p className="text-sm text-gray-500">{selectedCustomer.telefono}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-300">{selectedCustomer.telefono}</p>
                   )}
                   {selectedCustomer.direccion && (
-                    <p className="text-sm text-gray-500">{selectedCustomer.direccion}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-300 break-words">{selectedCustomer.direccion}</p>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setFormData({ ...formData, customer_id: '' })}
+                  className="self-start sm:self-auto"
                 >
                   Cambiar
                 </Button>
@@ -229,10 +230,10 @@ function NuevaVisitaContent() {
                       key={customer.id}
                       type="button"
                       onClick={() => handleCustomerSelect(customer.id)}
-                      className="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                      className="w-full text-left p-3 rounded-lg bg-gray-50 dark:bg-dark-800 hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
                     >
-                      <p className="font-medium text-gray-900">{customer.nombre}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-gray-900 dark:text-white break-words">{customer.nombre}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-300">
                         {[customer.telefono, customer.zona, customer.ciudad]
                           .filter(Boolean)
                           .join(' · ')}
@@ -241,12 +242,12 @@ function NuevaVisitaContent() {
                   ))}
                   {filteredCustomers.length === 0 && (
                     loadingCustomers ? (
-                      <div className="flex items-center justify-center gap-2 py-4 text-gray-500">
+                      <div className="flex items-center justify-center gap-2 py-4 text-gray-500 dark:text-gray-300">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>Cargando clientes...</span>
                       </div>
                     ) : (
-                      <p className="text-center text-gray-500 py-4">
+                      <p className="text-center text-gray-500 dark:text-gray-300 py-4">
                         No se encontraron clientes
                       </p>
                     )
@@ -258,7 +259,7 @@ function NuevaVisitaContent() {
 
           {/* Programación */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-dark-500 pb-2">
               Programación
             </h3>
             <Input
@@ -289,8 +290,8 @@ function NuevaVisitaContent() {
           </div>
 
           {/* Vincular a Objetivo Estratégico */}
-          <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-            <h4 className="text-sm font-semibold text-indigo-700">
+          <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-transparent dark:border-indigo-800 rounded-xl p-3 sm:p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-indigo-700 dark:text-indigo-200">
               Vincular a Objetivo Estratégico (opcional)
             </h4>
             {strategicObjectives.length > 0 ? (
@@ -298,30 +299,30 @@ function NuevaVisitaContent() {
                 <select
                   value={formData.objetivo_estrategico_id || ''}
                   onChange={(e) => setFormData({ ...formData, objetivo_estrategico_id: e.target.value || null })}
-                  className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                  className="w-full px-4 py-2.5 border border-indigo-200 dark:border-indigo-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">Sin vincular</option>
+                  <option value="" className="dark:bg-dark-700">Sin vincular</option>
                   {strategicObjectives.map((obj) => (
-                    <option key={obj.id} value={obj.id}>
+                    <option key={obj.id} value={obj.id} className="dark:bg-dark-700">
                       {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-indigo-600">
+                <p className="text-xs text-indigo-600 dark:text-indigo-300">
                   Si vinculas esta visita a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
                 </p>
               </>
             ) : (
-              <p className="text-sm text-indigo-500">No hay objetivos estratégicos activos disponibles.</p>
+              <p className="text-sm text-indigo-500 dark:text-indigo-300">No hay objetivos estratégicos activos disponibles.</p>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
-            <Link href="/calendario">
-              <Button variant="secondary">Cancelar</Button>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Link href="/calendario" className="w-full sm:w-auto">
+              <Button variant="secondary" className="w-full">Cancelar</Button>
             </Link>
-            <Button type="submit" loading={loading}>
+            <Button type="submit" loading={loading} className="w-full sm:w-auto">
               Programar Visita
             </Button>
           </div>

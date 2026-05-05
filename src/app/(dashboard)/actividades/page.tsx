@@ -853,7 +853,7 @@ export default function ActividadesPage() {
             
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, i) => (
-                <div key={`empty-${i}`} className="h-24 bg-gray-50 rounded-lg" />
+                <div key={`empty-${i}`} className="h-24 bg-gray-50 dark:bg-dark-800 rounded-lg" />
               ))}
               
               {calendarDays.map(day => {
@@ -864,11 +864,11 @@ export default function ActividadesPage() {
                   <div 
                     key={day.toISOString()} 
                     className={`h-24 border rounded-lg p-1 overflow-hidden ${
-                      isCurrentDay ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-100'
+                      isCurrentDay ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700' : 'bg-white dark:bg-dark-700 border-gray-100 dark:border-dark-500'
                     }`}
                   >
                     <div className={`text-sm font-medium mb-1 ${
-                      isCurrentDay ? 'text-indigo-600' : 'text-gray-700'
+                      isCurrentDay ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-200'
                     }`}>
                       {format(day, 'd')}
                     </div>
@@ -884,7 +884,7 @@ export default function ActividadesPage() {
                         </div>
                       ))}
                       {dayActivities.length > 2 && (
-                        <div className="text-xs text-gray-500 px-1">
+                        <div className="text-xs text-gray-500 dark:text-gray-300 px-1">
                           +{dayActivities.length - 2} más
                         </div>
                       )}
@@ -896,28 +896,28 @@ export default function ActividadesPage() {
           </div>
 
           {/* Móvil: lista de días con actividades */}
-          <div className="sm:hidden divide-y divide-gray-100">
+          <div className="sm:hidden divide-y divide-gray-100 dark:divide-dark-500">
             {calendarDays.filter(day => getActivitiesForDay(day).length > 0).length === 0 ? (
-              <div className="p-8 text-center text-gray-500 text-sm">Sin actividades este mes</div>
+              <div className="p-8 text-center text-gray-500 dark:text-gray-300 text-sm">Sin actividades este mes</div>
             ) : (
               calendarDays.filter(day => getActivitiesForDay(day).length > 0).map(day => {
                 const dayActivities = getActivitiesForDay(day);
                 const isCurrentDay = isToday(day);
                 return (
-                  <div key={day.toISOString()} className={`p-3 ${isCurrentDay ? 'bg-indigo-50/50' : ''}`}>
+                  <div key={day.toISOString()} className={`p-3 ${isCurrentDay ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`w-9 h-9 rounded-full flex flex-col items-center justify-center flex-shrink-0 ${
-                        isCurrentDay ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
+                        isCurrentDay ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-dark-600 text-gray-700 dark:text-gray-200'
                       }`}>
                         <span className="text-[10px] leading-none uppercase font-medium">
                           {format(day, 'EEE', { locale: es })}
                         </span>
                         <span className="text-sm font-bold leading-none">{format(day, 'd')}</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-600 capitalize">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-200 capitalize">
                         {format(day, 'EEEE d', { locale: es })}
                       </span>
-                      <span className="ml-auto text-xs text-gray-400">{dayActivities.length}</span>
+                      <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{dayActivities.length}</span>
                     </div>
                     <div className="space-y-1.5 ml-12">
                       {dayActivities.map(activity => (
@@ -942,16 +942,16 @@ export default function ActividadesPage() {
       {/* List View */}
       {viewMode === 'list' && (
         <Card>
-          <div className="divide-y">
+          <div className="divide-y divide-gray-200 dark:divide-dark-500">
             {filteredActivities.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-300">
                 No hay actividades que coincidan con los filtros
               </div>
             ) : (
               filteredActivities.map(activity => (
                 <div 
                   key={activity.id}
-                  className="p-4 hover:bg-gray-50 cursor-pointer flex items-center gap-4"
+                  className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-dark-600 cursor-pointer flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4"
                   onClick={() => openActivityDetail(activity)}
                 >
                   <div className="flex-shrink-0">
@@ -961,13 +961,13 @@ export default function ActividadesPage() {
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900">{activity.titulo}</h4>
+                    <h4 className="font-medium text-gray-900 dark:text-white">{activity.titulo}</h4>
                     {activity.descripcion && (
-                      <p className="text-sm text-gray-500 truncate">{activity.descripcion}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-300 truncate">{activity.descripcion}</p>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">
                     <span className={`px-2 py-0.5 rounded-full text-xs ${tipoColors[activity.tipo]}`}>
                       {tipoLabels[activity.tipo]}
                     </span>
@@ -1004,53 +1004,53 @@ export default function ActividadesPage() {
             />
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Descripción</label>
               <textarea
                 value={formData.descripcion || ''}
                 onChange={e => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
                 rows={3}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none bg-white dark:bg-dark-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Describe el objetivo de la actividad..."
               />
             </div>
           </div>
           
           {/* Tipo y Prioridad */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Tipo</label>
               <select
                 value={formData.tipo}
                 onChange={e => setFormData(prev => ({ ...prev, tipo: e.target.value as ActivityType }))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
               >
-                <option value="reunion">Reunión</option>
-                <option value="capacitacion">Capacitación</option>
-                <option value="seguimiento">Seguimiento</option>
+                <option value="reunion" className="dark:bg-dark-700">Reunión</option>
+                <option value="capacitacion" className="dark:bg-dark-700">Capacitación</option>
+                <option value="seguimiento" className="dark:bg-dark-700">Seguimiento</option>
               </select>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Prioridad</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Prioridad</label>
               <select
                 value={formData.prioridad}
                 onChange={e => setFormData(prev => ({ ...prev, prioridad: e.target.value as ActivityPriority }))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
               >
                 {Object.entries(prioridadLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value} className="dark:bg-dark-700">{label}</option>
                 ))}
               </select>
             </div>
           </div>
           
           {/* Fechas */}
-          <div className="bg-blue-50 rounded-xl p-4 space-y-4">
-            <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1.5">
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-transparent dark:border-blue-800 rounded-xl p-3 sm:p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide flex items-center gap-1.5">
               <CalendarIcon className="h-3.5 w-3.5" />
               Fechas y horarios
             </h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Input
                 label="Inicio *"
                 type="datetime-local"
@@ -1075,8 +1075,8 @@ export default function ActividadesPage() {
           </div>
 
           {/* Recurrencia */}
-          <div className="bg-teal-50 rounded-xl p-4 space-y-4">
-            <h4 className="text-xs font-semibold text-teal-600 uppercase tracking-wide flex items-center gap-1.5">
+          <div className="bg-teal-50 dark:bg-teal-900/30 border border-transparent dark:border-teal-800 rounded-xl p-3 sm:p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-teal-600 dark:text-teal-300 uppercase tracking-wide flex items-center gap-1.5">
               <Repeat className="h-3.5 w-3.5" />
               Programar Recurrente
             </h4>
@@ -1084,22 +1084,22 @@ export default function ActividadesPage() {
               <select
                 value={formData.recurrencia}
                 onChange={e => setFormData(prev => ({ ...prev, recurrencia: e.target.value as RecurrenceType }))}
-                className="w-full px-3 py-2.5 border border-teal-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                className="w-full px-3 py-2.5 border border-teal-200 dark:border-teal-700 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
               >
                 {RECURRENCE_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <option key={option.value} value={option.value} className="dark:bg-dark-700">{option.label}</option>
                 ))}
               </select>
 
               {formData.recurrencia !== 'none' && (
-                <div className="pt-2 border-t border-teal-100">
+                <div className="pt-2 border-t border-teal-100 dark:border-teal-800">
                   <Input
                     label="Termina el (opcional)"
                     type="date"
                     value={formData.recurrencia_fin || ''}
                     onChange={e => setFormData(prev => ({ ...prev, recurrencia_fin: e.target.value }))}
                   />
-                  <p className="text-xs text-teal-600 mt-1">
+                  <p className="text-xs text-teal-600 dark:text-teal-300 mt-1">
                     Si no especificas fecha, se repetirá indefinidamente
                   </p>
                 </div>
@@ -1108,19 +1108,19 @@ export default function ActividadesPage() {
           </div>
 
           {/* Ubicación */}
-          <div className="bg-purple-50 rounded-xl p-4 space-y-4">
+          <div className="bg-purple-50 dark:bg-purple-900/30 border border-transparent dark:border-purple-800 rounded-xl p-3 sm:p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide flex items-center gap-1.5">
+              <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase tracking-wide flex items-center gap-1.5">
                 {formData.es_virtual ? <Video className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
                 {formData.es_virtual ? 'Reunión Virtual' : 'Ubicación'}
               </h4>
               <label className="flex items-center gap-2 cursor-pointer">
-                <span className="text-xs text-purple-600">Virtual</span>
+                <span className="text-xs text-purple-600 dark:text-purple-300">Virtual</span>
                 <input
                   type="checkbox"
                   checked={formData.es_virtual}
                   onChange={e => setFormData(prev => ({ ...prev, es_virtual: e.target.checked }))}
-                  className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-4 w-4"
+                  className="rounded border-purple-300 dark:border-purple-700 text-purple-600 focus:ring-purple-500 h-4 w-4"
                 />
               </label>
             </div>
@@ -1144,31 +1144,31 @@ export default function ActividadesPage() {
           
           {/* Involucrados/Participantes */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
               <Users className="h-3.5 w-3.5" />
               Involucrados ({users.length} disponibles)
             </label>
-            <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto bg-gray-50">
+            <div className="border border-gray-200 dark:border-dark-500 rounded-xl max-h-56 overflow-y-auto bg-gray-50 dark:bg-dark-800">
               {users.length === 0 ? (
-                <p className="p-4 text-center text-gray-500 text-sm">No hay usuarios disponibles</p>
+                <p className="p-4 text-center text-gray-500 dark:text-gray-300 text-sm">No hay usuarios disponibles</p>
               ) : (
                 users.map(user => {
                   const isSelected = formData.participantes.includes(user.id);
                   const rolColors: Record<string, string> = {
-                    admin: 'bg-red-100 text-red-700',
-                    vendedor: 'bg-blue-100 text-blue-700',
-                    supervisor: 'bg-green-100 text-green-700',
-                    supervisor_nivel1: 'bg-purple-100 text-purple-700',
-                    supervisor_vendedor: 'bg-indigo-100 text-indigo-700',
-                    vendedor_tecnico: 'bg-amber-100 text-amber-800',
-                    marketing: 'bg-emerald-100 text-emerald-700',
-                    tecnico: 'bg-amber-100 text-amber-700'
+                    admin: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200',
+                    vendedor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200',
+                    supervisor: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200',
+                    supervisor_nivel1: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200',
+                    supervisor_vendedor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200',
+                    vendedor_tecnico: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+                    marketing: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200',
+                    tecnico: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
                   };
                   return (
                     <label 
                       key={user.id} 
-                      className={`flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all ${
-                        isSelected ? 'bg-indigo-50 border-indigo-100' : 'hover:bg-white'
+                      className={`flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 dark:border-dark-600 last:border-b-0 transition-all ${
+                        isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800' : 'hover:bg-white dark:hover:bg-dark-700'
                       }`}
                     >
                       <input
@@ -1181,7 +1181,7 @@ export default function ActividadesPage() {
                             setFormData(prev => ({ ...prev, participantes: prev.participantes.filter(id => id !== user.id) }));
                           }
                         }}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                        className="rounded border-gray-300 dark:border-dark-500 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                       />
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-semibold text-sm">
@@ -1189,9 +1189,9 @@ export default function ActividadesPage() {
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900">{user.nombre_completo}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700'}`}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{user.nombre_completo}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>
                             {user.rol === 'supervisor_nivel1' ? 'Sup. N1' :
                             user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' :
                             user.rol === 'vendedor_tecnico' ? 'Vend.+Téc.' :
@@ -1199,10 +1199,10 @@ export default function ActividadesPage() {
                             user.rol === 'tecnico' ? 'Técnico' : user.rol}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300 truncate">{user.email}</p>
                       </div>
                       {isSelected && (
-                        <CheckCircle className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+                        <CheckCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
                       )}
                     </label>
                   );
@@ -1210,8 +1210,8 @@ export default function ActividadesPage() {
               )}
             </div>
             {formData.participantes.length > 0 && (
-              <div className="mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                <p className="text-sm text-indigo-700 font-medium flex items-center gap-2">
+              <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                <p className="text-sm text-indigo-700 dark:text-indigo-200 font-medium flex items-center gap-2">
                   <CheckCircle className="h-4 w-4" />
                   {formData.participantes.length} involucrado(s) seleccionado(s)
                 </p>
@@ -1220,8 +1220,8 @@ export default function ActividadesPage() {
           </div>
           
           {/* Recordatorio */}
-          <div className="bg-amber-50 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex items-center gap-1.5">
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-transparent dark:border-amber-800 rounded-xl p-3 sm:p-4 space-y-3">
+            <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
               <Bell className="h-3.5 w-3.5" />
               Recuérdamelo
             </h4>
@@ -1231,17 +1231,17 @@ export default function ActividadesPage() {
                 ...prev, 
                 recordatorio_minutos: e.target.value ? parseInt(e.target.value) : null 
               }))}
-              className="w-full px-4 py-2.5 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white"
+              className="w-full px-4 py-2.5 border border-amber-200 dark:border-amber-700 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
             >
-              <option value="">Sin recordatorio</option>
+              <option value="" className="dark:bg-dark-700">Sin recordatorio</option>
               {REMINDER_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
+                <option key={option.value} value={option.value} className="dark:bg-dark-700">
                   {option.label}
                 </option>
               ))}
             </select>
             {formData.recordatorio_minutos !== null && formData.participantes.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-100 p-2 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg">
                 <Mail className="h-3.5 w-3.5" />
                 <span>Se enviará un correo a los {formData.participantes.length} involucrado(s)</span>
               </div>
@@ -1250,22 +1250,22 @@ export default function ActividadesPage() {
 
           {/* Notas */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Notas adicionales</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Notas adicionales</label>
             <textarea
               value={formData.notas || ''}
               onChange={e => setFormData(prev => ({ ...prev, notas: e.target.value }))}
               rows={2}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none bg-white dark:bg-dark-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
               placeholder="Notas o recordatorios..."
             />
           </div>
           
           {/* Acciones */}
-          <div className="flex justify-end gap-3 pt-5 border-t border-gray-200">
-            <Button variant="secondary" onClick={() => { setShowCreateModal(false); resetForm(); }}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-5 border-t border-gray-200 dark:border-dark-500">
+            <Button variant="secondary" onClick={() => { setShowCreateModal(false); resetForm(); }} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleSaveActivity}>
+            <Button onClick={handleSaveActivity} className="w-full sm:w-auto">
               {isEditing ? 'Guardar Cambios' : 'Crear Actividad'}
             </Button>
           </div>
@@ -1296,37 +1296,37 @@ export default function ActividadesPage() {
             
             {/* Descripción */}
             {selectedActivity.descripcion && (
-              <div className="bg-gray-50 rounded-xl p-4">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Descripción</h4>
-                <p className="text-gray-700 leading-relaxed">{selectedActivity.descripcion}</p>
+              <div className="bg-gray-50 dark:bg-dark-800 rounded-xl p-4">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-2">Descripción</h4>
+                <p className="text-gray-700 dark:text-gray-200 leading-relaxed">{selectedActivity.descripcion}</p>
               </div>
             )}
             
             {/* Fechas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-blue-50 rounded-xl p-4">
-                <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-4">
+                <h4 className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-2 flex items-center gap-1">
                   <CalendarIcon className="h-3.5 w-3.5" />
                   Fecha inicio
                 </h4>
-                <p className="text-gray-800 font-medium">
+                <p className="text-gray-800 dark:text-white font-medium">
                   {format(parseISO(selectedActivity.fecha_inicio), "d 'de' MMMM 'de' yyyy", { locale: es })}
                 </p>
-                <p className="text-blue-600 text-sm font-medium mt-0.5">
+                <p className="text-blue-600 dark:text-blue-300 text-sm font-medium mt-0.5">
                   {format(parseISO(selectedActivity.fecha_inicio), "HH:mm", { locale: es })} hrs
                 </p>
               </div>
               
               {selectedActivity.fecha_fin && (
-                <div className="bg-green-50 rounded-xl p-4">
-                  <h4 className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-4">
+                  <h4 className="text-xs font-semibold text-green-600 dark:text-green-300 uppercase tracking-wide mb-2 flex items-center gap-1">
                     <CalendarIcon className="h-3.5 w-3.5" />
                     Fecha fin
                   </h4>
-                  <p className="text-gray-800 font-medium">
+                  <p className="text-gray-800 dark:text-white font-medium">
                     {format(parseISO(selectedActivity.fecha_fin), "d 'de' MMMM 'de' yyyy", { locale: es })}
                   </p>
-                  <p className="text-green-600 text-sm font-medium mt-0.5">
+                  <p className="text-green-600 dark:text-green-300 text-sm font-medium mt-0.5">
                     {format(parseISO(selectedActivity.fecha_fin), "HH:mm", { locale: es })} hrs
                   </p>
                 </div>
@@ -1335,10 +1335,10 @@ export default function ActividadesPage() {
             
             {/* Ubicación o Virtual */}
             {(selectedActivity.ubicacion || (selectedActivity.es_virtual && selectedActivity.enlace_reunion)) && (
-              <div className="bg-purple-50 rounded-xl p-4">
+              <div className="bg-purple-50 dark:bg-purple-900/30 rounded-xl p-4">
                 {selectedActivity.es_virtual && selectedActivity.enlace_reunion ? (
                   <>
-                    <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase tracking-wide mb-2 flex items-center gap-1">
                       <Video className="h-3.5 w-3.5" />
                       Reunión Virtual
                     </h4>
@@ -1354,11 +1354,11 @@ export default function ActividadesPage() {
                   </>
                 ) : selectedActivity.ubicacion && (
                   <>
-                    <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase tracking-wide mb-2 flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" />
                       Ubicación
                     </h4>
-                    <p className="text-gray-800 font-medium">{selectedActivity.ubicacion}</p>
+                    <p className="text-gray-800 dark:text-white font-medium">{selectedActivity.ubicacion}</p>
                   </>
                 )}
               </div>
@@ -1367,22 +1367,22 @@ export default function ActividadesPage() {
             {/* Participantes */}
             {selectedActivity.participants && selectedActivity.participants.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
                   <Users className="h-3.5 w-3.5" />
                   Participantes ({selectedActivity.participants.length})
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {selectedActivity.participants.map(p => (
-                    <div key={p.id} className="flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors rounded-xl p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <span className="text-indigo-600 font-semibold text-sm">
+                    <div key={p.id} className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-dark-800 hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors rounded-xl p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
+                          <span className="text-indigo-600 dark:text-indigo-300 font-semibold text-sm">
                             {p.user_profile?.nombre_completo?.charAt(0) || '?'}
                           </span>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm text-gray-900">{p.user_profile?.nombre_completo}</p>
-                          <p className="text-xs text-gray-500">{p.user_profile?.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{p.user_profile?.nombre_completo}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-300 truncate">{p.user_profile?.email}</p>
                         </div>
                       </div>
                       <Badge variant={
@@ -1400,15 +1400,15 @@ export default function ActividadesPage() {
             
             {/* Notas */}
             {selectedActivity.notas && (
-              <div className="bg-amber-50 rounded-xl p-4">
-                <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-2">Notas</h4>
-                <p className="text-gray-700 leading-relaxed">{selectedActivity.notas}</p>
+              <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4">
+                <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-300 uppercase tracking-wide mb-2">Notas</h4>
+                <p className="text-gray-700 dark:text-gray-200 leading-relaxed">{selectedActivity.notas}</p>
               </div>
             )}
 
             {/* Comentarios */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <div className="bg-gray-50 dark:bg-dark-800 rounded-xl p-4">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <MessageSquare className="h-3.5 w-3.5" />
                 Comentarios ({selectedActivity.comments?.length || 0})
               </h4>
@@ -1417,23 +1417,23 @@ export default function ActividadesPage() {
               <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                 {selectedActivity.comments && selectedActivity.comments.length > 0 ? (
                   selectedActivity.comments.map(comment => (
-                    <div key={comment.id} className="bg-white rounded-lg p-3 border border-gray-200">
+                    <div key={comment.id} className="bg-white dark:bg-dark-700 rounded-lg p-3 border border-gray-200 dark:border-dark-500">
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-indigo-600 font-semibold text-sm">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
+                          <span className="text-indigo-600 dark:text-indigo-300 font-semibold text-sm">
                             {comment.user_profile?.nombre_completo?.charAt(0) || '?'}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-medium text-gray-900">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
                               {comment.user_profile?.nombre_completo || 'Usuario'}
                             </p>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 dark:text-gray-300">
                               {format(parseISO(comment.created_at), "dd/MM/yyyy HH:mm", { locale: es })}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                          <p className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words">
                             {comment.comentario}
                           </p>
                         </div>
@@ -1441,21 +1441,21 @@ export default function ActividadesPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-6 text-gray-400 text-sm">
+                  <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
                     No hay comentarios aún. Sé el primero en comentar.
                   </div>
                 )}
               </div>
               
               {/* Formulario para agregar comentario */}
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-gray-200 dark:border-dark-500 pt-4">
                 <div className="flex gap-2">
                   <textarea
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                     placeholder="Escribe un comentario..."
                     rows={2}
-                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none text-sm"
+                    className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none text-sm bg-white dark:bg-dark-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         e.preventDefault();
@@ -1472,7 +1472,7 @@ export default function ActividadesPage() {
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">
                   Presiona Ctrl+Enter para enviar
                 </p>
               </div>
@@ -1480,12 +1480,12 @@ export default function ActividadesPage() {
 
             {/* Recordatorio */}
             {selectedActivity.recordatorio_minutos !== null && (
-              <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
-                <h4 className="text-xs font-semibold text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-xl p-4 border border-yellow-200 dark:border-yellow-700">
+                <h4 className="text-xs font-semibold text-yellow-700 dark:text-yellow-300 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                   <Bell className="h-3.5 w-3.5" />
                   Recordatorio configurado
                 </h4>
-                <p className="text-yellow-800 font-medium">
+                <p className="text-yellow-800 dark:text-yellow-200 font-medium">
                   {REMINDER_OPTIONS.find(o => o.value === selectedActivity.recordatorio_minutos)?.label || 
                    `${selectedActivity.recordatorio_minutos} minutos antes`}
                 </p>
@@ -1493,8 +1493,8 @@ export default function ActividadesPage() {
             )}
             
             {/* Cambiar estado */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cambiar estado</h4>
+            <div className="bg-gray-50 dark:bg-dark-800 rounded-xl p-4">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-3">Cambiar estado</h4>
               <div className="flex gap-2 flex-wrap">
                 {(['planificacion', 'haciendo', 'realizado'] as ActivityStatus[]).map(status => (
                   <button
@@ -1505,8 +1505,8 @@ export default function ActividadesPage() {
                       selectedActivity.estado === status
                         ? `${estadoColors[status].bg} ${estadoColors[status].text} border-2 ${estadoColors[status].border} ring-2 ring-offset-1 ring-current/20`
                         : (status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                        ? 'bg-gray-200 dark:bg-dark-600 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                        : 'bg-white dark:bg-dark-700 text-gray-600 dark:text-gray-200 border border-gray-200 dark:border-dark-500 hover:bg-gray-100 dark:hover:bg-dark-600 hover:border-gray-300'
                     }`}
                     title={status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
                   >
@@ -1516,7 +1516,7 @@ export default function ActividadesPage() {
                 ))}
               </div>
               {!isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && (
-                <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5">
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5" />
                   Solo Supervisores Nivel 1 pueden marcar objetivos estratégicos como Realizado
                 </p>
@@ -1524,30 +1524,30 @@ export default function ActividadesPage() {
             </div>
             
             {/* Acciones */}
-            <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
               <Button 
                 variant="danger" 
                 size="sm"
                 onClick={() => handleDeleteActivity(selectedActivity.id)}
-                className="gap-1.5"
+                className="gap-1.5 w-full sm:w-auto justify-center"
               >
                 <Trash2 className="h-4 w-4" />
                 Eliminar
               </Button>
               
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   variant="secondary" 
                   onClick={() => {
                     setShowDetailModal(false);
                     openEditModal(selectedActivity);
                   }}
-                  className="gap-1.5"
+                  className="gap-1.5 w-full sm:w-auto justify-center"
                 >
                   <Edit className="h-4 w-4" />
                   Editar
                 </Button>
-                <Button variant="secondary" onClick={() => setShowDetailModal(false)}>
+                <Button variant="secondary" onClick={() => setShowDetailModal(false)} className="w-full sm:w-auto">
                   Cerrar
                 </Button>
               </div>

@@ -260,43 +260,43 @@ export default function VendorEventPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         <Link href="/eventos"><Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>Eventos</Button></Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{event.nombre}</h1>
-          <div className="flex items-center gap-2 mt-1 flex-wrap text-sm text-gray-500">
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${event.estado === 'en_ejecucion' ? 'bg-amber-100 text-amber-700' : event.estado === 'finalizado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">{event.nombre}</h1>
+          <div className="flex items-center gap-2 mt-1 flex-wrap text-sm text-gray-500 dark:text-gray-300">
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${event.estado === 'en_ejecucion' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' : event.estado === 'finalizado' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'}`}>
               {event.estado === 'en_ejecucion' ? 'En Ejecución' : event.estado.charAt(0).toUpperCase() + event.estado.slice(1)}
             </span>
             <span>{format(new Date(event.fecha_inicio), "d MMM yyyy", { locale: es })}{event.fecha_fin ? ` → ${format(new Date(event.fecha_fin), "d MMM yyyy", { locale: es })}` : ''}</span>
             {event.ubicacion && <span>📍 {event.ubicacion}</span>}
           </div>
-          {event.objetivo && <p className="text-sm text-gray-600 mt-2">{event.objetivo}</p>}
+          {event.objetivo && <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 break-words">{event.objetivo}</p>}
         </div>
       </div>
 
       {/* My Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="bg-blue-50 border border-blue-200"><div className="p-3">
-          <p className="text-[10px] text-blue-600 font-semibold uppercase">Mis Inscritos</p>
-          <p className="text-xl font-bold">{myParticipants.length}</p>
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"><div className="p-3">
+          <p className="text-[10px] text-blue-600 dark:text-blue-300 font-semibold uppercase">Mis Inscritos</p>
+          <p className="text-xl font-bold text-gray-900 dark:text-white">{myParticipants.length}</p>
         </div></Card>
-        <Card className="bg-green-50 border border-green-200"><div className="p-3">
-          <p className="text-[10px] text-green-600 font-semibold uppercase">Recaudado</p>
-          <p className="text-xl font-bold">${totalRecaudado.toLocaleString()}</p>
+        <Card className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"><div className="p-3">
+          <p className="text-[10px] text-green-600 dark:text-green-300 font-semibold uppercase">Recaudado</p>
+          <p className="text-xl font-bold text-gray-900 dark:text-white">${totalRecaudado.toLocaleString()}</p>
         </div></Card>
-        <Card className="bg-purple-50 border border-purple-200"><div className="p-3">
-          <p className="text-[10px] text-purple-600 font-semibold uppercase">Cupos Adicionales</p>
-          <p className="text-xl font-bold">{totalCuposAdicionales}</p>
+        <Card className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"><div className="p-3">
+          <p className="text-[10px] text-purple-600 dark:text-purple-300 font-semibold uppercase">Cupos Adicionales</p>
+          <p className="text-xl font-bold text-gray-900 dark:text-white">{totalCuposAdicionales}</p>
         </div></Card>
-        <Card className="bg-amber-50 border border-amber-200"><div className="p-3">
-          <p className="text-[10px] text-amber-600 font-semibold uppercase">Mis Actividades</p>
-          <p className="text-xl font-bold">{myActivities.filter(a => a.estado === 'completada').length}/{myActivities.length}</p>
+        <Card className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"><div className="p-3">
+          <p className="text-[10px] text-amber-600 dark:text-amber-300 font-semibold uppercase">Mis Actividades</p>
+          <p className="text-xl font-bold text-gray-900 dark:text-white">{myActivities.filter(a => a.estado === 'completada').length}/{myActivities.length}</p>
         </div></Card>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
+      <div className="flex gap-1 bg-gray-100 dark:bg-dark-800 rounded-xl p-1 overflow-x-auto">
         {[
           { id: 'resumen' as const, label: 'Resumen', icon: Eye },
           { id: 'participantes' as const, label: 'Participantes', icon: Users, count: participants.length },
@@ -304,9 +304,9 @@ export default function VendorEventPage() {
         ].map(t => {
           const Icon = t.icon;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center ${tab === t.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center ${tab === t.id ? 'bg-white dark:bg-dark-600 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`}>
               <Icon className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">{t.label}</span><span className="sm:hidden">{t.label === 'Mis Actividades' ? 'Actividades' : t.label}</span>
-              {t.count !== undefined && <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-indigo-100' : 'bg-gray-200'}`}>{t.count}</span>}
+              {t.count !== undefined && <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-200' : 'bg-gray-200 dark:bg-dark-600 dark:text-gray-200'}`}>{t.count}</span>}
             </button>
           );
         })}
@@ -316,20 +316,20 @@ export default function VendorEventPage() {
       {tab === 'resumen' && (
         <div className="space-y-4">
           <Card>
-            <h3 className="font-semibold text-gray-900 mb-3">Información del Evento</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-gray-500">Tipo:</span> <span className="font-medium">{event.tipo}</span></div>
-              <div><span className="text-gray-500">Modalidad:</span> <span className="font-medium">{event.modalidad}</span></div>
-              <div><span className="text-gray-500">Precio por persona:</span> <span className="font-bold text-green-700">${Number(event.precio_por_persona).toLocaleString()}</span></div>
-              <div><span className="text-gray-500">Cupo máximo:</span> <span className="font-medium">{event.cupo_maximo || '∞'}</span></div>
-              {event.plataforma && <div><span className="text-gray-500">Plataforma:</span> <span className="font-medium">{event.plataforma}</span></div>}
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Información del Evento</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+              <div><span className="text-gray-500 dark:text-gray-300">Tipo:</span> <span className="font-medium text-gray-900 dark:text-white">{event.tipo}</span></div>
+              <div><span className="text-gray-500 dark:text-gray-300">Modalidad:</span> <span className="font-medium text-gray-900 dark:text-white">{event.modalidad}</span></div>
+              <div><span className="text-gray-500 dark:text-gray-300">Precio por persona:</span> <span className="font-bold text-green-700 dark:text-green-400">${Number(event.precio_por_persona).toLocaleString()}</span></div>
+              <div><span className="text-gray-500 dark:text-gray-300">Cupo máximo:</span> <span className="font-medium text-gray-900 dark:text-white">{event.cupo_maximo || '∞'}</span></div>
+              {event.plataforma && <div><span className="text-gray-500 dark:text-gray-300">Plataforma:</span> <span className="font-medium text-gray-900 dark:text-white">{event.plataforma}</span></div>}
             </div>
           </Card>
 
           {event.descripcion && (
             <Card>
-              <h3 className="font-semibold text-gray-900 mb-2">Descripción</h3>
-              <p className="text-sm text-gray-700">{event.descripcion}</p>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Descripción</h3>
+              <p className="text-sm text-gray-700 dark:text-gray-200 break-words">{event.descripcion}</p>
             </Card>
           )}
         </div>
@@ -340,8 +340,8 @@ export default function VendorEventPage() {
         <div className="space-y-4">
           {/* Resumen por categorías */}
           {(event.categorias_participantes || []).length > 0 && (
-            <Card className="bg-teal-50/50 border-teal-200">
-              <h4 className="text-xs font-semibold text-teal-700 uppercase mb-3">🏅 Resumen por Categoría</h4>
+            <Card className="bg-teal-50/50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800">
+              <h4 className="text-xs font-semibold text-teal-700 dark:text-teal-300 uppercase mb-3">🏅 Resumen por Categoría</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {(event.categorias_participantes || []).map((cat: any) => {
                   const catParticipants = participants.filter(p => p.categoria === cat.nombre);
@@ -351,28 +351,28 @@ export default function VendorEventPage() {
                   const listaEspera = catParticipants.filter(p => p.estado_inscripcion === 'lista_espera').length;
                   const activos = preInscritos + confirmados + listaEspera;
                   return (
-                    <div key={cat.nombre} className="bg-white rounded-xl p-3 border border-teal-200 overflow-hidden relative">
+                    <div key={cat.nombre} className="bg-white dark:bg-dark-700 rounded-xl p-3 border border-teal-200 dark:border-teal-800 overflow-hidden relative">
                       {cat.color && <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: cat.color }} />}
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm text-gray-900 flex items-center gap-1.5">{cat.color && <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: cat.color }} />}{cat.nombre}</span>
+                        <span className="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">{cat.color && <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: cat.color }} />}{cat.nombre}</span>
                         {cat.cupo ? (
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activos >= cat.cupo ? 'bg-red-100 text-red-700' : activos >= cat.cupo * 0.8 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activos >= cat.cupo ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200' : activos >= cat.cupo * 0.8 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'}`}>
                             {activos}/{cat.cupo}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400">{catParticipants.length} inscritos</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">{catParticipants.length} inscritos</span>
                         )}
                       </div>
                       {cat.cupo && (
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                        <div className="w-full bg-gray-200 dark:bg-dark-600 rounded-full h-1.5 mb-2">
                           <div className={`h-1.5 rounded-full transition-all ${activos >= cat.cupo ? 'bg-red-500' : activos >= cat.cupo * 0.8 ? 'bg-amber-500' : 'bg-teal-500'}`} style={{ width: `${Math.min((activos / cat.cupo) * 100, 100)}%` }} />
                         </div>
                       )}
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
-                        <span className="text-gray-500">Pre-inscr: <strong>{preInscritos}</strong></span>
-                        <span className="text-green-600">Confirm: <strong>{confirmados}</strong></span>
-                        <span className="text-amber-600">Espera: <strong>{listaEspera}</strong></span>
-                        <span className="text-red-500">Cancel: <strong>{cancelados}</strong></span>
+                        <span className="text-gray-500 dark:text-gray-300">Pre-inscr: <strong>{preInscritos}</strong></span>
+                        <span className="text-green-600 dark:text-green-400">Confirm: <strong>{confirmados}</strong></span>
+                        <span className="text-amber-600 dark:text-amber-400">Espera: <strong>{listaEspera}</strong></span>
+                        <span className="text-red-500 dark:text-red-400">Cancel: <strong>{cancelados}</strong></span>
                       </div>
                     </div>
                   );
@@ -450,43 +450,43 @@ export default function VendorEventPage() {
           {/* Mobile card layout */}
           <div className="md:hidden space-y-2">
             {filteredParticipants.length === 0 ? (
-              <Card><p className="text-center py-4 text-gray-500 text-sm">{hasActiveFilters ? 'Sin resultados para estos filtros' : 'Sin participantes aún'}</p></Card>
+              <Card><p className="text-center py-4 text-gray-500 dark:text-gray-300 text-sm">{hasActiveFilters ? 'Sin resultados para estos filtros' : 'Sin participantes aún'}</p></Card>
             ) : filteredParticipants.map(p => {
               const isMine = isMyParticipant(p);
               return (
-                <Card key={p.id} className={isMine ? 'border-indigo-200 bg-indigo-50/20' : ''} padding="none">
+                <Card key={p.id} className={isMine ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50/20 dark:bg-indigo-900/20' : ''} padding="none">
                   <div className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{p.nombre}</p>
+                        <p className="font-medium text-sm truncate text-gray-900 dark:text-white">{p.nombre}</p>
                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                          {p.numero_asiento && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold">Asiento {p.numero_asiento}</span>}
+                          {p.numero_asiento && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 font-semibold">Asiento {p.numero_asiento}</span>}
                           {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
-                          {isMine && <span className="text-[10px] text-indigo-600 font-medium">Mi inscrito</span>}
-                          {p.empresa && <span className="text-[10px] text-gray-400">{p.empresa}</span>}
+                          {isMine && <span className="text-[10px] text-indigo-600 dark:text-indigo-300 font-medium">Mi inscrito</span>}
+                          {p.empresa && <span className="text-[10px] text-gray-400 dark:text-gray-500">{p.empresa}</span>}
                         </div>
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
-                        <button onClick={() => setQrParticipant(p)} className="p-1.5 hover:bg-indigo-50 rounded-lg" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
+                        <button onClick={() => setQrParticipant(p)} className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
                         {event && (
-                          <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1.5 hover:bg-purple-50 rounded-lg">
+                          <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1.5 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg">
                             <FileText className="h-3.5 w-3.5 text-purple-500" />
                           </InvitationDownloadButton>
                         )}
                         {isMine && (
                           <>
-                            <button onClick={() => openEditParticipant(p)} className="p-1.5 hover:bg-gray-100 rounded-lg"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
-                            <button onClick={() => handleRemoveParticipant(p.id)} className="p-1.5 hover:bg-red-50 rounded-lg"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                            <button onClick={() => openEditParticipant(p)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-dark-600 rounded-lg"><Edit className="h-3.5 w-3.5 text-gray-500 dark:text-gray-300" /></button>
+                            <button onClick={() => handleRemoveParticipant(p.id)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
                           </>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span>
-                      <span className="text-xs font-semibold ml-auto">${Number(p.monto_pagado).toLocaleString()}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>{p.estado_inscripcion.replace('_', ' ')}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' : 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>{p.estado_pago}</span>
+                      <span className="text-xs font-semibold ml-auto text-gray-900 dark:text-white">${Number(p.monto_pagado).toLocaleString()}</span>
                     </div>
-                    {p.registered_by && <p className="text-[10px] text-gray-400 mt-1">Por: {getUserName(p.registered_by)}</p>}
+                    {p.registered_by && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Por: {getUserName(p.registered_by)}</p>}
                   </div>
                 </Card>
               );
@@ -497,7 +497,7 @@ export default function VendorEventPage() {
           <Card padding="none" className="hidden md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead><tr className="bg-gray-50 border-b">
+                <thead><tr className="bg-gray-50 dark:bg-dark-800 border-b border-gray-200 dark:border-dark-500 text-gray-700 dark:text-gray-200">
                   <th className="text-center px-4 py-3 w-16">Asiento</th>
                   <th className="text-left px-4 py-3">Nombre</th>
                   <th className="text-left px-4 py-3">Contacto</th>
@@ -507,39 +507,39 @@ export default function VendorEventPage() {
                   <th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th>
                   <th className="text-center px-4 py-3 w-20">Acción</th>
                 </tr></thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-gray-200 dark:divide-dark-500">
                   {filteredParticipants.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-8 text-gray-500">{hasActiveFilters ? 'Sin resultados para estos filtros' : 'Sin participantes aún'}</td></tr>
+                    <tr><td colSpan={8} className="text-center py-8 text-gray-500 dark:text-gray-300">{hasActiveFilters ? 'Sin resultados para estos filtros' : 'Sin participantes aún'}</td></tr>
                   ) : filteredParticipants.map(p => {
                     const isMine = isMyParticipant(p);
                     return (
-                      <tr key={p.id} className={`hover:bg-gray-50 ${isMine ? 'bg-indigo-50/30' : ''}`}>
-                        <td className="px-4 py-3 text-center">{p.numero_asiento ? <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg">{p.numero_asiento}</span> : <span className="text-gray-300">—</span>}</td>
+                      <tr key={p.id} className={`hover:bg-gray-50 dark:hover:bg-dark-600 ${isMine ? 'bg-indigo-50/30 dark:bg-indigo-900/20' : ''}`}>
+                        <td className="px-4 py-3 text-center">{p.numero_asiento ? <span className="text-xs font-bold text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/40 px-2 py-1 rounded-lg">{p.numero_asiento}</span> : <span className="text-gray-300 dark:text-gray-600">—</span>}</td>
                         <td className="px-4 py-3">
-                          <p className="font-medium">{p.nombre}</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{p.nombre}</p>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {p.empresa && <span className="text-xs text-gray-500">{p.empresa}</span>}
+                            {p.empresa && <span className="text-xs text-gray-500 dark:text-gray-300">{p.empresa}</span>}
                             {p.categoria && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(p.categoria) || '#0d9488' }}>{p.categoria}</span>}
-                            {isMine && <span className="text-[10px] text-indigo-600 font-medium">Mi inscrito</span>}
+                            {isMine && <span className="text-[10px] text-indigo-600 dark:text-indigo-300 font-medium">Mi inscrito</span>}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{p.email || p.telefono || '—'}</td>
-                        <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
-                        <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.estado_pago}</span></td>
-                        <td className="px-4 py-3 text-right font-semibold">${Number(p.monto_pagado).toLocaleString()}</td>
-                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">{p.email || p.telefono || '—'}</td>
+                        <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : p.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>{p.estado_inscripcion.replace('_', ' ')}</span></td>
+                        <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : p.estado_pago === 'parcial' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' : 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>{p.estado_pago}</span></td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">${Number(p.monto_pagado).toLocaleString()}</td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-500 dark:text-gray-300">{p.registered_by ? getUserName(p.registered_by) : <span className="text-gray-300 dark:text-gray-600">—</span>}</td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex gap-1 justify-center">
-                            <button onClick={() => setQrParticipant(p)} className="p-1 hover:bg-indigo-50 rounded" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
+                            <button onClick={() => setQrParticipant(p)} className="p-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded" title="Ver QR"><QrCode className="h-3.5 w-3.5 text-indigo-500" /></button>
                             {event && (
-                              <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1 hover:bg-purple-50 rounded">
+                              <InvitationDownloadButton participant={p} event={event} getCatColor={getCatColor} baseUrl={typeof window !== 'undefined' ? window.location.origin : ''} className="p-1 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded">
                                 <FileText className="h-3.5 w-3.5 text-purple-500" />
                               </InvitationDownloadButton>
                             )}
                             {isMine && (
                               <>
-                                <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 rounded"><Edit className="h-3.5 w-3.5 text-gray-500" /></button>
-                                <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                                <button onClick={() => openEditParticipant(p)} className="p-1 hover:bg-gray-100 dark:hover:bg-dark-600 rounded"><Edit className="h-3.5 w-3.5 text-gray-500 dark:text-gray-300" /></button>
+                                <button onClick={() => handleRemoveParticipant(p.id)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
                               </>
                             )}
                           </div>
@@ -557,11 +557,11 @@ export default function VendorEventPage() {
       {/* TAB: ACTIVIDADES + GANTT */}
       {tab === 'actividades' && (
         <div className="space-y-4">
-          <h3 className="font-semibold text-gray-900">Mis Actividades ({myActivities.length})</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Mis Actividades ({myActivities.length})</h3>
 
           {myActivities.length > 0 && (
             <Card>
-              <h4 className="text-sm font-semibold text-gray-600 mb-3">📊 Mi Timeline</h4>
+              <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-200 mb-3">📊 Mi Timeline</h4>
               <div className="overflow-x-auto">
                 <div className="min-w-[400px]">
                   {myActivities.map(a => {
@@ -573,8 +573,8 @@ export default function VendorEventPage() {
                     const barColor = a.estado === 'completada' ? 'bg-green-400' : a.estado === 'bloqueada' ? 'bg-red-400' : isOverdue ? 'bg-orange-400' : a.tipo === 'estrategica' ? 'bg-purple-400' : 'bg-blue-400';
                     return (
                       <div key={a.id} className="flex items-center gap-3 py-2 group">
-                        <div className="w-40 flex-shrink-0 text-xs truncate text-gray-700 font-medium">{a.es_hito ? '🔹 ' : ''}{a.nombre}</div>
-                        <div className="flex-1 relative h-7 bg-gray-100 rounded">
+                        <div className="w-40 flex-shrink-0 text-xs truncate text-gray-700 dark:text-gray-200 font-medium">{a.es_hito ? '🔹 ' : ''}{a.nombre}</div>
+                        <div className="flex-1 relative h-7 bg-gray-100 dark:bg-dark-600 rounded">
                           <div className={`absolute h-7 rounded ${barColor} transition-all opacity-80 group-hover:opacity-100`} style={{ left: `${left}%`, width: `${width}%` }}>
                             <span className="text-[10px] text-white font-medium px-1.5 leading-7 truncate block">{a.estado === 'completada' ? '100' : a.porcentaje_avance}%</span>
                           </div>
@@ -582,7 +582,7 @@ export default function VendorEventPage() {
                       </div>
                     );
                   })}
-                  <div className="flex justify-between text-[10px] text-gray-400 mt-2 px-1">
+                  <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-2 px-1">
                     <span>{format(ganttStart, 'd MMM', { locale: es })}</span>
                     <span>{format(ganttEnd, 'd MMM', { locale: es })}</span>
                   </div>
@@ -594,33 +594,33 @@ export default function VendorEventPage() {
           <Card padding="none">
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="bg-gray-50 border-b">
+              <thead><tr className="bg-gray-50 dark:bg-dark-800 border-b border-gray-200 dark:border-dark-500 text-gray-700 dark:text-gray-200">
                 <th className="text-left px-4 py-3">Actividad</th>
                 <th className="text-left px-4 py-3 hidden md:table-cell">Fechas</th>
                 <th className="text-center px-4 py-3">Avance</th>
                 <th className="text-center px-4 py-3">Estado</th>
               </tr></thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-gray-200 dark:divide-dark-500">
                 {myActivities.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center py-8 text-gray-500">No tienes actividades asignadas en este evento</td></tr>
+                  <tr><td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-300">No tienes actividades asignadas en este evento</td></tr>
                 ) : myActivities.map(a => {
                   const isOverdue = a.estado !== 'completada' && a.estado !== 'cancelada' && a.fecha_fin && new Date(a.fecha_fin) < new Date();
                   return (
-                    <tr key={a.id} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50/50' : ''}`}>
+                    <tr key={a.id} className={`hover:bg-gray-50 dark:hover:bg-dark-600 ${isOverdue ? 'bg-red-50/50 dark:bg-red-900/20' : ''}`}>
                       <td className="px-4 py-3">
-                        <p className="font-medium">{a.es_hito ? '🔹 ' : ''}{a.nombre}</p>
-                        <p className="text-xs text-gray-500">{a.tipo === 'estrategica' ? '⭐ Estratégica' : 'Operativa'} • {a.prioridad} {isOverdue && <span className="text-red-600 font-medium">• RETRASADA</span>}</p>
-                        {a.descripcion && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{a.descripcion}</p>}
+                        <p className="font-medium text-gray-900 dark:text-white">{a.es_hito ? '🔹 ' : ''}{a.nombre}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300">{a.tipo === 'estrategica' ? '⭐ Estratégica' : 'Operativa'} • {a.prioridad} {isOverdue && <span className="text-red-600 dark:text-red-400 font-medium">• RETRASADA</span>}</p>
+                        {a.descripcion && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 line-clamp-1">{a.descripcion}</p>}
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-600">
+                      <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-600 dark:text-gray-300">
                         {format(new Date(a.fecha_inicio), 'd MMM', { locale: es })}
                         {a.fecha_fin && ` → ${format(new Date(a.fecha_fin), 'd MMM', { locale: es })}`}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="w-16 mx-auto bg-gray-200 rounded-full h-2"><div className="h-2 rounded-full bg-indigo-500" style={{ width: `${a.estado === 'completada' ? 100 : a.porcentaje_avance}%` }} /></div>
-                        <span className="text-xs text-gray-500">{a.estado === 'completada' ? 100 : a.porcentaje_avance}%</span>
+                        <div className="w-16 mx-auto bg-gray-200 dark:bg-dark-600 rounded-full h-2"><div className="h-2 rounded-full bg-indigo-500" style={{ width: `${a.estado === 'completada' ? 100 : a.porcentaje_avance}%` }} /></div>
+                        <span className="text-xs text-gray-500 dark:text-gray-300">{a.estado === 'completada' ? 100 : a.porcentaje_avance}%</span>
                       </td>
-                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${a.estado === 'completada' ? 'bg-green-100 text-green-700' : a.estado === 'en_progreso' ? 'bg-blue-100 text-blue-700' : a.estado === 'bloqueada' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{a.estado.replace('_', ' ')}</span></td>
+                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${a.estado === 'completada' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : a.estado === 'en_progreso' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' : a.estado === 'bloqueada' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>{a.estado.replace('_', ' ')}</span></td>
                     </tr>
                   );
                 })}
@@ -636,85 +636,85 @@ export default function VendorEventPage() {
         <div className="space-y-4">
           {!selectedCustomer ? (
             <>
-              <p className="text-sm text-gray-600">Busca un cliente de tu cartera para inscribirlo:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Busca un cliente de tu cartera para inscribirlo:</p>
               <div className="relative">
                 <Input placeholder="Buscar cliente por nombre o teléfono..." value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} />
               </div>
-              <div className="max-h-48 overflow-y-auto space-y-1 border rounded-xl">
+              <div className="max-h-48 overflow-y-auto space-y-1 border border-gray-200 dark:border-dark-500 rounded-xl">
                 {filteredCustomers.map(c => (
-                  <button key={c.id} onClick={() => selectCustomerForRegistration(c)} className="w-full text-left p-3 hover:bg-indigo-50 transition-colors border-b last:border-b-0">
-                    <p className="font-medium text-sm">{c.nombre}</p>
-                    <p className="text-xs text-gray-500">{[c.telefono, c.ciudad].filter(Boolean).join(' • ')}</p>
+                  <button key={c.id} onClick={() => selectCustomerForRegistration(c)} className="w-full text-left p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors border-b border-gray-200 dark:border-dark-500 last:border-b-0">
+                    <p className="font-medium text-sm text-gray-900 dark:text-white">{c.nombre}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-300">{[c.telefono, c.ciudad].filter(Boolean).join(' • ')}</p>
                   </button>
                 ))}
-                {filteredCustomers.length === 0 && <p className="text-center py-4 text-gray-500 text-sm">No se encontraron clientes</p>}
+                {filteredCustomers.length === 0 && <p className="text-center py-4 text-gray-500 dark:text-gray-300 text-sm">No se encontraron clientes</p>}
               </div>
-              <div className="border-t pt-3">
-                <p className="text-xs text-gray-500 mb-2">¿No está en tu cartera? Ingresa manualmente:</p>
+              <div className="border-t border-gray-200 dark:border-dark-500 pt-3">
+                <p className="text-xs text-gray-500 dark:text-gray-300 mb-2">¿No está en tu cartera? Ingresa manualmente:</p>
                 <Button variant="secondary" size="sm" onClick={() => setSelectedCustomer({ id: 'manual', nombre: '' } as any)}>Registro Manual</Button>
               </div>
             </>
           ) : (
             <>
               {selectedCustomer.id !== 'manual' && (
-                <div className="bg-indigo-50 rounded-xl p-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-sm text-indigo-800">{selectedCustomer.nombre}</p>
-                    <p className="text-xs text-indigo-600">{selectedCustomer.telefono} {selectedCustomer.email && `• ${selectedCustomer.email}`}</p>
+                <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-xl p-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm text-indigo-800 dark:text-indigo-200">{selectedCustomer.nombre}</p>
+                    <p className="text-xs text-indigo-600 dark:text-indigo-300 break-words">{selectedCustomer.telefono} {selectedCustomer.email && `• ${selectedCustomer.email}`}</p>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedCustomer(null)}>Cambiar</Button>
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Input label="Nombre *" value={partForm.nombre} onChange={e => setPartForm(p => ({ ...p, nombre: e.target.value }))} />
                 <Input label="Email" value={partForm.email} onChange={e => setPartForm(p => ({ ...p, email: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Input label="Teléfono" value={partForm.telefono} onChange={e => setPartForm(p => ({ ...p, telefono: e.target.value }))} />
                 <Input label="Empresa" value={partForm.empresa} onChange={e => setPartForm(p => ({ ...p, empresa: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
                 <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
                 <Input label="N° Asiento" value={partForm.numero_asiento} onChange={e => setPartForm(p => ({ ...p, numero_asiento: e.target.value }))} placeholder="Ej: A1, 12" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
-                  <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                    <option value="pre_inscrito">Pre-inscrito</option>
-                    <option value="confirmado">Confirmado</option>
-                    <option value="lista_espera">Lista de espera</option>
-                    <option value="cancelado">Cancelado</option>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Estado inscripción</label>
+                  <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl bg-white dark:bg-dark-700 text-gray-900 dark:text-white">
+                    <option value="pre_inscrito" className="dark:bg-dark-700">Pre-inscrito</option>
+                    <option value="confirmado" className="dark:bg-dark-700">Confirmado</option>
+                    <option value="lista_espera" className="dark:bg-dark-700">Lista de espera</option>
+                    <option value="cancelado" className="dark:bg-dark-700">Cancelado</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado pago</label>
-                  <select value={partForm.estado_pago} onChange={e => setPartForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                    <option value="pendiente">Pendiente</option>
-                    <option value="parcial">Parcial</option>
-                    <option value="pagado">Pagado</option>
-                    <option value="reembolsado">Reembolsado</option>
-                    <option value="exento">Exento</option>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Estado pago</label>
+                  <select value={partForm.estado_pago} onChange={e => setPartForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl bg-white dark:bg-dark-700 text-gray-900 dark:text-white">
+                    <option value="pendiente" className="dark:bg-dark-700">Pendiente</option>
+                    <option value="parcial" className="dark:bg-dark-700">Parcial</option>
+                    <option value="pagado" className="dark:bg-dark-700">Pagado</option>
+                    <option value="reembolsado" className="dark:bg-dark-700">Reembolsado</option>
+                    <option value="exento" className="dark:bg-dark-700">Exento</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
-                <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                  <option value="">Sin categoría</option>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Categoría</label>
+                <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl bg-white dark:bg-dark-700 text-gray-900 dark:text-white">
+                  <option value="" className="dark:bg-dark-700">Sin categoría</option>
                   {(event?.categorias_participantes || []).map((cat: any) => (
-                    <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
+                    <option key={cat.nombre} value={cat.nombre} className="dark:bg-dark-700">{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Notas</label>
-                <textarea value={partForm.notas} onChange={e => setPartForm(p => ({ ...p, notas: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border rounded-xl resize-none text-sm" placeholder="Observaciones..." />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Notas</label>
+                <textarea value={partForm.notas} onChange={e => setPartForm(p => ({ ...p, notas: e.target.value }))} rows={2} className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl resize-none text-sm bg-white dark:bg-dark-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500" placeholder="Observaciones..." />
               </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancelar</Button>
-                <Button onClick={handleAddParticipant}>Inscribir</Button>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+                <Button variant="secondary" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto">Cancelar</Button>
+                <Button onClick={handleAddParticipant} className="w-full sm:w-auto">Inscribir</Button>
               </div>
             </>
           )}
@@ -724,52 +724,52 @@ export default function VendorEventPage() {
       {/* EDIT PARTICIPANT MODAL */}
       <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Editar Participante">
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Input label="Nombre *" value={partForm.nombre} onChange={e => setPartForm(p => ({ ...p, nombre: e.target.value }))} />
             <Input label="Email" value={partForm.email} onChange={e => setPartForm(p => ({ ...p, email: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Input label="Teléfono" value={partForm.telefono} onChange={e => setPartForm(p => ({ ...p, telefono: e.target.value }))} />
             <Input label="Empresa" value={partForm.empresa} onChange={e => setPartForm(p => ({ ...p, empresa: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <Input label="Monto pagado ($)" type="number" step="0.01" value={partForm.monto_pagado} onChange={e => setPartForm(p => ({ ...p, monto_pagado: e.target.value }))} />
             <Input label="Cupos adicionales" type="number" value={partForm.cupos_adicionales} onChange={e => setPartForm(p => ({ ...p, cupos_adicionales: e.target.value }))} />
             <Input label="N° Asiento" value={partForm.numero_asiento} onChange={e => setPartForm(p => ({ ...p, numero_asiento: e.target.value }))} placeholder="Ej: A1, 12" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado inscripción</label>
-              <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                <option value="pre_inscrito">Pre-inscrito</option>
-                <option value="confirmado">Confirmado</option>
-                <option value="lista_espera">Lista de espera</option>
-                <option value="cancelado">Cancelado</option>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Estado inscripción</label>
+              <select value={partForm.estado_inscripcion} onChange={e => setPartForm(p => ({ ...p, estado_inscripcion: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl bg-white dark:bg-dark-700 text-gray-900 dark:text-white">
+                <option value="pre_inscrito" className="dark:bg-dark-700">Pre-inscrito</option>
+                <option value="confirmado" className="dark:bg-dark-700">Confirmado</option>
+                <option value="lista_espera" className="dark:bg-dark-700">Lista de espera</option>
+                <option value="cancelado" className="dark:bg-dark-700">Cancelado</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado pago</label>
-              <select value={partForm.estado_pago} onChange={e => setPartForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-                <option value="pendiente">Pendiente</option>
-                <option value="parcial">Parcial</option>
-                <option value="pagado">Pagado</option>
-                <option value="reembolsado">Reembolsado</option>
-                <option value="exento">Exento</option>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Estado pago</label>
+              <select value={partForm.estado_pago} onChange={e => setPartForm(p => ({ ...p, estado_pago: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl bg-white dark:bg-dark-700 text-gray-900 dark:text-white">
+                <option value="pendiente" className="dark:bg-dark-700">Pendiente</option>
+                <option value="parcial" className="dark:bg-dark-700">Parcial</option>
+                <option value="pagado" className="dark:bg-dark-700">Pagado</option>
+                <option value="reembolsado" className="dark:bg-dark-700">Reembolsado</option>
+                <option value="exento" className="dark:bg-dark-700">Exento</option>
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
-            <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border rounded-xl bg-white">
-              <option value="">Sin categoría</option>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Categoría</label>
+            <select value={partForm.categoria} onChange={e => setPartForm(p => ({ ...p, categoria: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl bg-white dark:bg-dark-700 text-gray-900 dark:text-white">
+              <option value="" className="dark:bg-dark-700">Sin categoría</option>
               {(event?.categorias_participantes || []).map((cat: any) => (
-                <option key={cat.nombre} value={cat.nombre}>{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
+                <option key={cat.nombre} value={cat.nombre} className="dark:bg-dark-700">{cat.nombre}{cat.cupo ? ` (cupo: ${cat.cupo})` : ''}</option>
               ))}
             </select>
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancelar</Button>
-            <Button onClick={handleEditParticipant}>Guardar</Button>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Button variant="secondary" onClick={() => setShowEditModal(false)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button onClick={handleEditParticipant} className="w-full sm:w-auto">Guardar</Button>
           </div>
         </div>
       </Modal>
@@ -779,15 +779,15 @@ export default function VendorEventPage() {
         {qrParticipant && (
           <div className="flex flex-col items-center space-y-4">
             <div className="text-center">
-              <p className="font-semibold text-lg text-gray-900">{qrParticipant.nombre}</p>
-              {qrParticipant.numero_asiento && <p className="text-sm font-bold text-indigo-600">Asiento {qrParticipant.numero_asiento}</p>}
-              <div className="flex items-center justify-center gap-2 mt-1">
+              <p className="font-semibold text-lg text-gray-900 dark:text-white">{qrParticipant.nombre}</p>
+              {qrParticipant.numero_asiento && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-300">Asiento {qrParticipant.numero_asiento}</p>}
+              <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
                 {qrParticipant.categoria && (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: getCatColor(qrParticipant.categoria) || '#0d9488' }}>
                     {qrParticipant.categoria}
                   </span>
                 )}
-                <span className={`text-xs px-2 py-0.5 rounded-full ${qrParticipant.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700' : qrParticipant.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${qrParticipant.estado_inscripcion === 'confirmado' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : qrParticipant.estado_inscripcion === 'cancelado' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>
                   {qrParticipant.estado_inscripcion.replace('_', ' ')}
                 </span>
               </div>

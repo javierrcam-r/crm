@@ -349,7 +349,7 @@ export default function PedidoDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando pedido...</div>
+        <div className="text-gray-500 dark:text-gray-400">Cargando pedido...</div>
       </div>
     );
   }
@@ -357,7 +357,7 @@ export default function PedidoDetailPage() {
   if (!order) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl text-gray-900">Pedido no encontrado</h2>
+        <h2 className="text-xl text-gray-900 dark:text-white">Pedido no encontrado</h2>
         <Link href="/pedidos">
           <Button variant="secondary" className="mt-4">
             Volver a Pedidos
@@ -379,12 +379,12 @@ export default function PedidoDetailPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Detalle de Pedido</h1>
-              <div className="flex items-center gap-2 mt-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Detalle de Pedido</h1>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <Badge variant={getStatusBadge(order.status)}>
                   {orderStatusLabels[order.status]}
                 </Badge>
-                <span className="text-sm text-gray-500">
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                   {formatOrderDateLocal(order.order_date as string)}
                 </span>
               </div>
@@ -425,16 +425,16 @@ export default function PedidoDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Cliente */}
           <Card className="lg:col-span-1">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Cliente</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Cliente</h2>
             {order.customer ? (
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-indigo-500 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-gray-400">Nombre</p>
+                  <User className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Nombre</p>
                     <Link
                       href={`/clientes/${order.customer.id}`}
-                      className="text-gray-900 font-medium hover:text-indigo-600"
+                      className="text-gray-900 dark:text-white font-medium hover:text-indigo-600 dark:hover:text-indigo-400 break-words"
                     >
                       {order.customer.nombre}
                     </Link>
@@ -443,12 +443,12 @@ export default function PedidoDetailPage() {
 
                 {order.customer.telefono && (
                   <div className="flex items-start gap-3">
-                    <Phone className="h-5 w-5 text-indigo-500 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-gray-400">Teléfono</p>
+                    <Phone className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Teléfono</p>
                       <a
                         href={`tel:${order.customer.telefono}`}
-                        className="text-gray-900 hover:text-indigo-600"
+                        className="text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400"
                       >
                         {order.customer.telefono}
                       </a>
@@ -458,47 +458,47 @@ export default function PedidoDetailPage() {
 
                 {order.customer.direccion && (
                   <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-indigo-500 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-gray-400">Dirección</p>
-                      <p className="text-gray-900">{order.customer.direccion}</p>
+                    <MapPin className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Dirección</p>
+                      <p className="text-gray-900 dark:text-white break-words">{order.customer.direccion}</p>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <p className="text-gray-500">Cliente no encontrado</p>
+              <p className="text-gray-500 dark:text-gray-400">Cliente no encontrado</p>
             )}
           </Card>
 
           {/* Totales */}
           <Card className="lg:col-span-2">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumen</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 rounded-lg bg-gray-50">
-                <p className="text-sm text-gray-500">Subtotal</p>
-                <p className="text-xl font-bold text-gray-900">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Resumen</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="text-center p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-dark-800">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Subtotal</p>
+                <p className="text-base sm:text-xl font-bold text-gray-900 dark:text-white break-words">
                   {formatCurrency(order.subtotal)}
                 </p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-amber-50">
-                <p className="text-sm text-amber-700">Bonificado</p>
-                <p className="text-xl font-bold text-amber-600">
+              <div className="text-center p-3 sm:p-4 rounded-lg bg-amber-50 dark:bg-amber-900/30">
+                <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">Bonificado</p>
+                <p className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 break-words">
                   {formatCurrency(order.total_bonificado)}
                 </p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-emerald-50">
-                <p className="text-sm text-emerald-700">Total</p>
-                <p className="text-xl font-bold text-emerald-600">
+              <div className="text-center p-3 sm:p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30">
+                <p className="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300">Total</p>
+                <p className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 break-words">
                   {formatCurrency(order.total)}
                 </p>
               </div>
             </div>
 
             {order.observacion_general && (
-              <div className="mt-4 p-4 rounded-lg bg-gray-50">
-                <p className="text-xs text-gray-400 mb-1">Observaciones</p>
-                <p className="text-gray-900">{order.observacion_general}</p>
+              <div className="mt-4 p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-dark-800">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Observaciones</p>
+                <p className="text-gray-900 dark:text-gray-100">{order.observacion_general}</p>
               </div>
             )}
           </Card>
@@ -506,7 +506,7 @@ export default function PedidoDetailPage() {
 
         {/* Productos */}
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Productos ({order.items?.length || 0})
           </h2>
           <div className="table-container">
@@ -525,34 +525,34 @@ export default function PedidoDetailPage() {
                   <tr key={item.id}>
                     <td>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-gray-900 dark:text-white">
                           {item.product?.nombre || 'Producto'}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           {item.product?.sku}
                         </p>
                         {item.observacion_item && (
-                          <p className="text-sm text-gray-400 mt-1 italic">
+                          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 italic">
                             "{item.observacion_item}"
                           </p>
                         )}
                       </div>
                     </td>
                     <td className="text-center">
-                      <span className="font-semibold text-gray-900">{item.qty}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{item.qty}</span>
                     </td>
                     <td className="text-right">
-                      <span className="text-gray-500">
+                      <span className="text-gray-500 dark:text-gray-400">
                         {formatCurrency(item.unit_price)}
                       </span>
                     </td>
                     <td className="text-right">
                       {item.bonificado ? (
-                        <span className="text-amber-600 line-through">
+                        <span className="text-amber-600 dark:text-amber-400 line-through">
                           {formatCurrency(item.qty * item.unit_price)}
                         </span>
                       ) : (
-                        <span className="font-semibold text-emerald-600">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                           {formatCurrency(item.line_total)}
                         </span>
                       )}
@@ -565,13 +565,13 @@ export default function PedidoDetailPage() {
                             Bonificado
                           </Badge>
                           {item.motivo_bonificado && (
-                            <p className="text-xs text-amber-600 mt-1">
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                               {item.motivo_bonificado}
                             </p>
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-400 dark:text-gray-500">-</span>
                       )}
                     </td>
                   </tr>
@@ -584,7 +584,7 @@ export default function PedidoDetailPage() {
         {/* Actions */}
         {order.status !== 'cancelado' && order.status !== 'entregado' && (
           <Card>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Acciones</h2>
             <div className="flex flex-wrap gap-3">
               {order.status === 'borrador' && (
                 <>
@@ -643,15 +643,15 @@ export default function PedidoDetailPage() {
           title="Eliminar Pedido"
           size="sm"
         >
-          <div className="p-6">
-            <p className="text-gray-500 mb-6">
+          <div className="p-4 sm:p-6">
+            <p className="text-gray-500 dark:text-gray-300 mb-6">
               ¿Estás segura de eliminar este pedido? Esta acción no se puede deshacer.
             </p>
-            <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+              <Button variant="secondary" onClick={() => setShowDeleteModal(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button variant="danger" onClick={handleDelete} loading={actionLoading}>
+              <Button variant="danger" onClick={handleDelete} loading={actionLoading} className="w-full sm:w-auto">
                 Eliminar
               </Button>
             </div>

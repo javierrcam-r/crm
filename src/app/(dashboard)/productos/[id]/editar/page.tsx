@@ -85,23 +85,23 @@ export default function EditarProductoPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando producto...</div>
+        <div className="text-gray-500 dark:text-gray-400">Cargando producto...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/productos">
           <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
             Volver
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Editar Producto</h1>
-          <p className="text-gray-500">Modifica los datos del producto</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Editar Producto</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">Modifica los datos del producto</p>
         </div>
       </div>
 
@@ -110,10 +110,10 @@ export default function EditarProductoPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Identificación */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-dark-500 pb-2">
               Identificación
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="SKU *"
                 value={formData.sku || ''}
@@ -139,7 +139,7 @@ export default function EditarProductoPage() {
 
           {/* Precio */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-dark-500 pb-2">
               Precio
             </h3>
             <Input
@@ -155,7 +155,7 @@ export default function EditarProductoPage() {
 
           {/* Descripción */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-dark-500 pb-2">
               Información Adicional
             </h3>
             <Textarea
@@ -171,20 +171,20 @@ export default function EditarProductoPage() {
                 id="activo"
                 checked={formData.activo}
                 onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-gray-300 dark:border-dark-500 bg-white dark:bg-dark-600 text-indigo-600 focus:ring-indigo-500"
               />
-              <label htmlFor="activo" className="text-sm text-gray-700">
+              <label htmlFor="activo" className="text-sm text-gray-700 dark:text-gray-200">
                 Producto activo (disponible para pedidos)
               </label>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Link href="/productos">
-              <Button variant="secondary">Cancelar</Button>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Link href="/productos" className="w-full sm:w-auto">
+              <Button variant="secondary" className="w-full">Cancelar</Button>
             </Link>
-            <Button type="submit" loading={saving}>
+            <Button type="submit" loading={saving} className="w-full sm:w-auto">
               Guardar Cambios
             </Button>
           </div>

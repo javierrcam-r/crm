@@ -101,7 +101,7 @@ export default function ClienteDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando cliente...</div>
+        <div className="text-gray-500 dark:text-gray-300">Cargando cliente...</div>
       </div>
     );
   }
@@ -109,7 +109,7 @@ export default function ClienteDetailPage() {
   if (!customer) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl text-gray-900">Cliente no encontrado</h2>
+        <h2 className="text-xl text-gray-900 dark:text-white">Cliente no encontrado</h2>
         <Link href="/clientes">
           <Button variant="secondary" className="mt-4">
             Volver a Clientes
@@ -123,31 +123,31 @@ export default function ClienteDetailPage() {
   const IconoEstado = estadoInfo.icon;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link href="/clientes">
             <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
-              Volver
+              <span className="hidden sm:inline">Volver</span>
             </Button>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div
               className={cn(
-                'p-3 rounded-xl',
-                estadoInfo.variant === 'green' ? 'bg-emerald-50' : 
-                estadoInfo.variant === 'red' ? 'bg-red-50' : 'bg-blue-50'
+                'p-2.5 sm:p-3 rounded-xl flex-shrink-0',
+                estadoInfo.variant === 'green' ? 'bg-emerald-50 dark:bg-emerald-900/30' :
+                estadoInfo.variant === 'red' ? 'bg-red-50 dark:bg-red-900/30' : 'bg-blue-50 dark:bg-blue-900/30'
               )}
             >
               <IconoEstado className={cn(
-                'h-6 w-6',
-                estadoInfo.variant === 'green' ? 'text-emerald-600' : 
-                estadoInfo.variant === 'red' ? 'text-red-600' : 'text-blue-600'
+                'h-5 w-5 sm:h-6 sm:w-6',
+                estadoInfo.variant === 'green' ? 'text-emerald-600 dark:text-emerald-400' :
+                estadoInfo.variant === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'
               )} />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{customer.nombre}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white break-words">{customer.nombre}</h1>
               <Badge variant={estadoInfo.variant}>
                 {estadoInfo.label}
               </Badge>
@@ -155,21 +155,21 @@ export default function ClienteDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/calendario/nueva?customer=${customerId}`}>
-            <Button icon={<Calendar className="h-4 w-4" />}>
+          <Link href={`/calendario/nueva?customer=${customerId}`} className="w-full sm:w-auto">
+            <Button icon={<Calendar className="h-4 w-4" />} className="w-full sm:w-auto justify-center">
               Programar Visita
             </Button>
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Información del Cliente */}
         <div className="lg:col-span-1 space-y-4">
           {/* Información de Contacto */}
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Información</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Información</h2>
               <div className="flex gap-2">
                 <Link href={`/clientes/${customerId}/editar`}>
                   <Button variant="ghost" size="sm" icon={<Edit className="h-4 w-4" />} />
@@ -186,19 +186,19 @@ export default function ClienteDetailPage() {
             <div className="space-y-4">
               {customer.telefono ? (
                 <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-indigo-500" />
-                  <div>
-                    <p className="text-xs text-gray-400">Teléfono</p>
+                  <Phone className="h-5 w-5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Teléfono</p>
                     <a
                       href={`tel:${customer.telefono}`}
-                      className="text-gray-900 hover:text-indigo-600 font-medium"
+                      className="text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 font-medium"
                     >
                       {customer.telefono}
                     </a>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 text-gray-300">
+                <div className="flex items-center gap-3 text-gray-300 dark:text-gray-600">
                   <Phone className="h-5 w-5" />
                   <span className="text-sm">Sin teléfono</span>
                 </div>
@@ -206,19 +206,19 @@ export default function ClienteDetailPage() {
 
               {customer.email ? (
                 <div className="flex items-center gap-3">
-                  <Mail className="h-5 w-5 text-indigo-500" />
-                  <div>
-                    <p className="text-xs text-gray-400">Email</p>
+                  <Mail className="h-5 w-5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Email</p>
                     <a
                       href={`mailto:${customer.email}`}
-                      className="text-gray-900 hover:text-indigo-600"
+                      className="text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 break-all"
                     >
                       {customer.email}
                     </a>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 text-gray-300">
+                <div className="flex items-center gap-3 text-gray-300 dark:text-gray-600">
                   <Mail className="h-5 w-5" />
                   <span className="text-sm">Sin email</span>
                 </div>
@@ -226,19 +226,19 @@ export default function ClienteDetailPage() {
 
               {customer.direccion ? (
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-indigo-500 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-gray-400">Dirección</p>
-                    <p className="text-gray-900">{customer.direccion}</p>
+                  <MapPin className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Dirección</p>
+                    <p className="text-gray-900 dark:text-white break-words">{customer.direccion}</p>
                     {(customer.zona || customer.ciudad) && (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-300">
                         {[customer.zona, customer.ciudad].filter(Boolean).join(', ')}
                       </p>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 text-gray-300">
+                <div className="flex items-center gap-3 text-gray-300 dark:text-gray-600">
                   <MapPin className="h-5 w-5" />
                   <span className="text-sm">Sin dirección</span>
                 </div>
@@ -246,9 +246,9 @@ export default function ClienteDetailPage() {
             </div>
 
             {customer.notas && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-2">Notas</p>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-500">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Notas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-200 whitespace-pre-wrap bg-gray-50 dark:bg-dark-800 p-3 rounded-lg">
                   {customer.notas}
                 </p>
               </div>
@@ -257,32 +257,32 @@ export default function ClienteDetailPage() {
 
           {/* Perfil Comercial */}
           <Card>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-indigo-500" />
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
               Perfil Comercial
             </h2>
 
             <div className="space-y-4">
               {/* Forma de Pago */}
               <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-gray-400" />
+                <CreditCard className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 <div className="flex-1">
-                  <p className="text-xs text-gray-400">Forma de Pago</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Forma de Pago</p>
                   {customer.forma_pago ? (
                     <Badge variant="blue">
                       {formaPagoLabels[customer.forma_pago] || customer.forma_pago}
                     </Badge>
                   ) : (
-                    <span className="text-sm text-gray-400">Sin especificar</span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500">Sin especificar</span>
                   )}
                 </div>
               </div>
 
               {/* Calidad de Pago */}
               <div className="flex items-center gap-3">
-                <Star className="h-5 w-5 text-gray-400" />
+                <Star className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 <div className="flex-1">
-                  <p className="text-xs text-gray-400">Calidad de Pago</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Calidad de Pago</p>
                   {customer.calidad_pago ? (
                     <Badge 
                       variant={
@@ -293,30 +293,30 @@ export default function ClienteDetailPage() {
                       {calidadPagoLabels[customer.calidad_pago] || customer.calidad_pago}
                     </Badge>
                   ) : (
-                    <span className="text-sm text-gray-400">Sin especificar</span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500">Sin especificar</span>
                   )}
                 </div>
               </div>
 
               {/* Categoría de Compra */}
               <div className="flex items-center gap-3">
-                <Tag className="h-5 w-5 text-gray-400" />
+                <Tag className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 <div className="flex-1">
-                  <p className="text-xs text-gray-400">Categoría de Compra</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Categoría de Compra</p>
                   {customer.categoria_compra ? (
                     <Badge variant="purple">
                       {customer.categoria_compra}
                     </Badge>
                   ) : (
-                    <span className="text-sm text-gray-400">Sin especificar</span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500">Sin especificar</span>
                   )}
                 </div>
               </div>
 
               {/* Etiquetas generales */}
               {customer.etiquetas && customer.etiquetas.length > 0 && (
-                <div className="pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-400 mb-2">Etiquetas</p>
+                <div className="pt-3 border-t border-gray-100 dark:border-dark-500">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Etiquetas</p>
                   <div className="flex flex-wrap gap-2">
                     {customer.etiquetas.map((tag) => (
                       <Badge key={tag} variant="gray">
@@ -340,7 +340,7 @@ export default function ClienteDetailPage() {
               <div className="space-y-4">
                 {customer.num_identificacion && (
                   <div className="flex items-center gap-3">
-                    <IdCard className="h-5 w-5 text-gray-400" />
+                    <IdCard className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     <div className="flex-1">
                       <p className="text-xs text-gray-400 dark:text-gray-500">
                         {customer.tipo_identificacion === 'R' ? 'RUC' : customer.tipo_identificacion === 'C' ? 'Cédula' : 'Identificación'}
@@ -354,7 +354,7 @@ export default function ClienteDetailPage() {
 
                 {customer.fecha_nacimiento && (
                   <div className="flex items-center gap-3">
-                    <Cake className="h-5 w-5 text-gray-400" />
+                    <Cake className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     <div className="flex-1">
                       <p className="text-xs text-gray-400 dark:text-gray-500">Fecha de Nacimiento</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -366,7 +366,7 @@ export default function ClienteDetailPage() {
 
                 {customer.codigo_cliente_ventas && (
                   <div className="flex items-center gap-3">
-                    <Hash className="h-5 w-5 text-gray-400" />
+                    <Hash className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     <div className="flex-1">
                       <p className="text-xs text-gray-400 dark:text-gray-500">Código Sistema Ventas</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -394,7 +394,7 @@ export default function ClienteDetailPage() {
           {/* Visitas */}
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                 Visitas
                 <Badge variant="blue" className="ml-2">
                   {visits.length}
@@ -408,7 +408,7 @@ export default function ClienteDetailPage() {
             </div>
 
             {visits.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">
+              <p className="text-center text-gray-500 dark:text-gray-300 py-8">
                 No hay visitas registradas
               </p>
             ) : (
@@ -417,24 +417,24 @@ export default function ClienteDetailPage() {
                   <Link
                     key={visit.id}
                     href={`/calendario/${visit.id}`}
-                    className="block p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="block p-3 rounded-lg bg-gray-50 dark:bg-dark-800 hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-blue-50">
-                          <Calendar className="h-4 w-4 text-blue-600" />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex-shrink-0">
+                          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white">
                             {formatDateTime(visit.scheduled_at)}
                           </p>
                           {visit.objetivo && (
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-gray-500 dark:text-gray-300 mt-1 break-words">
                               {visit.objetivo}
                             </p>
                           )}
                           {visit.observaciones && (
-                            <p className="text-sm text-gray-400 mt-1 italic">
+                            <p className="text-sm text-gray-400 dark:text-gray-400 mt-1 italic break-words">
                               "{visit.observaciones}"
                             </p>
                           )}
@@ -466,16 +466,16 @@ export default function ClienteDetailPage() {
         title="Eliminar Cliente"
         size="sm"
       >
-        <div className="p-6">
-          <p className="text-gray-500 mb-6">
-            ¿Estás segura de eliminar a <strong className="text-gray-900">{customer.nombre}</strong>?
+        <div className="p-4 sm:p-6">
+          <p className="text-gray-500 dark:text-gray-300 mb-6">
+            ¿Estás segura de eliminar a <strong className="text-gray-900 dark:text-white">{customer.nombre}</strong>?
             Esta acción no se puede deshacer.
           </p>
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button variant="danger" onClick={handleDelete} loading={deleting}>
+            <Button variant="danger" onClick={handleDelete} loading={deleting} className="w-full sm:w-auto">
               Eliminar
             </Button>
           </div>

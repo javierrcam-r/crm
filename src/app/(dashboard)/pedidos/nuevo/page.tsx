@@ -201,33 +201,33 @@ function NuevoPedidoContent() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/pedidos">
           <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
             Volver
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nuevo Pedido</h1>
-          <p className="text-gray-500">Crea un pedido para un cliente</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Nuevo Pedido</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">Crea un pedido para un cliente</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Cliente */}
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Cliente</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Cliente</h2>
           {selectedCustomer ? (
-            <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50">
-              <div>
-                <p className="font-semibold text-gray-900">{selectedCustomer.nombre}</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-dark-800">
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900 dark:text-white break-words">{selectedCustomer.nombre}</p>
                 {selectedCustomer.telefono && (
-                  <p className="text-sm text-gray-500">{selectedCustomer.telefono}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-300">{selectedCustomer.telefono}</p>
                 )}
                 {selectedCustomer.direccion && (
-                  <p className="text-sm text-gray-500">{selectedCustomer.direccion}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-300 break-words">{selectedCustomer.direccion}</p>
                 )}
               </div>
               <Button
@@ -235,6 +235,7 @@ function NuevoPedidoContent() {
                 size="sm"
                 onClick={() => setCustomerId('')}
                 type="button"
+                className="self-start sm:self-auto"
               >
                 Cambiar
               </Button>
@@ -253,10 +254,10 @@ function NuevoPedidoContent() {
                     key={customer.id}
                     type="button"
                     onClick={() => setCustomerId(customer.id)}
-                    className="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="w-full text-left p-3 rounded-lg bg-gray-50 dark:bg-dark-800 hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
                   >
-                    <p className="font-medium text-gray-900">{customer.nombre}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-gray-900 dark:text-white break-words">{customer.nombre}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-300">
                       {[customer.telefono, customer.zona, customer.ciudad]
                         .filter(Boolean)
                         .join(' · ')}
@@ -271,7 +272,7 @@ function NuevoPedidoContent() {
         {/* Productos */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Productos</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Productos</h2>
             <Button
               variant="secondary"
               size="sm"
@@ -285,7 +286,7 @@ function NuevoPedidoContent() {
 
           {/* Product Search */}
           {showProductSearch && (
-            <div className="mb-4 p-4 rounded-lg bg-gray-50 space-y-3">
+            <div className="mb-4 p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-dark-800 space-y-3">
               <Input
                 placeholder="Buscar producto por nombre o SKU..."
                 value={productSearch}
@@ -299,15 +300,15 @@ function NuevoPedidoContent() {
                     key={product.id}
                     type="button"
                     onClick={() => addItem(product)}
-                    className="w-full text-left p-3 rounded-lg bg-white hover:bg-gray-100 transition-colors flex items-center justify-between border border-gray-200"
+                    className="w-full text-left p-3 rounded-lg bg-white dark:bg-dark-700 hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors flex items-center justify-between gap-3 border border-gray-200 dark:border-dark-500"
                   >
-                    <div>
-                      <p className="font-medium text-gray-900">{product.nombre}</p>
-                      <p className="text-sm text-gray-500">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">{product.nombre}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-300 truncate">
                         {product.sku} · {product.categoria || 'Sin categoría'}
                       </p>
                     </div>
-                    <span className="text-emerald-600 font-semibold">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap flex-shrink-0">
                       {formatCurrency(product.precio)}
                     </span>
                   </button>
@@ -329,7 +330,7 @@ function NuevoPedidoContent() {
 
           {/* Items Table */}
           {items.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-gray-500 dark:text-gray-300 py-8">
               No hay productos agregados
             </p>
           ) : (
@@ -338,14 +339,14 @@ function NuevoPedidoContent() {
                 <div
                   key={item.id}
                   className={cn(
-                    'p-4 rounded-lg border border-gray-200',
-                    item.bonificado && 'border-amber-300 bg-amber-50/50'
+                    'p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-dark-500',
+                    item.bonificado && 'border-amber-300 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-900/20'
                   )}
                 >
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-gray-900 dark:text-white">
                           {item.product.nombre}
                         </p>
                         {item.bonificado && (
@@ -355,7 +356,7 @@ function NuevoPedidoContent() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-300">
                         {item.product.sku}
                       </p>
                     </div>
@@ -369,9 +370,9 @@ function NuevoPedidoContent() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                     <div>
-                      <label className="label">Cantidad</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-200 mb-1.5">Cantidad</label>
                       <Input
                         type="number"
                         min={1}
@@ -382,7 +383,7 @@ function NuevoPedidoContent() {
                       />
                     </div>
                     <div>
-                      <label className="label">Precio Unit.</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-200 mb-1.5">Precio Unit.</label>
                       <Input
                         type="number"
                         min={0}
@@ -396,10 +397,10 @@ function NuevoPedidoContent() {
                       />
                     </div>
                     <div>
-                      <label className="label">Subtotal</label>
-                      <p className="text-lg font-semibold text-emerald-600 py-2.5">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-200 mb-1.5">Subtotal</label>
+                      <p className="text-base sm:text-lg font-semibold text-emerald-600 dark:text-emerald-400 py-2.5 break-words">
                         {item.bonificado ? (
-                          <span className="line-through text-gray-400">
+                          <span className="line-through text-gray-400 dark:text-gray-500">
                             {formatCurrency(item.qty * item.unit_price)}
                           </span>
                         ) : (
@@ -415,9 +416,9 @@ function NuevoPedidoContent() {
                           onChange={(e) =>
                             updateItem(item.id, { bonificado: e.target.checked })
                           }
-                          className="h-4 w-4 rounded border-gray-300 bg-white text-amber-500 focus:ring-amber-500"
+                          className="h-4 w-4 rounded border-gray-300 dark:border-dark-500 bg-white dark:bg-dark-600 text-amber-500 focus:ring-amber-500"
                         />
-                        <span className="text-sm text-gray-700">Bonificado</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-200">Bonificado</span>
                       </label>
                     </div>
                   </div>
@@ -447,22 +448,22 @@ function NuevoPedidoContent() {
               ))}
 
               {/* Totals */}
-              <div className="border-t border-gray-200 pt-4 space-y-2">
+              <div className="border-t border-gray-200 dark:border-dark-500 pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Subtotal</span>
-                  <span className="text-gray-900">{formatCurrency(subtotal)}</span>
+                  <span className="text-gray-500 dark:text-gray-300">Subtotal</span>
+                  <span className="text-gray-900 dark:text-white">{formatCurrency(subtotal)}</span>
                 </div>
                 {totalBonificado > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-amber-600">Total Bonificado</span>
-                    <span className="text-amber-600">
+                    <span className="text-amber-600 dark:text-amber-400">Total Bonificado</span>
+                    <span className="text-amber-600 dark:text-amber-400">
                       -{formatCurrency(totalBonificado)}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold">
-                  <span className="text-gray-900">Total</span>
-                  <span className="text-emerald-600">{formatCurrency(total)}</span>
+                <div className="flex justify-between text-base sm:text-lg font-bold">
+                  <span className="text-gray-900 dark:text-white">Total</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(total)}</span>
                 </div>
               </div>
             </div>
@@ -471,7 +472,7 @@ function NuevoPedidoContent() {
 
         {/* Observaciones */}
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Observaciones Generales
           </h2>
           <Textarea
@@ -483,11 +484,11 @@ function NuevoPedidoContent() {
         </Card>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3">
-          <Link href="/pedidos">
-            <Button variant="secondary">Cancelar</Button>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+          <Link href="/pedidos" className="w-full sm:w-auto">
+            <Button variant="secondary" className="w-full">Cancelar</Button>
           </Link>
-          <Button type="submit" loading={loading}>
+          <Button type="submit" loading={loading} className="w-full sm:w-auto">
             Crear Pedido
           </Button>
         </div>

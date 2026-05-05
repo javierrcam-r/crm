@@ -304,13 +304,13 @@ export default function UsuariosPage() {
   // Si no es admin, mostrar mensaje de acceso denegado
   if (!isUserAdmin) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[60vh] px-4">
         <Card className="max-w-md text-center">
-          <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <Shield className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             Acceso Denegado
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-300">
             Solo los administradores pueden gestionar usuarios.
           </p>
         </Card>
@@ -321,16 +321,16 @@ export default function UsuariosPage() {
   const filteredUsers = users;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Usuarios</h1>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
             Gestiona los usuarios y sus roles en el sistema
           </p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2 w-full sm:w-auto justify-center">
           <Plus className="h-4 w-4" />
           Nuevo Usuario
         </Button>
@@ -338,9 +338,9 @@ export default function UsuariosPage() {
 
       {/* Filtros */}
       <Card>
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
             <Input
               type="text"
               placeholder="Buscar por nombre o email..."
@@ -349,11 +349,11 @@ export default function UsuariosPage() {
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select
               value={filterRol}
               onChange={(e) => setFilterRol(e.target.value)}
-              className="w-40"
+              className="w-full sm:w-44"
             >
               <option value="">Todos los roles</option>
               <option value="admin">Administrador</option>
@@ -369,7 +369,7 @@ export default function UsuariosPage() {
             <Select
               value={filterActivo}
               onChange={(e) => setFilterActivo(e.target.value)}
-              className="w-32"
+              className="w-full sm:w-32"
             >
               <option value="">Todos</option>
               <option value="true">Activos</option>
@@ -383,8 +383,8 @@ export default function UsuariosPage() {
       {loading ? (
         <Card>
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-            <p className="mt-4 text-gray-600">Cargando usuarios...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-300">Cargando usuarios...</p>
           </div>
         </Card>
       ) : filteredUsers.length === 0 ? (
@@ -400,13 +400,13 @@ export default function UsuariosPage() {
             const RoleIcon = roleInfo.icon;
             return (
               <Card key={user.id} className="hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                         {user.nombre_completo}
                       </h3>
-                      <Badge variant={roleInfo.variant} className="flex items-center gap-1">
+                      <Badge variant={roleInfo.variant} className="flex items-center gap-1 whitespace-nowrap">
                         <RoleIcon className="h-3 w-3" />
                         {roleInfo.label}
                       </Badge>
@@ -414,16 +414,16 @@ export default function UsuariosPage() {
                         <Badge variant="gray">Inactivo</Badge>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                       {user.username && (
-                        <div className="flex items-center gap-1.5 bg-indigo-50 px-2 py-0.5 rounded">
-                          <User className="h-4 w-4 text-indigo-600" />
-                          <span className="font-mono text-indigo-700">{user.username}</span>
+                        <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded">
+                          <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                          <span className="font-mono text-indigo-700 dark:text-indigo-300">{user.username}</span>
                         </div>
                       )}
                       {user.email && (
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-4 w-4" />
+                        <div className="flex items-center gap-1.5 break-all">
+                          <Mail className="h-4 w-4 flex-shrink-0" />
                           {user.email}
                         </div>
                       )}
@@ -434,22 +434,22 @@ export default function UsuariosPage() {
                         </div>
                       )}
                       {user.password_temp && (
-                        <div className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                          <Key className="h-4 w-4 text-amber-600" />
-                          <span className="text-amber-800 font-mono">
+                        <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
+                          <Key className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          <span className="text-amber-800 dark:text-amber-200 font-mono">
                             {user.password_temp}
                           </span>
-                          <span className="text-xs text-amber-600">(temporal)</span>
+                          <span className="text-xs text-amber-600 dark:text-amber-400">(temporal)</span>
                         </div>
                       )}
                     </div>
                     {user.debe_cambiar_password && (
-                      <p className="text-xs text-amber-600 mt-2">
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
                         ⚠️ Este usuario debe cambiar su contraseña al iniciar sesión
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-2 lg:flex-nowrap">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -457,16 +457,16 @@ export default function UsuariosPage() {
                       className="flex items-center gap-1"
                     >
                       <Edit className="h-4 w-4" />
-                      Editar
+                      <span className="hidden sm:inline">Editar</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleOpenPasswordModal(user)}
-                      className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+                      className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
                     >
                       <Key className="h-4 w-4" />
-                      Contraseña
+                      <span className="hidden sm:inline">Contraseña</span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -474,18 +474,20 @@ export default function UsuariosPage() {
                       onClick={() => handleToggleActive(user)}
                       className={cn(
                         'flex items-center gap-1',
-                        user.activo ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
+                        user.activo
+                          ? 'text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'
+                          : 'text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300'
                       )}
                     >
                       {user.activo ? (
                         <>
                           <UserX className="h-4 w-4" />
-                          Desactivar
+                          <span className="hidden sm:inline">Desactivar</span>
                         </>
                       ) : (
                         <>
                           <UserCheck className="h-4 w-4" />
-                          Activar
+                          <span className="hidden sm:inline">Activar</span>
                         </>
                       )}
                     </Button>
@@ -505,7 +507,7 @@ export default function UsuariosPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Usuario *
             </label>
             <Input
@@ -515,12 +517,12 @@ export default function UsuariosPage() {
               required
               placeholder="cfernandez"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Nombre de usuario para iniciar sesión (sin espacios)
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Contraseña {!editingUser && '*'}
             </label>
             <Input
@@ -530,12 +532,12 @@ export default function UsuariosPage() {
               required={!editingUser}
               placeholder={editingUser ? 'Dejar vacío para no cambiar' : 'Contraseña temporal'}
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {editingUser ? 'Deja vacío si no quieres cambiar la contraseña' : 'Contraseña temporal que el usuario usará para entrar'}
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Nombre Completo *
             </label>
             <Input
@@ -546,7 +548,7 @@ export default function UsuariosPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Email
             </label>
             <Input
@@ -557,7 +559,7 @@ export default function UsuariosPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Teléfono
             </label>
             <Input
@@ -567,7 +569,7 @@ export default function UsuariosPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Rol *
             </label>
             <Select
@@ -592,9 +594,9 @@ export default function UsuariosPage() {
               id="activo"
               checked={formData.activo}
               onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-gray-300 dark:border-dark-500 dark:bg-dark-600 text-indigo-600 focus:ring-indigo-500"
             />
-            <label htmlFor="activo" className="text-sm font-medium text-gray-700">
+            <label htmlFor="activo" className="text-sm font-medium text-gray-700 dark:text-gray-200">
               Usuario activo
             </label>
           </div>
@@ -618,11 +620,11 @@ export default function UsuariosPage() {
         {resettingUser && (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="mb-4">
-              <p className="text-sm text-gray-600">
-                Usuario: <span className="font-medium text-gray-900">{resettingUser.nombre_completo}</span>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Usuario: <span className="font-medium text-gray-900 dark:text-white">{resettingUser.nombre_completo}</span>
               </p>
-              <p className="text-sm text-gray-600">
-                Email: <span className="font-medium text-gray-900">{resettingUser.email}</span>
+              <p className="text-sm text-gray-600 dark:text-gray-300 break-all">
+                Email: <span className="font-medium text-gray-900 dark:text-white">{resettingUser.email}</span>
               </p>
             </div>
 
@@ -637,7 +639,7 @@ export default function UsuariosPage() {
                     onChange={() => setPasswordOption('set')}
                     className="text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">Establecer nueva contraseña</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Establecer nueva contraseña</span>
                 </label>
               </div>
               <div>
@@ -650,7 +652,7 @@ export default function UsuariosPage() {
                     onChange={() => setPasswordOption('email')}
                     className="text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">Enviar email de recuperación</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Enviar email de recuperación</span>
                 </label>
               </div>
             </div>
@@ -658,7 +660,7 @@ export default function UsuariosPage() {
             {passwordOption === 'set' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Nueva Contraseña *
                   </label>
                   <Input
@@ -671,7 +673,7 @@ export default function UsuariosPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Confirmar Contraseña *
                   </label>
                   <Input
@@ -687,8 +689,8 @@ export default function UsuariosPage() {
             )}
 
             {passwordOption === 'email' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-700">
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-700 dark:text-blue-200">
                   Se enviará un email a <strong>{resettingUser.email}</strong> con un enlace para que el usuario pueda restablecer su contraseña.
                 </p>
               </div>

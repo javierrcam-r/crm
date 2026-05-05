@@ -52,21 +52,21 @@ export default function RecuperarContraseñaPage() {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-50 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full">
-          <Card className="p-8 text-center">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+          <Card className="p-6 sm:p-8 text-center">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/40 mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-300" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-2">
               Email Enviado
             </h2>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               Hemos enviado un enlace de recuperación a:
             </p>
-            <p className="text-sm font-medium text-gray-900 mb-6">{email}</p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-xs text-blue-700">
+            <p className="text-sm font-medium text-gray-900 dark:text-white mb-6 break-all">{email}</p>
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+              <p className="text-xs text-blue-700 dark:text-blue-200">
                 Revisa tu bandeja de entrada y haz clic en el enlace para restablecer tu contraseña.
                 Si no lo encuentras, revisa tu carpeta de spam.
               </p>
@@ -81,27 +81,27 @@ export default function RecuperarContraseñaPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-50 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            <span className="text-indigo-600">Recuperar</span> Contraseña
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            <span className="text-indigo-600 dark:text-indigo-400">Recuperar</span> Contraseña
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             Ingresa tu email para recibir un enlace de recuperación
           </p>
         </div>
 
         {/* Card del Formulario */}
-        <Card className="p-8">
+        <Card className="p-5 sm:p-8">
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500 z-10" />
                 <Input
                   type="email"
                   value={email}
@@ -113,10 +113,10 @@ export default function RecuperarContraseñaPage() {
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-700">
+                <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-700 dark:text-blue-200">
                   Te enviaremos un enlace por email para restablecer tu contraseña.
                   El enlace expirará en 1 hora.
                 </p>
@@ -145,7 +145,7 @@ export default function RecuperarContraseñaPage() {
           <div className="mt-6 text-center">
             <Link
               href="/login"
-              className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"
+              className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
             >
               <ArrowLeft className="h-4 w-4" />
               Volver al Login

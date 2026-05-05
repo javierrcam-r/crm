@@ -361,7 +361,7 @@ export default function VisitaDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando visita...</div>
+        <div className="text-gray-500 dark:text-gray-300">Cargando visita...</div>
       </div>
     );
   }
@@ -369,7 +369,7 @@ export default function VisitaDetailPage() {
   if (!visit) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl text-gray-900">Visita no encontrada</h2>
+        <h2 className="text-xl text-gray-900 dark:text-white">Visita no encontrada</h2>
         <Link href="/calendario">
           <Button variant="secondary" className="mt-4">
             Volver al Calendario
@@ -382,17 +382,17 @@ export default function VisitaDetailPage() {
   const overdue = visit.status === 'programada' && isOverdue(visit.scheduled_at);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link href="/calendario">
             <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
-              Volver
+              <span className="hidden sm:inline">Volver</span>
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Detalle de Visita</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Detalle de Visita</h1>
             <div className="flex items-center gap-2 mt-1">
               <Badge
                 variant={
@@ -418,15 +418,16 @@ export default function VisitaDetailPage() {
       </div>
 
       {/* Acciones Rápidas - Siempre visibles */}
-      <Card className="bg-indigo-50 border-indigo-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-indigo-600" />
+      <Card className="bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           Acciones Rápidas
         </h2>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
           <Button 
             icon={<Edit className="h-4 w-4" />}
             onClick={() => setShowEditModal(true)}
+            className="w-full sm:w-auto justify-center"
           >
             Editar Visita
           </Button>
@@ -434,12 +435,13 @@ export default function VisitaDetailPage() {
             variant="secondary"
             icon={<MessageSquare className="h-4 w-4" />}
             onClick={() => setShowCommentModal(true)}
+            className="w-full sm:w-auto justify-center"
           >
             {visit.observaciones ? 'Editar Comentarios' : 'Agregar Comentarios'}
           </Button>
           {visit.customer && (
-            <Link href={`/clientes/${visit.customer.id}`}>
-              <Button variant="secondary" icon={<User className="h-4 w-4" />}>
+            <Link href={`/clientes/${visit.customer.id}`} className="w-full sm:w-auto">
+              <Button variant="secondary" icon={<User className="h-4 w-4" />} className="w-full justify-center">
                 Ver Cliente
               </Button>
             </Link>
@@ -448,17 +450,17 @@ export default function VisitaDetailPage() {
       </Card>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Info */}
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Información</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Información</h2>
           
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <Calendar className="h-5 w-5 text-indigo-500 mt-0.5" />
-              <div>
-                <p className="text-xs text-gray-400">Fecha y Hora</p>
-                <p className="text-gray-900 font-medium">
+              <Calendar className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 dark:text-gray-500">Fecha y Hora</p>
+                <p className="text-gray-900 dark:text-white font-medium">
                   {formatDateTime(visit.scheduled_at)}
                 </p>
               </div>
@@ -466,48 +468,48 @@ export default function VisitaDetailPage() {
 
             {visit.location_text && (
               <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-indigo-500 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-400">Ubicación</p>
-                  <p className="text-gray-900">{visit.location_text}</p>
+                <MapPin className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Ubicación</p>
+                  <p className="text-gray-900 dark:text-white break-words">{visit.location_text}</p>
                 </div>
               </div>
             )}
 
             {visit.objetivo && (
-              <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-1">Objetivo</p>
-                <p className="text-gray-900">{visit.objetivo}</p>
+              <div className="pt-4 border-t border-gray-100 dark:border-dark-500">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Objetivo</p>
+                <p className="text-gray-900 dark:text-white break-words">{visit.objetivo}</p>
               </div>
             )}
 
             {visit.resultado && (
-              <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-1">Resultado</p>
-                <p className="text-gray-900">{visit.resultado}</p>
+              <div className="pt-4 border-t border-gray-100 dark:border-dark-500">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Resultado</p>
+                <p className="text-gray-900 dark:text-white break-words">{visit.resultado}</p>
               </div>
             )}
 
             {visit.next_action && (
-              <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-1">Próxima Acción</p>
-                <p className="text-gray-900">{visit.next_action}</p>
+              <div className="pt-4 border-t border-gray-100 dark:border-dark-500">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Próxima Acción</p>
+                <p className="text-gray-900 dark:text-white break-words">{visit.next_action}</p>
               </div>
             )}
 
             {linkedStrategicObj && (
-              <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+              <div className="pt-4 border-t border-gray-100 dark:border-dark-500">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1 flex items-center gap-1">
                   <Target className="h-3 w-3" />
                   Objetivo Estratégico Vinculado
                 </p>
                 <Link
                   href={`/actividades/${linkedStrategicObj.id}`}
-                  className="text-indigo-600 font-medium hover:text-indigo-700"
+                  className="text-indigo-600 dark:text-indigo-300 font-medium hover:text-indigo-700 dark:hover:text-indigo-200"
                 >
                   {linkedStrategicObj.titulo}
                 </Link>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
                   {linkedStrategicObj.tipo === 'reunion' ? 'Reunión' : 
                    linkedStrategicObj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'}
                 </p>
@@ -518,17 +520,17 @@ export default function VisitaDetailPage() {
 
         {/* Cliente */}
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Cliente</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Cliente</h2>
           
           {visit.customer ? (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <User className="h-5 w-5 text-indigo-500 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-400">Nombre</p>
+                <User className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Nombre</p>
                   <Link
                     href={`/clientes/${visit.customer.id}`}
-                    className="text-gray-900 font-medium hover:text-indigo-600"
+                    className="text-gray-900 dark:text-white font-medium hover:text-indigo-600 dark:hover:text-indigo-300 break-words"
                   >
                     {visit.customer.nombre}
                   </Link>
@@ -537,12 +539,12 @@ export default function VisitaDetailPage() {
 
               {visit.customer.telefono && (
                 <div className="flex items-start gap-3">
-                  <Phone className="h-5 w-5 text-indigo-500 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-gray-400">Teléfono</p>
+                  <Phone className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Teléfono</p>
                     <a
                       href={`tel:${visit.customer.telefono}`}
-                      className="text-gray-900 hover:text-indigo-600"
+                      className="text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-300"
                     >
                       {visit.customer.telefono}
                     </a>
@@ -552,15 +554,15 @@ export default function VisitaDetailPage() {
 
               {visit.customer.direccion && (
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-indigo-500 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-gray-400">Dirección</p>
-                    <p className="text-gray-900">{visit.customer.direccion}</p>
+                  <MapPin className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Dirección</p>
+                    <p className="text-gray-900 dark:text-white break-words">{visit.customer.direccion}</p>
                   </div>
                 </div>
               )}
 
-              <div className="pt-4 border-t border-gray-100">
+              <div className="pt-4 border-t border-gray-100 dark:border-dark-500">
                 <Link href={`/clientes/${visit.customer.id}`}>
                   <Button variant="secondary" size="sm" className="w-full">
                     Ver Ficha del Cliente
@@ -569,7 +571,7 @@ export default function VisitaDetailPage() {
               </div>
             </div>
           ) : (
-            <p className="text-gray-500">Cliente no encontrado</p>
+            <p className="text-gray-500 dark:text-gray-300">Cliente no encontrado</p>
           )}
         </Card>
       </div>
@@ -577,8 +579,8 @@ export default function VisitaDetailPage() {
       {/* Comentarios/Observaciones */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-gray-400" />
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             Comentarios de la Visita
           </h2>
           <Button 
@@ -591,11 +593,11 @@ export default function VisitaDetailPage() {
           </Button>
         </div>
         {visit.observaciones ? (
-          <div className="p-4 rounded-lg bg-gray-50">
-            <p className="text-gray-700 whitespace-pre-wrap">{visit.observaciones}</p>
+          <div className="p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-dark-800">
+            <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words">{visit.observaciones}</p>
           </div>
         ) : (
-          <p className="text-gray-400 text-center py-4">
+          <p className="text-gray-400 dark:text-gray-500 text-center py-4">
             No hay comentarios. Haz clic en "Agregar" para añadir notas sobre esta visita.
           </p>
         )}
@@ -604,7 +606,7 @@ export default function VisitaDetailPage() {
       {/* Actions */}
       {visit.status === 'programada' && (
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Cambiar Estado</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Cambiar Estado</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button
               variant="success"
@@ -679,33 +681,33 @@ export default function VisitaDetailPage() {
 
           {/* Vincular a Objetivo Estratégico */}
           {strategicObjectives.length > 0 && (
-            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-              <h4 className="text-sm font-semibold text-indigo-700">
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-transparent dark:border-indigo-800 rounded-xl p-3 sm:p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-indigo-700 dark:text-indigo-200">
                 Vincular a Objetivo Estratégico (opcional)
               </h4>
               <select
                 value={editFormData.objetivo_estrategico_id}
                 onChange={(e) => setEditFormData({ ...editFormData, objetivo_estrategico_id: e.target.value })}
-                className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-4 py-2.5 border border-indigo-200 dark:border-indigo-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
               >
-                <option value="">Sin vincular</option>
+                <option value="" className="dark:bg-dark-700">Sin vincular</option>
                 {strategicObjectives.map((obj) => (
-                  <option key={obj.id} value={obj.id}>
+                  <option key={obj.id} value={obj.id} className="dark:bg-dark-700">
                     {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-indigo-600">
+              <p className="text-xs text-indigo-600 dark:text-indigo-300">
                 Si vinculas esta visita a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
               </p>
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Button variant="secondary" onClick={() => setShowEditModal(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleSaveEdit} loading={actionLoading} icon={<CheckCircle className="h-4 w-4" />}>
+            <Button onClick={handleSaveEdit} loading={actionLoading} icon={<CheckCircle className="h-4 w-4" />} className="w-full sm:w-auto justify-center">
               Guardar Cambios
             </Button>
           </div>
@@ -732,14 +734,14 @@ export default function VisitaDetailPage() {
               rows={6}
             />
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
             Estos comentarios quedarán guardados en el historial de la visita.
           </p>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button variant="secondary" onClick={() => setShowCommentModal(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Button variant="secondary" onClick={() => setShowCommentModal(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleSaveComment} loading={actionLoading} icon={<Send className="h-4 w-4" />}>
+            <Button onClick={handleSaveComment} loading={actionLoading} icon={<Send className="h-4 w-4" />} className="w-full sm:w-auto justify-center">
               Guardar Comentarios
             </Button>
           </div>
@@ -836,7 +838,7 @@ export default function VisitaDetailPage() {
                 value={nextVisitAt}
                 onChange={(e) => setNextVisitAt(e.target.value)}
               />
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 Si programas una siguiente visita, se creará automáticamente al completar.
               </p>
             </div>
@@ -897,11 +899,11 @@ export default function VisitaDetailPage() {
             value={newScheduledAt}
             onChange={(e) => setNewScheduledAt(e.target.value)}
           />
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button variant="secondary" onClick={() => setShowRescheduleModal(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Button variant="secondary" onClick={() => setShowRescheduleModal(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleReschedule} loading={actionLoading}>
+            <Button onClick={handleReschedule} loading={actionLoading} className="w-full sm:w-auto">
               Reprogramar
             </Button>
           </div>
@@ -928,11 +930,11 @@ export default function VisitaDetailPage() {
               rows={3}
             />
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Button variant="secondary" onClick={() => setShowCancelModal(false)} className="w-full sm:w-auto">
               Volver
             </Button>
-            <Button variant="danger" onClick={handleCancel} loading={actionLoading}>
+            <Button variant="danger" onClick={handleCancel} loading={actionLoading} className="w-full sm:w-auto">
               Confirmar Cancelación
             </Button>
           </div>
@@ -946,15 +948,15 @@ export default function VisitaDetailPage() {
         title="Eliminar Visita"
         size="sm"
       >
-        <div className="p-6">
-          <p className="text-gray-500 mb-6">
+        <div className="p-4 sm:p-6">
+          <p className="text-gray-500 dark:text-gray-300 mb-6">
             ¿Estás segura de eliminar esta visita? Esta acción no se puede deshacer.
           </p>
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button variant="danger" onClick={handleDelete} loading={actionLoading}>
+            <Button variant="danger" onClick={handleDelete} loading={actionLoading} className="w-full sm:w-auto">
               Eliminar
             </Button>
           </div>

@@ -209,17 +209,17 @@ function NuevaActividadContent() {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/calendario">
           <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
             Volver
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nueva Actividad Diaria</h1>
-          <p className="text-gray-500">Crea una actividad y asigna participantes</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Nueva Actividad Diaria</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">Crea una actividad y asigna participantes</p>
         </div>
       </div>
 
@@ -228,7 +228,7 @@ function NuevaActividadContent() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Información básica */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-dark-500 pb-2">
               Información Básica
             </h3>
             <Input
@@ -250,40 +250,40 @@ function NuevaActividadContent() {
 
           {/* Vincular a Objetivo Estratégico */}
           {strategicObjectives.length > 0 && (
-            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-              <h4 className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-transparent dark:border-indigo-800 rounded-xl p-3 sm:p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-indigo-600 dark:text-indigo-300 uppercase tracking-wide">
                 Vincular a Objetivo Estratégico (opcional)
               </h4>
               <select
                 value={formData.objetivo_estrategico_id}
                 onChange={e => setFormData({ ...formData, objetivo_estrategico_id: e.target.value })}
-                className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-4 py-2.5 border border-indigo-200 dark:border-indigo-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
               >
-                <option value="">Sin vincular</option>
+                <option value="" className="dark:bg-dark-700">Sin vincular</option>
                 {strategicObjectives.map(obj => (
-                  <option key={obj.id} value={obj.id}>
+                  <option key={obj.id} value={obj.id} className="dark:bg-dark-700">
                     {obj.titulo} ({obj.tipo === 'reunion' ? 'Reunión' : obj.tipo === 'capacitacion' ? 'Capacitación' : 'Seguimiento'})
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-indigo-600">
+              <p className="text-xs text-indigo-600 dark:text-indigo-300">
                 Si vinculas esta actividad a un objetivo estratégico, el supervisor podrá verla al consultar ese objetivo.
               </p>
             </div>
           )}
 
           {/* Tipo y Prioridad */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Tipo *</label>
               <select
                 value={formData.tipo}
                 onChange={e => setFormData({ ...formData, tipo: e.target.value as ActivityType })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
                 required
               >
                 {tipoOptions.map(option => (
-                  <option key={option.value} value={option.value}>
+                  <option key={option.value} value={option.value} className="dark:bg-dark-700">
                     {option.label}
                   </option>
                 ))}
@@ -291,14 +291,14 @@ function NuevaActividadContent() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Prioridad</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Prioridad</label>
               <select
                 value={formData.prioridad}
                 onChange={e => setFormData({ ...formData, prioridad: e.target.value as ActivityPriority })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
               >
                 {prioridadOptions.map(option => (
-                  <option key={option.value} value={option.value}>
+                  <option key={option.value} value={option.value} className="dark:bg-dark-700">
                     {option.label}
                   </option>
                 ))}
@@ -307,12 +307,12 @@ function NuevaActividadContent() {
           </div>
 
           {/* Fechas */}
-          <div className="bg-blue-50 rounded-xl p-4 space-y-4">
-            <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1.5">
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-transparent dark:border-blue-800 rounded-xl p-3 sm:p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide flex items-center gap-1.5">
               <CalendarIcon className="h-3.5 w-3.5" />
               Fechas y horarios
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Input
                 label="Fecha y Hora de Inicio *"
                 type="datetime-local"
@@ -338,19 +338,19 @@ function NuevaActividadContent() {
           </div>
 
           {/* Ubicación */}
-          <div className="bg-purple-50 rounded-xl p-4 space-y-4">
+          <div className="bg-purple-50 dark:bg-purple-900/30 border border-transparent dark:border-purple-800 rounded-xl p-3 sm:p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wide flex items-center gap-1.5">
+              <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase tracking-wide flex items-center gap-1.5">
                 {formData.es_virtual ? <Video className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
                 {formData.es_virtual ? 'Reunión Virtual' : 'Ubicación'}
               </h4>
               <label className="flex items-center gap-2 cursor-pointer">
-                <span className="text-xs text-purple-600">Virtual</span>
+                <span className="text-xs text-purple-600 dark:text-purple-300">Virtual</span>
                 <input
                   type="checkbox"
                   checked={formData.es_virtual}
                   onChange={e => setFormData({ ...formData, es_virtual: e.target.checked })}
-                  className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-4 w-4"
+                  className="rounded border-purple-300 dark:border-purple-700 text-purple-600 focus:ring-purple-500 h-4 w-4"
                 />
               </label>
             </div>
@@ -373,8 +373,8 @@ function NuevaActividadContent() {
           </div>
 
           {/* Recurrencia */}
-          <div className="bg-teal-50 rounded-xl p-4 space-y-4">
-            <h4 className="text-xs font-semibold text-teal-600 uppercase tracking-wide flex items-center gap-1.5">
+          <div className="bg-teal-50 dark:bg-teal-900/30 border border-transparent dark:border-teal-800 rounded-xl p-3 sm:p-4 space-y-4">
+            <h4 className="text-xs font-semibold text-teal-600 dark:text-teal-300 uppercase tracking-wide flex items-center gap-1.5">
               <Repeat className="h-3.5 w-3.5" />
               Programar Recurrente
             </h4>
@@ -382,22 +382,22 @@ function NuevaActividadContent() {
               <select
                 value={formData.recurrencia}
                 onChange={e => setFormData({ ...formData, recurrencia: e.target.value as RecurrenceType })}
-                className="w-full px-3 py-2.5 border border-teal-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                className="w-full px-3 py-2.5 border border-teal-200 dark:border-teal-700 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
               >
                 {RECURRENCE_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <option key={option.value} value={option.value} className="dark:bg-dark-700">{option.label}</option>
                 ))}
               </select>
 
               {formData.recurrencia !== 'none' && (
-                <div className="pt-2 border-t border-teal-100">
+                <div className="pt-2 border-t border-teal-100 dark:border-teal-800">
                   <Input
                     label="Termina el (opcional)"
                     type="date"
                     value={formData.recurrencia_fin || ''}
                     onChange={e => setFormData({ ...formData, recurrencia_fin: e.target.value })}
                   />
-                  <p className="text-xs text-teal-600 mt-1">
+                  <p className="text-xs text-teal-600 dark:text-teal-300 mt-1">
                     Si no especificas fecha, se repetirá indefinidamente
                   </p>
                 </div>
@@ -406,8 +406,8 @@ function NuevaActividadContent() {
           </div>
 
           {/* Recordatorio */}
-          <div className="bg-amber-50 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex items-center gap-1.5">
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-transparent dark:border-amber-800 rounded-xl p-3 sm:p-4 space-y-3">
+            <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
               <Bell className="h-3.5 w-3.5" />
               Recuérdamelo
             </h4>
@@ -417,17 +417,17 @@ function NuevaActividadContent() {
                 ...formData, 
                 recordatorio_minutos: e.target.value ? parseInt(e.target.value) : null 
               })}
-              className="w-full px-4 py-2.5 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white"
+              className="w-full px-4 py-2.5 border border-amber-200 dark:border-amber-700 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
             >
-              <option value="">Sin recordatorio</option>
+              <option value="" className="dark:bg-dark-700">Sin recordatorio</option>
               {REMINDER_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
+                <option key={option.value} value={option.value} className="dark:bg-dark-700">
                   {option.label}
                 </option>
               ))}
             </select>
             {formData.recordatorio_minutos !== null && formData.participantes.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-100 p-2 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg">
                 <Bell className="h-3.5 w-3.5" />
                 <span>Se enviará un recordatorio a los {formData.participantes.length} involucrado(s)</span>
               </div>
@@ -436,34 +436,34 @@ function NuevaActividadContent() {
 
           {/* Participantes/Involucrados */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-dark-500 pb-2 mb-4">
               Participantes
             </h3>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
               <Users className="h-3.5 w-3.5" />
               Selecciona los involucrados ({users.length} disponibles)
             </label>
-            <div className="border border-gray-200 rounded-xl max-h-64 overflow-y-auto bg-gray-50">
+            <div className="border border-gray-200 dark:border-dark-500 rounded-xl max-h-64 overflow-y-auto bg-gray-50 dark:bg-dark-800">
               {users.length === 0 ? (
-                <p className="p-4 text-center text-gray-500 text-sm">No hay usuarios disponibles</p>
+                <p className="p-4 text-center text-gray-500 dark:text-gray-300 text-sm">No hay usuarios disponibles</p>
               ) : (
                 users.map(user => {
                   const isSelected = formData.participantes.includes(user.id);
                   const rolColors: Record<string, string> = {
-                    admin: 'bg-red-100 text-red-700',
-                    vendedor: 'bg-blue-100 text-blue-700',
-                    supervisor: 'bg-green-100 text-green-700',
-                    supervisor_nivel1: 'bg-purple-100 text-purple-700',
-                    supervisor_vendedor: 'bg-indigo-100 text-indigo-700',
-                    vendedor_tecnico: 'bg-amber-100 text-amber-800',
-                    marketing: 'bg-emerald-100 text-emerald-700',
-                    tecnico: 'bg-amber-100 text-amber-700'
+                    admin: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200',
+                    vendedor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200',
+                    supervisor: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200',
+                    supervisor_nivel1: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200',
+                    supervisor_vendedor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200',
+                    vendedor_tecnico: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+                    marketing: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200',
+                    tecnico: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
                   };
                   return (
                     <label 
                       key={user.id} 
-                      className={`flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all ${
-                        isSelected ? 'bg-indigo-50 border-indigo-100' : 'hover:bg-white'
+                      className={`flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 dark:border-dark-600 last:border-b-0 transition-all ${
+                        isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800' : 'hover:bg-white dark:hover:bg-dark-700'
                       }`}
                     >
                       <input
@@ -476,7 +476,7 @@ function NuevaActividadContent() {
                             setFormData({ ...formData, participantes: formData.participantes.filter(id => id !== user.id) });
                           }
                         }}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                        className="rounded border-gray-300 dark:border-dark-500 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                       />
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-semibold text-sm">
@@ -484,9 +484,9 @@ function NuevaActividadContent() {
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900">{user.nombre_completo}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700'}`}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{user.nombre_completo}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>
                             {user.rol === 'supervisor_nivel1' ? 'Sup. N1' :
                             user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' :
                             user.rol === 'vendedor_tecnico' ? 'Vend.+Téc.' :
@@ -494,10 +494,10 @@ function NuevaActividadContent() {
                             user.rol === 'tecnico' ? 'Técnico' : user.rol}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300 truncate">{user.email}</p>
                       </div>
                       {isSelected && (
-                        <CheckCircle className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+                        <CheckCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
                       )}
                     </label>
                   );
@@ -505,8 +505,8 @@ function NuevaActividadContent() {
               )}
             </div>
             {formData.participantes.length > 0 && (
-              <div className="mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                <p className="text-sm text-indigo-700 font-medium flex items-center gap-2">
+              <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                <p className="text-sm text-indigo-700 dark:text-indigo-200 font-medium flex items-center gap-2">
                   <CheckCircle className="h-4 w-4" />
                   {formData.participantes.length} participante(s) seleccionado(s)
                 </p>
@@ -550,11 +550,11 @@ function NuevaActividadContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
-            <Link href="/calendario">
-              <Button variant="secondary">Cancelar</Button>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-dark-500">
+            <Link href="/calendario" className="w-full sm:w-auto">
+              <Button variant="secondary" className="w-full">Cancelar</Button>
             </Link>
-            <Button type="submit" loading={loading}>
+            <Button type="submit" loading={loading} className="w-full sm:w-auto">
               Crear Actividad
             </Button>
           </div>

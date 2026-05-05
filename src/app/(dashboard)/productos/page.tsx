@@ -131,27 +131,27 @@ export default function ProductosPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando productos...</div>
+        <div className="text-gray-500 dark:text-gray-400">Cargando productos...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Catálogo de Productos</h1>
-          <p className="text-gray-500 mt-1">Gestiona tu catálogo de productos</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Catálogo de Productos</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1">Gestiona tu catálogo de productos</p>
         </div>
-        <Link href="/productos/nuevo">
-          <Button icon={<Plus className="h-4 w-4" />}>Nuevo Producto</Button>
+        <Link href="/productos/nuevo" className="w-full sm:w-auto">
+          <Button icon={<Plus className="h-4 w-4" />} className="w-full sm:w-auto justify-center">Nuevo Producto</Button>
         </Link>
       </div>
 
       {/* Search and Filters */}
       <Card padding="sm">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1">
             <Input
               placeholder="Buscar por nombre o SKU..."
@@ -164,13 +164,14 @@ export default function ProductosPage() {
             variant="secondary"
             onClick={() => setShowFilters(!showFilters)}
             icon={<Filter className="h-4 w-4" />}
+            className="w-full sm:w-auto justify-center"
           >
             Filtros
           </Button>
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-500">
             <Select
               options={categoriaOptions}
               value={filterCategoria}
@@ -224,15 +225,15 @@ export default function ProductosPage() {
                   )}
                 >
                   <td>
-                    <span className="font-mono text-sm text-gray-500">
+                    <span className="font-mono text-sm text-gray-500 dark:text-gray-400">
                       {product.sku}
                     </span>
                   </td>
                   <td>
                     <div>
-                      <p className="font-medium text-gray-900">{product.nombre}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{product.nombre}</p>
                       {product.descripcion && (
-                        <p className="text-sm text-gray-400 truncate max-w-[300px]">
+                        <p className="text-sm text-gray-400 dark:text-gray-500 truncate max-w-[300px]">
                           {product.descripcion}
                         </p>
                       )}
@@ -242,11 +243,11 @@ export default function ProductosPage() {
                     {product.categoria ? (
                       <Badge variant="blue">{product.categoria}</Badge>
                     ) : (
-                      <span className="text-gray-400">-</span>
+                      <span className="text-gray-400 dark:text-gray-500">-</span>
                     )}
                   </td>
                   <td className="text-right">
-                    <span className="font-semibold text-emerald-600">
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                       {formatCurrency(product.precio)}
                     </span>
                   </td>
@@ -257,13 +258,13 @@ export default function ProductosPage() {
                     >
                       {product.activo ? (
                         <>
-                          <ToggleRight className="h-5 w-5 text-emerald-500" />
-                          <span className="text-sm text-emerald-600">Activo</span>
+                          <ToggleRight className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
+                          <span className="text-sm text-emerald-600 dark:text-emerald-400">Activo</span>
                         </>
                       ) : (
                         <>
-                          <ToggleLeft className="h-5 w-5 text-gray-400" />
-                          <span className="text-sm text-gray-400">Inactivo</span>
+                          <ToggleLeft className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                          <span className="text-sm text-gray-400 dark:text-gray-500">Inactivo</span>
                         </>
                       )}
                     </button>
@@ -292,26 +293,26 @@ export default function ProductosPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card className="text-center">
-          <p className="text-2xl font-bold text-gray-900">{allProducts.length}</p>
-          <p className="text-sm text-gray-500">Total Productos</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{allProducts.length}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total Productos</p>
         </Card>
         <Card className="text-center">
-          <p className="text-2xl font-bold text-emerald-600">
+          <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
             {allProducts.filter((p) => p.activo).length}
           </p>
-          <p className="text-sm text-gray-500">Activos</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Activos</p>
         </Card>
         <Card className="text-center">
-          <p className="text-2xl font-bold text-gray-400">
+          <p className="text-xl sm:text-2xl font-bold text-gray-400 dark:text-gray-500">
             {allProducts.filter((p) => !p.activo).length}
           </p>
-          <p className="text-sm text-gray-500">Inactivos</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Inactivos</p>
         </Card>
         <Card className="text-center">
-          <p className="text-2xl font-bold text-indigo-600">{categories.length}</p>
-          <p className="text-sm text-gray-500">Categorías</p>
+          <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">{categories.length}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Categorías</p>
         </Card>
       </div>
 
@@ -322,17 +323,17 @@ export default function ProductosPage() {
         title="Eliminar Producto"
         size="sm"
       >
-        <div className="p-6">
-          <p className="text-gray-500 mb-6">
+        <div className="p-4 sm:p-6">
+          <p className="text-gray-500 dark:text-gray-300 mb-6">
             ¿Estás segura de eliminar{' '}
-            <strong className="text-gray-900">{deleteModal?.nombre}</strong>?
+            <strong className="text-gray-900 dark:text-white">{deleteModal?.nombre}</strong>?
             Esta acción no se puede deshacer.
           </p>
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setDeleteModal(null)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <Button variant="secondary" onClick={() => setDeleteModal(null)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button variant="danger" onClick={handleDelete} loading={deleting}>
+            <Button variant="danger" onClick={handleDelete} loading={deleting} className="w-full sm:w-auto">
               Eliminar
             </Button>
           </div>

@@ -275,45 +275,45 @@ export default function PedidosPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando pedidos...</div>
+        <div className="text-gray-500 dark:text-gray-400">Cargando pedidos...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pedidos</h1>
-          <p className="text-gray-500 mt-1">Gestiona los pedidos de tus clientes</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Pedidos</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1">Gestiona los pedidos de tus clientes</p>
         </div>
-        <Link href="/pedidos/nuevo">
-          <Button icon={<Plus className="h-4 w-4" />}>Nuevo Pedido</Button>
+        <Link href="/pedidos/nuevo" className="w-full sm:w-auto">
+          <Button icon={<Plus className="h-4 w-4" />} className="w-full sm:w-auto justify-center">Nuevo Pedido</Button>
         </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <Card className="text-center">
-          <p className="text-2xl font-bold text-gray-900">{totalOrders}</p>
-          <p className="text-sm text-gray-500">Total Pedidos</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{totalOrders}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total</p>
         </Card>
         <Card className="text-center">
-          <p className="text-2xl font-bold text-emerald-600">
+          <p className="text-base sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 break-words">
             {formatCurrency(totalAmount)}
           </p>
-          <p className="text-sm text-gray-500">Monto Total</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Monto Total</p>
         </Card>
         <Card className="text-center">
-          <p className="text-2xl font-bold text-amber-600">{pendingOrders}</p>
-          <p className="text-sm text-gray-500">Pendientes</p>
+          <p className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{pendingOrders}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Pendientes</p>
         </Card>
       </div>
 
       {/* Search and Filters */}
       <Card padding="sm">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1 flex items-center gap-2">
             <div className="flex-1">
               <Input
@@ -329,13 +329,14 @@ export default function PedidosPage() {
             variant="secondary"
             onClick={() => setShowFilters(!showFilters)}
             icon={<Filter className="h-4 w-4" />}
+            className="w-full sm:w-auto justify-center"
           >
             Filtros
           </Button>
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-500">
             <Select
               options={statusOptions}
               value={filterStatus}
@@ -383,32 +384,32 @@ export default function PedidosPage() {
                 `stagger-${(index % 5) + 1}`
               )}
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <Link href={`/pedidos/${order.id}`} className="flex items-center gap-4 flex-1 cursor-pointer">
-                  <div className="p-3 rounded-xl bg-emerald-50">
-                    <ShoppingCart className="h-6 w-6 text-emerald-600" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+                <Link href={`/pedidos/${order.id}`} className="flex items-center gap-3 sm:gap-4 flex-1 cursor-pointer min-w-0">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex-shrink-0">
+                    <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900 dark:text-white truncate">
                       {order.customer?.nombre || 'Cliente'}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(order.order_date)}
                     </p>
                     {order.observacion_general && (
-                      <p className="text-sm text-gray-400 mt-1 truncate max-w-[300px]">
+                      <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-1 truncate max-w-[300px]">
                         {order.observacion_general}
                       </p>
                     )}
                   </div>
                 </Link>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-4 flex-wrap">
                   <div className="text-right">
-                    <p className="text-xl font-bold text-emerald-600">
+                    <p className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">
                       {formatCurrency(order.total)}
                     </p>
                     {order.total_bonificado > 0 && (
-                      <p className="text-xs text-amber-600">
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
                         Bonif: {formatCurrency(order.total_bonificado)}
                       </p>
                     )}
@@ -418,14 +419,14 @@ export default function PedidosPage() {
                   </Badge>
                   <button
                     onClick={(e) => exportPDF(e, order.id)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                     title="Exportar PDF"
                   >
                     <Download className="h-4 w-4" />
                     <span className="hidden sm:inline">Export PDF</span>
                   </button>
                   <Link href={`/pedidos/${order.id}`}>
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 cursor-pointer" />
                   </Link>
                 </div>
               </div>
