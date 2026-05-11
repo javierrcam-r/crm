@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import {
   Plus,
@@ -14,6 +14,11 @@ import {
   UserPlus,
   UserX,
   IdCard,
+  Sparkles,
+  Loader2,
+  Info,
+  X,
+  TrendingUp,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -29,7 +34,22 @@ import {
 } from '@/lib/services/customers';
 import { cn } from '@/lib/utils';
 import { searchCustomers } from '@/lib/search';
+import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 import type { CustomerType, FunnelStage } from '@/types/database';
+
+interface SmartResult {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  email: string | null;
+  ciudad: string | null;
+  zona: string | null;
+  etiquetas: string[];
+  categoria_compra: string | null;
+  reasons: string[];
+  score: number;
+}
 
 // Helper para obtener el estado simplificado
 const getEstadoCliente = (customer: Customer) => {
@@ -43,6 +63,7 @@ const getEstadoCliente = (customer: Customer) => {
 };
 
 export default function ClientesPage() {
+  const { userProfile } = useAuth();
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -50,6 +71,12 @@ export default function ClientesPage() {
   const [filterCiudad, setFilterCiudad] = useState<string>('');
   const [cities, setCities] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+
+  const [smartQuery, setSmartQuery] = useState('');
+  const [smartResults, setSmartResults] = useState<SmartResult[]>([]);
+  const [smartLoading, setSmartLoading] = useState(false);
+  const [smartActive, setSmartActive] = useState(false);
+  const [smartTotal, setSmartTotal] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -68,6 +95,40 @@ export default function ClientesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const runSmartFilter = async () => {
+    if (!smartQuery.trim() || !userProfile) return;
+    setSmartLoading(true);
+    try {
+      const res = await fetch('/api/smart-filter-clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userProfile.user_id || userProfile.id,
+          query: smartQuery.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setSmartResults(data.results || []);
+      setSmartTotal(data.total || 0);
+      setSmartActive(true);
+      if ((data.results || []).length === 0) {
+        toast('No se encontraron clientes que coincidan con esa búsqueda', { icon: '🔍' });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error en búsqueda inteligente');
+    } finally {
+      setSmartLoading(false);
+    }
+  };
+
+  const clearSmartFilter = () => {
+    setSmartActive(false);
+    setSmartResults([]);
+    setSmartQuery('');
+    setSmartTotal(0);
   };
 
   const customers = (() => {
@@ -96,6 +157,7 @@ export default function ClientesPage() {
     setSearch('');
     setFilterEstado('');
     setFilterCiudad('');
+    clearSmartFilter();
   };
 
   const estadoOptions = [
@@ -173,10 +235,65 @@ export default function ClientesPage() {
             </Button>
           </div>
         )}
+
+        {/* Smart AI Filter */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-dark-500">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-violet-500" />
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Búsqueda Inteligente</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">Busca en etiquetas, notas, resultados de visitas...</span>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={smartQuery}
+                onChange={(e) => setSmartQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && runSmartFilter()}
+                placeholder="Ej: alisado, keratina, premium, mayorista..."
+                className="w-full px-3 py-2 text-sm rounded-xl border border-violet-200 dark:border-violet-500/30 bg-violet-50/50 dark:bg-violet-900/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              />
+            </div>
+            <button
+              onClick={runSmartFilter}
+              disabled={smartLoading || !smartQuery.trim()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-medium hover:from-violet-600 hover:to-indigo-700 transition-all disabled:opacity-50 shadow-sm"
+            >
+              {smartLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              Buscar
+            </button>
+            {smartActive && (
+              <button
+                onClick={clearSmartFilter}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-dark-500 text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-dark-600 transition-all"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
       </Card>
 
-      {/* Customer List */}
-      {customers.length === 0 ? (
+      {/* Smart Filter Results */}
+      {smartActive && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-500" />
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              {smartTotal} cliente{smartTotal !== 1 ? 's' : ''} encontrado{smartTotal !== 1 ? 's' : ''}
+            </span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">para &ldquo;{smartQuery}&rdquo;</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {smartResults.map((result) => (
+              <SmartResultCard key={result.id} result={result} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Customer List (hidden when smart filter active) */}
+      {smartActive ? null : customers.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No hay clientes"
@@ -272,6 +389,110 @@ export default function ClientesPage() {
               </Link>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SmartResultCard({ result }: { result: SmartResult }) {
+  const [showReasons, setShowReasons] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showReasons) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setShowReasons(false);
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [showReasons]);
+
+  return (
+    <div className="relative rounded-xl border border-violet-200 dark:border-violet-500/30 bg-white dark:bg-dark-700 p-4 hover:shadow-md transition-all">
+      {/* Header: name + info button */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <Link href={`/clientes/${result.id}`} className="min-w-0 flex-1">
+          <h3 className="font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 transition-colors truncate">
+            {result.nombre}
+          </h3>
+        </Link>
+        <div ref={ref} className="relative">
+          <button
+            onClick={() => setShowReasons(!showReasons)}
+            className="p-2 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-500 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-800/40 active:bg-violet-200 transition-colors"
+            aria-label="¿Por qué aparece?"
+          >
+            <Info className="h-5 w-5" />
+          </button>
+          {showReasons && (
+            <div className="absolute top-full right-0 mt-2 z-50 w-72 sm:w-80 animate-in fade-in-0 zoom-in-95">
+              <div className="bg-gray-900 dark:bg-dark-800 text-white text-xs rounded-xl px-4 py-3.5 shadow-xl border border-gray-700 dark:border-dark-500">
+                <p className="font-semibold text-violet-400 mb-2.5 flex items-center gap-1.5 text-sm">
+                  <TrendingUp className="h-4 w-4" />
+                  ¿Por qué aparece?
+                </p>
+                <ul className="space-y-2">
+                  {result.reasons.map((r, i) => (
+                    <li key={i} className="text-gray-200 leading-relaxed text-[13px]">
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex justify-end mr-4">
+                <div className="w-3 h-3 bg-gray-900 dark:bg-dark-800 rotate-45 -mt-1.5 border-l border-t border-gray-700 dark:border-dark-500" />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* First reason preview */}
+      {result.reasons.length > 0 && (
+        <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg px-2.5 py-1.5 mb-2.5">
+          <p className="text-xs text-violet-700 dark:text-violet-300 font-medium leading-relaxed line-clamp-2">
+            {result.reasons[0]}
+          </p>
+          {result.reasons.length > 1 && (
+            <button onClick={() => setShowReasons(true)} className="text-[10px] text-violet-500 hover:text-violet-700 dark:hover:text-violet-300 mt-0.5">
+              +{result.reasons.length - 1} razón{result.reasons.length > 2 ? 'es' : ''} más
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Details */}
+      <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+        {result.ciudad && (
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-3 w-3" />
+            <span>{[result.zona, result.ciudad].filter(Boolean).join(', ')}</span>
+          </div>
+        )}
+        {result.telefono && (
+          <div className="flex items-center gap-1.5">
+            <Phone className="h-3 w-3" />
+            <span>{result.telefono}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Tags */}
+      {result.etiquetas.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100 dark:border-dark-500">
+          {result.etiquetas.slice(0, 4).map((t) => (
+            <span key={t} className="px-1.5 py-0.5 rounded text-[10px] bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/30">
+              {t}
+            </span>
+          ))}
+          {result.etiquetas.length > 4 && (
+            <span className="text-[10px] text-gray-400">+{result.etiquetas.length - 4}</span>
+          )}
         </div>
       )}
     </div>

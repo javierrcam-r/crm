@@ -6,12 +6,22 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+interface CustomerFields {
+  id: string;
+  nombre: string;
+  direccion: string | null;
+  zona: string | null;
+  ciudad: string | null;
+  categoria_compra: string | null;
+  etiquetas: string[] | null;
+}
+
 interface VisitRecordRaw {
   id: string;
   customer_id: string;
   scheduled_at: string;
   status: string;
-  customer: { id: string; nombre: string; direccion: string | null; zona: string | null; ciudad: string | null }[] | { id: string; nombre: string; direccion: string | null; zona: string | null; ciudad: string | null } | null;
+  customer: CustomerFields[] | CustomerFields | null;
 }
 
 interface VisitRecord {
@@ -19,7 +29,7 @@ interface VisitRecord {
   customer_id: string;
   scheduled_at: string;
   status: string;
-  customer: { id: string; nombre: string; direccion: string | null; zona: string | null; ciudad: string | null } | null;
+  customer: CustomerFields | null;
 }
 
 function normalizeVisit(raw: VisitRecordRaw): VisitRecord {
@@ -35,6 +45,8 @@ interface CustomerPattern {
   customerAddress: string | null;
   customerZona: string | null;
   customerCiudad: string | null;
+  customerCategoriaCompra: string | null;
+  customerEtiquetas: string[];
   avgDaysBetweenVisits: number;
   preferredDayOfWeek: number;
   dayOfWeekConfidence: number;
@@ -139,6 +151,8 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
     customerAddress: customer.direccion || null,
     customerZona: customer.zona || null,
     customerCiudad: customer.ciudad || null,
+    customerCategoriaCompra: customer.categoria_compra || null,
+    customerEtiquetas: Array.isArray(customer.etiquetas) ? customer.etiquetas : [],
     avgDaysBetweenVisits: Math.round(avgInterval),
     preferredDayOfWeek: preferredDay,
     dayOfWeekConfidence: dayConfidence,
@@ -365,7 +379,7 @@ export async function POST(req: NextRequest) {
       .from('visits')
       .select(`
         id, customer_id, scheduled_at, status,
-        customer:customers(id, nombre, direccion, zona, ciudad)
+        customer:customers(id, nombre, direccion, zona, ciudad, categoria_compra, etiquetas)
       `)
       .eq('user_id', userId)
       .is('deleted_at', null)
@@ -383,7 +397,7 @@ export async function POST(req: NextRequest) {
         .from('visits')
         .select(`
           id, customer_id, scheduled_at, status,
-          customer:customers(id, nombre, direccion, zona, ciudad)
+          customer:customers(id, nombre, direccion, zona, ciudad, categoria_compra, etiquetas)
         `)
         .eq('user_id', userId)
         .is('deleted_at', null)
@@ -441,8 +455,9 @@ export async function POST(req: NextRequest) {
       const instructionKeywords = normalizeStr(filterInstructions).split(/\s+/).filter(w => w.length > 2);
       if (instructionKeywords.length > 0) {
         patterns = patterns.filter(p => {
+          const etiquetasStr = p.customerEtiquetas.join(' ');
           const searchable = normalizeStr(
-            `${p.customerName} ${p.customerAddress || ''} ${p.customerZona || ''} ${p.customerCiudad || ''}`
+            `${p.customerName} ${p.customerAddress || ''} ${p.customerZona || ''} ${p.customerCiudad || ''} ${p.customerCategoriaCompra || ''} ${etiquetasStr}`
           );
           return instructionKeywords.some(kw => searchable.includes(kw));
         });

@@ -6,6 +6,7 @@ import {
   Clock, BarChart3, Search, Target, MessageSquare,
   Eye, Sparkles, Loader2, Calendar, ArrowRight, RefreshCw, X,
   ChevronLeft, ChevronRight, CalendarDays, Zap,
+  Tag, ShoppingBag,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { getCustomers, type Customer } from '@/lib/services/customers';
@@ -143,6 +144,36 @@ export default function ReportesPage() {
   }, [selectedCustomerId, visits]);
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
+  const categoryStats = useMemo(() => {
+    const visitedCusts = customers.filter(c => visitedCustomerIds.has(c.id));
+    const catMap: Record<string, { total: number; completadas: number; noAtendio: number }> = {};
+    for (const c of visitedCusts) {
+      const cat = c.categoria_compra || 'Sin categoría';
+      if (!catMap[cat]) catMap[cat] = { total: 0, completadas: 0, noAtendio: 0 };
+      const cv = visits.filter(v => v.customer_id === c.id);
+      catMap[cat].total += cv.length;
+      catMap[cat].completadas += cv.filter(v => v.status === 'completada').length;
+      catMap[cat].noAtendio += cv.filter(v => v.status === 'no_atendio').length;
+    }
+    return Object.entries(catMap).sort((a, b) => b[1].total - a[1].total);
+  }, [customers, visits, visitedCustomerIds]);
+
+  const tagStats = useMemo(() => {
+    const visitedCusts = customers.filter(c => visitedCustomerIds.has(c.id));
+    const tagMap: Record<string, { clientes: number; visitas: number; completadas: number }> = {};
+    for (const c of visitedCusts) {
+      const tags = c.etiquetas?.length ? c.etiquetas : ['Sin etiqueta'];
+      const cv = visits.filter(v => v.customer_id === c.id);
+      for (const t of tags) {
+        if (!tagMap[t]) tagMap[t] = { clientes: 0, visitas: 0, completadas: 0 };
+        tagMap[t].clientes += 1;
+        tagMap[t].visitas += cv.length;
+        tagMap[t].completadas += cv.filter(v => v.status === 'completada').length;
+      }
+    }
+    return Object.entries(tagMap).sort((a, b) => b[1].visitas - a[1].visitas);
+  }, [customers, visits, visitedCustomerIds]);
+
   const loadAiSummary = async (custId: string) => {
     if (!userProfile) return;
     setAiLoading(true); setAiSummary(null);
@@ -274,6 +305,81 @@ export default function ReportesPage() {
           <GlassProgress label="Con resultado" value={withResult} max={totalVisits} color="text-blue-500 dark:text-blue-400" />
         </div>
       </GlassCard>
+
+      {/* Categories & Tags Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Category Summary */}
+        <GlassCard className="p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30">
+              <ShoppingBag className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Categorías de Compra</h2>
+          </div>
+          {categoryStats.length > 0 ? (
+            <div className="space-y-2.5">
+              {categoryStats.map(([cat, data]) => {
+                const pctComp = data.total > 0 ? Math.round((data.completadas / data.total) * 100) : 0;
+                return (
+                  <div key={cat} className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">{cat}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-slate-500 ml-2 shrink-0">{data.total} visitas</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-400 dark:bg-amber-500 rounded-full transition-all duration-700" style={{ width: `${pctComp}%` }} />
+                      </div>
+                      <div className="flex justify-between mt-0.5">
+                        <span className="text-[9px] text-emerald-600 dark:text-emerald-400">{data.completadas} completadas ({pctComp}%)</span>
+                        {data.noAtendio > 0 && <span className="text-[9px] text-amber-600 dark:text-amber-400">{data.noAtendio} no atendió</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 dark:text-slate-500 text-center py-4">Sin datos de categorías en este período</p>
+          )}
+        </GlassCard>
+
+        {/* Tags Summary */}
+        <GlassCard className="p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/20 border border-violet-200 dark:border-violet-500/30">
+              <Tag className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+            </div>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Etiquetas</h2>
+          </div>
+          {tagStats.length > 0 ? (
+            <div className="space-y-2">
+              {tagStats.slice(0, 15).map(([tag, data]) => {
+                const pctComp = data.visitas > 0 ? Math.round((data.completadas / data.visitas) * 100) : 0;
+                return (
+                  <div key={tag} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/60 transition-colors">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-violet-50 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/30 truncate max-w-[120px]">
+                      {tag}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-violet-400 dark:bg-violet-500 rounded-full transition-all duration-700" style={{ width: `${pctComp}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-medium text-gray-700 dark:text-slate-200">{data.clientes} cliente{data.clientes > 1 ? 's' : ''}</p>
+                      <p className="text-[9px] text-gray-400 dark:text-slate-500">{data.visitas} vis. · {pctComp}% comp.</p>
+                    </div>
+                  </div>
+                );
+              })}
+              {tagStats.length > 15 && <p className="text-[10px] text-gray-400 dark:text-slate-500 text-center">+{tagStats.length - 15} etiquetas más</p>}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 dark:text-slate-500 text-center py-4">Sin etiquetas en este período</p>
+          )}
+        </GlassCard>
+      </div>
 
       {/* Client section */}
       <GlassCard className="p-4 sm:p-5">
