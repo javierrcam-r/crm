@@ -38,6 +38,43 @@ interface VendedorStats {
   visitasCompletadasPeriodo: number;
   tasaCumplimiento: number;
   ranking: number;
+  resultadosCategorias: { venta: { si: number; no: number }; cobro: { si: number; no: number }; seguimiento: { si: number; no: number }; prospeccion: { si: number; no: number } };
+}
+
+function DonutChart({ value, max, size = 100, strokeWidth = 10, color, bgColor = 'rgba(148,163,184,0.15)', children }: {
+  value: number; max: number; size?: number; strokeWidth?: number; color: string; bgColor?: string; children?: React.ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = max > 0 ? Math.min(value / max, 1) : 0;
+  const offset = circumference * (1 - pct);
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={bgColor} strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          className="transition-all duration-700" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function parseResultadoCategorias(resultado: string | null): Record<string, boolean> {
+  if (!resultado) return {};
+  const out: Record<string, boolean> = {};
+  const ventaMatch = resultado.match(/Venta:\s*(Sí|No)/i);
+  const cobroMatch = resultado.match(/Cobro:\s*(Sí|No)/i);
+  const segMatch = resultado.match(/Seguimiento:\s*(Sí|No)/i);
+  const prospMatch = resultado.match(/Prospecci[oó]n:\s*(Sí|No)/i);
+  if (ventaMatch) out.venta = ventaMatch[1].toLowerCase() === 'sí';
+  if (cobroMatch) out.cobro = cobroMatch[1].toLowerCase() === 'sí';
+  if (segMatch) out.seguimiento = segMatch[1].toLowerCase() === 'sí';
+  if (prospMatch) out.prospeccion = prospMatch[1].toLowerCase() === 'sí';
+  return out;
 }
 
 type PeriodFilter = 'hoy' | 'semana' | 'mes' | 'custom';
@@ -170,7 +207,7 @@ export default function SupervisoresPage() {
 
         const { data: visits } = await supabase
           .from('visits')
-          .select('status, scheduled_at')
+          .select('status, scheduled_at, resultado')
           .in('user_id', userIds)
           .is('deleted_at', null);
 
@@ -188,6 +225,16 @@ export default function SupervisoresPage() {
         const visitasCompletadasPeriodo = visits?.filter(v => v.status === 'completada' && v.scheduled_at && v.scheduled_at >= startDate).length || 0;
         const tasaCumplimiento = visitasPeriodo > 0 ? Math.round((visitasCompletadasPeriodo / visitasPeriodo) * 100) : 0;
 
+        const resultadosCategorias = { venta: { si: 0, no: 0 }, cobro: { si: 0, no: 0 }, seguimiento: { si: 0, no: 0 }, prospeccion: { si: 0, no: 0 } };
+        const periodVisits = (visits || []).filter(v => v.status === 'completada' && v.scheduled_at && v.scheduled_at >= startDate);
+        for (const v of periodVisits) {
+          const cats = parseResultadoCategorias(v.resultado);
+          if ('venta' in cats) { cats.venta ? resultadosCategorias.venta.si++ : resultadosCategorias.venta.no++; }
+          if ('cobro' in cats) { cats.cobro ? resultadosCategorias.cobro.si++ : resultadosCategorias.cobro.no++; }
+          if ('seguimiento' in cats) { cats.seguimiento ? resultadosCategorias.seguimiento.si++ : resultadosCategorias.seguimiento.no++; }
+          if ('prospeccion' in cats) { cats.prospeccion ? resultadosCategorias.prospeccion.si++ : resultadosCategorias.prospeccion.no++; }
+        }
+
         return {
           id: user.id,
           user_id: user.user_id,
@@ -199,6 +246,7 @@ export default function SupervisoresPage() {
           totalVisitas, visitasCompletadas, visitasProgramadas, visitasCanceladas, visitasNoAtendio,
           visitasPeriodo, visitasCompletadasPeriodo, tasaCumplimiento,
           ranking: 0,
+          resultadosCategorias,
         } as VendedorStats;
       });
 
@@ -239,6 +287,13 @@ export default function SupervisoresPage() {
   };
 
   const tasaGlobal = totals.visitasPeriodo > 0 ? Math.round((totals.visitasCompletadas / totals.visitasPeriodo) * 100) : 0;
+
+  const catTotals = {
+    venta: { si: fv.reduce((s, v) => s + v.resultadosCategorias.venta.si, 0), no: fv.reduce((s, v) => s + v.resultadosCategorias.venta.no, 0) },
+    cobro: { si: fv.reduce((s, v) => s + v.resultadosCategorias.cobro.si, 0), no: fv.reduce((s, v) => s + v.resultadosCategorias.cobro.no, 0) },
+    seguimiento: { si: fv.reduce((s, v) => s + v.resultadosCategorias.seguimiento.si, 0), no: fv.reduce((s, v) => s + v.resultadosCategorias.seguimiento.no, 0) },
+    prospeccion: { si: fv.reduce((s, v) => s + v.resultadosCategorias.prospeccion.si, 0), no: fv.reduce((s, v) => s + v.resultadosCategorias.prospeccion.no, 0) },
+  };
 
   const mejorVendedor = selectedVendedor ? fv[0] : (vendedores.length > 0 ? vendedores[0] : null);
 
@@ -353,52 +408,106 @@ export default function SupervisoresPage() {
         </div>
       ) : (
         <>
-          {/* KPIs Principales */}
+          {/* KPIs con Donuts - Glassmorphism */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white" padding="sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-xs sm:text-sm">Visitas ({getPeriodLabel()})</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold mt-1">{totals.visitasPeriodo}</p>
-                  <p className="text-blue-200 text-[10px] sm:text-xs mt-1">{totals.visitasCompletadas} completadas</p>
-                </div>
-                <Calendar className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-blue-300" />
+            {/* Cumplimiento */}
+            <div className="relative rounded-2xl border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-lg">
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-emerald-400/10 blur-2xl" />
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+              <div className="relative p-4 flex flex-col items-center">
+                <DonutChart value={totals.visitasCompletadas} max={totals.visitasPeriodo} size={90} strokeWidth={9} color="#10b981">
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">{tasaGlobal}%</span>
+                </DonutChart>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mt-2">Cumplimiento</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">{totals.visitasCompletadas}/{totals.visitasPeriodo} visitas</p>
               </div>
-            </Card>
+            </div>
 
-            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white" padding="sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-emerald-100 text-xs sm:text-sm">Cumplimiento</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold mt-1">{tasaGlobal}%</p>
-                  <p className="text-emerald-200 text-[10px] sm:text-xs mt-1">{totals.visitasCompletadas}/{totals.visitasPeriodo} visitas</p>
-                </div>
-                <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-emerald-300" />
+            {/* Visitas */}
+            <div className="relative rounded-2xl border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-lg">
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-blue-400/10 blur-2xl" />
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+              <div className="relative p-4 flex flex-col items-center">
+                <DonutChart value={totals.visitasCompletadas} max={totals.totalVisitas} size={90} strokeWidth={9} color="#3b82f6">
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">{totals.visitasPeriodo}</span>
+                </DonutChart>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mt-2">Visitas ({getPeriodLabel()})</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">{totals.visitasCompletadas} completadas</p>
               </div>
-            </Card>
+            </div>
 
-            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white" padding="sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-xs sm:text-sm">Total Clientes</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold mt-1">{totals.clientes}</p>
-                  <p className="text-purple-200 text-[10px] sm:text-xs mt-1">+{totals.clientesNuevos} nuevos</p>
-                </div>
-                <UserCheck className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-purple-300" />
+            {/* Clientes */}
+            <div className="relative rounded-2xl border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-lg">
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-purple-400/10 blur-2xl" />
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+              <div className="relative p-4 flex flex-col items-center">
+                <DonutChart value={totals.clientes} max={totals.clientes + totals.prospectos} size={90} strokeWidth={9} color="#8b5cf6">
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">{totals.clientes}</span>
+                </DonutChart>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mt-2">Clientes</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">+{totals.clientesNuevos} nuevos</p>
               </div>
-            </Card>
+            </div>
 
-            <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white" padding="sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-amber-100 text-xs sm:text-sm">Total Prospectos</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold mt-1">{totals.prospectos}</p>
-                  <p className="text-amber-200 text-[10px] sm:text-xs mt-1">+{totals.prospectosNuevos} nuevos</p>
-                </div>
-                <Target className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-amber-300" />
+            {/* Prospectos */}
+            <div className="relative rounded-2xl border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-lg">
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-amber-400/10 blur-2xl" />
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+              <div className="relative p-4 flex flex-col items-center">
+                <DonutChart value={totals.prospectos} max={totals.clientes + totals.prospectos} size={90} strokeWidth={9} color="#f59e0b">
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">{totals.prospectos}</span>
+                </DonutChart>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mt-2">Prospectos</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">+{totals.prospectosNuevos} nuevos</p>
               </div>
-            </Card>
+            </div>
           </div>
+
+          {/* Resultados por Categoría - Glassmorphism */}
+          {(catTotals.venta.si + catTotals.venta.no + catTotals.cobro.si + catTotals.cobro.no + catTotals.seguimiento.si + catTotals.seguimiento.no + catTotals.prospeccion.si + catTotals.prospeccion.no) > 0 && (
+            <div className="relative rounded-2xl border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-lg">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+              <div className="absolute -top-16 -left-16 w-40 h-40 rounded-full bg-indigo-400/5 blur-3xl" />
+              <div className="absolute -bottom-16 -right-16 w-40 h-40 rounded-full bg-purple-400/5 blur-3xl" />
+              <div className="relative p-5">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-500/30">
+                    <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Resultados por Categoría</h2>
+                  <Badge variant="purple" className="text-[10px]">{getPeriodLabel()}</Badge>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { key: 'venta', label: 'Venta', icon: '💰', color: '#10b981', data: catTotals.venta },
+                    { key: 'cobro', label: 'Cobro', icon: '🧾', color: '#3b82f6', data: catTotals.cobro },
+                    { key: 'seguimiento', label: 'Seguimiento', icon: '🔄', color: '#f59e0b', data: catTotals.seguimiento },
+                    { key: 'prospeccion', label: 'Prospección', icon: '🔍', color: '#8b5cf6', data: catTotals.prospeccion },
+                  ].map(cat => {
+                    const total = cat.data.si + cat.data.no;
+                    if (total === 0) return null;
+                    const pct = Math.round((cat.data.si / total) * 100);
+                    return (
+                      <div key={cat.key} className="flex flex-col items-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700/40">
+                        <DonutChart value={cat.data.si} max={total} size={80} strokeWidth={8} color={cat.color}>
+                          <span className="text-lg font-bold text-gray-900 dark:text-white">{pct}%</span>
+                        </DonutChart>
+                        <div className="mt-2 text-center">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{cat.icon} {cat.label}</p>
+                          <div className="flex items-center justify-center gap-3 mt-1">
+                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">✓ {cat.data.si} sí</span>
+                            <span className="text-[10px] font-medium text-red-500 dark:text-red-400">✗ {cat.data.no} no</span>
+                          </div>
+                          <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">{total} visitas con este objetivo</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Mejor vendedor + Resumen */}
           <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
@@ -478,88 +587,137 @@ export default function SupervisoresPage() {
               <Badge variant="purple" className="text-[10px] sm:text-xs">{getPeriodLabel()}</Badge>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {fv.map(v => (
-                <Card key={v.id} padding="sm" className="hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-sm">{v.nombre_completo.charAt(0)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{v.nombre_completo}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{v.email}</p>
+              {fv.map(v => {
+                const cumplColor = v.tasaCumplimiento >= 70 ? '#10b981' : v.tasaCumplimiento >= 50 ? '#f59e0b' : '#ef4444';
+                return (
+                  <div key={v.id} className="relative rounded-2xl border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+                    <div className="relative p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-sm">{v.nombre_completo.charAt(0)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{v.nombre_completo}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{v.email}</p>
+                        </div>
+                        <DonutChart value={v.visitasCompletadasPeriodo} max={v.visitasPeriodo} size={48} strokeWidth={5} color={cumplColor}>
+                          <span className="text-[10px] font-bold text-gray-900 dark:text-white">{v.tasaCumplimiento}%</span>
+                        </DonutChart>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="text-center p-1.5 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-100 dark:border-slate-700/40">
+                          <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{v.clientes}</p>
+                          <p className="text-[9px] text-gray-500 dark:text-gray-400">Clientes</p>
+                        </div>
+                        <div className="text-center p-1.5 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-100 dark:border-slate-700/40">
+                          <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{v.prospectos}</p>
+                          <p className="text-[9px] text-gray-500 dark:text-gray-400">Prospectos</p>
+                        </div>
+                        <div className="text-center p-1.5 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-100 dark:border-slate-700/40">
+                          <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{v.visitasPeriodo}</p>
+                          <p className="text-[9px] text-gray-500 dark:text-gray-400">Visitas</p>
+                        </div>
+                        <div className="text-center p-1.5 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-gray-100 dark:border-slate-700/40">
+                          <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{v.visitasCompletadasPeriodo}</p>
+                          <p className="text-[9px] text-gray-500 dark:text-gray-400">Complet.</p>
+                        </div>
+                      </div>
+                      {v.visitasPeriodo > 0 && (
+                        <div className="mt-2">
+                          <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
+                            <span>{v.visitasCompletadasPeriodo} completadas de {v.visitasPeriodo}</span>
+                          </div>
+                          <div className="w-full bg-gray-100 dark:bg-dark-600 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(v.tasaCumplimiento, 100)}%`, backgroundColor: cumplColor }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="text-center p-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
-                      <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{v.clientes}</p>
-                      <p className="text-[9px] text-gray-500 dark:text-gray-400">Clientes</p>
-                    </div>
-                    <div className="text-center p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
-                      <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{v.prospectos}</p>
-                      <p className="text-[9px] text-gray-500 dark:text-gray-400">Prospectos</p>
-                    </div>
-                    <div className="text-center p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                      <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{v.visitasPeriodo}</p>
-                      <p className="text-[9px] text-gray-500 dark:text-gray-400">Visitas</p>
-                    </div>
-                    <div className="text-center p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
-                      <p className={`text-sm font-bold ${v.tasaCumplimiento >= 70 ? 'text-emerald-600' : v.tasaCumplimiento >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{v.tasaCumplimiento}%</p>
-                      <p className="text-[9px] text-gray-500 dark:text-gray-400">Cumpl.</p>
-                    </div>
-                  </div>
-                  {v.visitasCompletadasPeriodo > 0 && (
-                    <div className="mt-2">
-                      <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
-                        <span>{v.visitasCompletadasPeriodo} completadas de {v.visitasPeriodo}</span>
-                      </div>
-                      <div className="w-full bg-gray-100 dark:bg-dark-600 rounded-full h-1.5">
-                        <div className={`h-1.5 rounded-full transition-all ${v.tasaCumplimiento >= 70 ? 'bg-emerald-500' : v.tasaCumplimiento >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(v.tasaCumplimiento, 100)}%` }} />
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           {/* Detalle vendedor seleccionado */}
-          {selectedVendedor && fv.length === 1 && (
-            <Card padding="sm">
-              <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                Detalle: {fv[0].nombre_completo}
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="bg-gray-50 dark:bg-dark-700 rounded-xl p-3">
-                  <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="h-3 w-3 text-emerald-600" />Clientes</h4>
-                  <div className="space-y-1.5 text-xs sm:text-sm">
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Total</span><span className="font-bold dark:text-white">{fv[0].totalClientes}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Clientes</span><Badge variant="green" className="text-[10px]">{fv[0].clientes}</Badge></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Prospectos</span><Badge variant="yellow" className="text-[10px]">{fv[0].prospectos}</Badge></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Nuevos (período)</span><span className="font-medium text-emerald-600">+{fv[0].clientesNuevosPeriodo}</span></div>
-                  </div>
-                </div>
+          {selectedVendedor && fv.length === 1 && (() => {
+            const d = fv[0];
+            const rc = d.resultadosCategorias;
+            const hasResults = (rc.venta.si + rc.venta.no + rc.cobro.si + rc.cobro.no + rc.seguimiento.si + rc.seguimiento.no + rc.prospeccion.si + rc.prospeccion.no) > 0;
+            return (
+              <div className="relative rounded-2xl border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-lg">
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+                <div className="relative p-5">
+                  <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-indigo-500" /> Detalle: {d.nombre_completo}
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                    <div className="bg-white/50 dark:bg-slate-800/50 rounded-xl p-3 border border-gray-100 dark:border-slate-700/40">
+                      <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="h-3 w-3 text-emerald-600" />Clientes</h4>
+                      <div className="space-y-1.5 text-xs sm:text-sm">
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Total</span><span className="font-bold dark:text-white">{d.totalClientes}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Clientes</span><Badge variant="green" className="text-[10px]">{d.clientes}</Badge></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Prospectos</span><Badge variant="yellow" className="text-[10px]">{d.prospectos}</Badge></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Nuevos (período)</span><span className="font-medium text-emerald-600">+{d.clientesNuevosPeriodo}</span></div>
+                      </div>
+                    </div>
 
-                <div className="bg-gray-50 dark:bg-dark-700 rounded-xl p-3">
-                  <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Calendar className="h-3 w-3 text-blue-600" />Visitas (período)</h4>
-                  <div className="space-y-1.5 text-xs sm:text-sm">
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Programadas</span><span className="font-bold dark:text-white">{fv[0].visitasPeriodo}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Completadas</span><Badge variant="green" className="text-[10px]">{fv[0].visitasCompletadasPeriodo}</Badge></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Cumplimiento</span><Badge variant={fv[0].tasaCumplimiento >= 70 ? 'green' : 'yellow'} className="text-[10px]">{fv[0].tasaCumplimiento}%</Badge></div>
-                  </div>
-                </div>
+                    <div className="bg-white/50 dark:bg-slate-800/50 rounded-xl p-3 border border-gray-100 dark:border-slate-700/40">
+                      <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Calendar className="h-3 w-3 text-blue-600" />Visitas (período)</h4>
+                      <div className="space-y-1.5 text-xs sm:text-sm">
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Programadas</span><span className="font-bold dark:text-white">{d.visitasPeriodo}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Completadas</span><Badge variant="green" className="text-[10px]">{d.visitasCompletadasPeriodo}</Badge></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Cumplimiento</span><Badge variant={d.tasaCumplimiento >= 70 ? 'green' : 'yellow'} className="text-[10px]">{d.tasaCumplimiento}%</Badge></div>
+                      </div>
+                    </div>
 
-                <div className="bg-gray-50 dark:bg-dark-700 rounded-xl p-3">
-                  <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><BarChart3 className="h-3 w-3 text-indigo-600" />Histórico Total</h4>
-                  <div className="space-y-1.5 text-xs sm:text-sm">
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Visitas totales</span><span className="font-bold dark:text-white">{fv[0].totalVisitas}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Completadas</span><span className="font-medium text-emerald-600">{fv[0].visitasCompletadas}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">No atendió</span><span className="font-medium text-red-600">{fv[0].visitasNoAtendio}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Canceladas</span><span className="font-medium text-gray-500">{fv[0].visitasCanceladas}</span></div>
+                    <div className="bg-white/50 dark:bg-slate-800/50 rounded-xl p-3 border border-gray-100 dark:border-slate-700/40">
+                      <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><BarChart3 className="h-3 w-3 text-indigo-600" />Histórico Total</h4>
+                      <div className="space-y-1.5 text-xs sm:text-sm">
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Visitas totales</span><span className="font-bold dark:text-white">{d.totalVisitas}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Completadas</span><span className="font-medium text-emerald-600">{d.visitasCompletadas}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">No atendió</span><span className="font-medium text-red-600">{d.visitasNoAtendio}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Canceladas</span><span className="font-medium text-gray-500">{d.visitasCanceladas}</span></div>
+                      </div>
+                    </div>
                   </div>
+
+                  {hasResults && (
+                    <>
+                      <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+                        <BarChart3 className="h-3.5 w-3.5 text-purple-500" /> Resultados por Objetivo ({getPeriodLabel()})
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                          { key: 'venta', label: 'Venta', icon: '💰', color: '#10b981', data: rc.venta },
+                          { key: 'cobro', label: 'Cobro', icon: '🧾', color: '#3b82f6', data: rc.cobro },
+                          { key: 'seguimiento', label: 'Seguimiento', icon: '🔄', color: '#f59e0b', data: rc.seguimiento },
+                          { key: 'prospeccion', label: 'Prospección', icon: '🔍', color: '#8b5cf6', data: rc.prospeccion },
+                        ].map(cat => {
+                          const total = cat.data.si + cat.data.no;
+                          if (total === 0) return null;
+                          const pct = Math.round((cat.data.si / total) * 100);
+                          return (
+                            <div key={cat.key} className="flex flex-col items-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700/40">
+                              <DonutChart value={cat.data.si} max={total} size={60} strokeWidth={6} color={cat.color}>
+                                <span className="text-xs font-bold text-gray-900 dark:text-white">{pct}%</span>
+                              </DonutChart>
+                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1.5">{cat.icon} {cat.label}</p>
+                              <div className="flex gap-2 mt-0.5">
+                                <span className="text-[9px] text-emerald-600">✓{cat.data.si}</span>
+                                <span className="text-[9px] text-red-500">✗{cat.data.no}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-            </Card>
-          )}
+            );
+          })()}
         </>
       )}
     </div>
