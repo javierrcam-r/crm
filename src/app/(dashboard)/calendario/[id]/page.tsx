@@ -60,8 +60,6 @@ const VISIT_OBJECTIVE_OPTIONS = [
   { key: 'COBRO', label: 'Cobro', icon: '🧾', activeBg: 'bg-blue-50 dark:bg-blue-900/30', activeText: 'text-blue-700 dark:text-blue-400', activeBorder: 'border-blue-300 dark:border-blue-500/50' },
   { key: 'SEGUIMIENTO', label: 'Seguimiento', icon: '🔄', activeBg: 'bg-amber-50 dark:bg-amber-900/30', activeText: 'text-amber-700 dark:text-amber-400', activeBorder: 'border-amber-300 dark:border-amber-500/50' },
   { key: 'PROSPECCION', label: 'Prospección', icon: '🔍', activeBg: 'bg-purple-50 dark:bg-purple-900/30', activeText: 'text-purple-700 dark:text-purple-400', activeBorder: 'border-purple-300 dark:border-purple-500/50' },
-  { key: 'ENTREGA', label: 'Entrega', icon: '📦', activeBg: 'bg-indigo-50 dark:bg-indigo-900/30', activeText: 'text-indigo-700 dark:text-indigo-400', activeBorder: 'border-indigo-300 dark:border-indigo-500/50' },
-  { key: 'RECLAMO', label: 'Reclamo', icon: '⚠️', activeBg: 'bg-red-50 dark:bg-red-900/30', activeText: 'text-red-700 dark:text-red-400', activeBorder: 'border-red-300 dark:border-red-500/50' },
 ];
 
 function parseObjectiveTags(objetivo: string | null): string[] {
@@ -130,8 +128,9 @@ export default function VisitaDetailPage() {
       });
       if (!res.ok) throw new Error('Error del servidor');
       const data = await res.json();
-      if (data.resultado) setResultado(data.resultado);
-      if (data.observaciones) setObservaciones(data.observaciones);
+      // AI detailed summary goes into observaciones (comentarios)
+      const aiSummary = [data.resultado, data.observaciones].filter(Boolean).join('\n\n');
+      if (aiSummary) setObservaciones(aiSummary);
       if (data.nextAction) setNextAction(data.nextAction);
       if (data.nextVisitDate) setNextVisitAt(data.nextVisitDate);
       if (data.objectiveResults && typeof data.objectiveResults === 'object') {
@@ -199,8 +198,8 @@ export default function VisitaDetailPage() {
   };
 
   const handleComplete = async () => {
-    if (!resultado.trim()) {
-      toast.error('El resultado es obligatorio');
+    if (!observaciones.trim() && Object.keys(objResults).length === 0) {
+      toast.error('Agrega comentarios sobre la visita');
       return;
     }
 
@@ -210,15 +209,17 @@ export default function VisitaDetailPage() {
         ? new Date(nextVisitAt).toISOString()
         : undefined;
 
-      // Build full resultado including objective results
-      let fullResultado = resultado;
+      // Build resultado from objective yes/no results
       const objEntries = Object.entries(objResults).filter(([, v]) => v !== null);
+      let fullResultado: string;
       if (objEntries.length > 0) {
         const objSummary = objEntries.map(([tag, val]) => {
           const opt = VISIT_OBJECTIVE_OPTIONS.find(o => o.key === tag);
           return `${opt?.icon || ''} ${opt?.label || tag}: ${val ? 'Sí' : 'No'}`;
         }).join(' | ');
-        fullResultado = `[${objSummary}] ${resultado}`;
+        fullResultado = objSummary;
+      } else {
+        fullResultado = observaciones.trim().slice(0, 100);
       }
 
       await completeVisit(
@@ -960,20 +961,18 @@ export default function VisitaDetailPage() {
           {/* Editable Fields - always visible if not AI filled, collapsible if AI filled */}
           {(!aiFilled || showDetails) && (
             <div className="space-y-3">
-              <Textarea
-                label="Resultado de la Visita *"
-                value={resultado}
-                onChange={(e) => setResultado(e.target.value)}
-                placeholder="Describe el resultado de la visita..."
-                rows={2}
-              />
-              <Textarea
-                label="Observaciones adicionales"
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-                placeholder="Observaciones adicionales..."
-                rows={2}
-              />
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-200">Comentarios adicionales *</label>
+                  <VoiceDictate size="sm" onTranscript={(t) => setObservaciones(prev => prev ? prev + ' ' + t : t)} />
+                </div>
+                <Textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Detalla lo que pasó en la visita: con quién hablaste, productos de interés, acuerdos, montos, etc."
+                  rows={4}
+                />
+              </div>
               <Input
                 label="Próxima Acción"
                 value={nextAction}
@@ -995,15 +994,9 @@ export default function VisitaDetailPage() {
           {/* Summary chips when collapsed */}
           {aiFilled && !showDetails && (
             <div className="space-y-2">
-              {resultado && (
-                <div className="px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
-                  <p className="text-[10px] uppercase font-semibold text-emerald-500 mb-0.5">Resultado</p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200">{resultado}</p>
-                </div>
-              )}
               {observaciones && (
                 <div className="px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
-                  <p className="text-[10px] uppercase font-semibold text-blue-500 mb-0.5">Observaciones</p>
+                  <p className="text-[10px] uppercase font-semibold text-blue-500 mb-0.5">Comentarios</p>
                   <p className="text-sm text-gray-800 dark:text-gray-200">{observaciones}</p>
                 </div>
               )}
@@ -1026,7 +1019,7 @@ export default function VisitaDetailPage() {
             <Button variant="secondary" onClick={() => { setShowCompleteModal(false); setAiFilled(false); setAiInput(''); setShowDetails(false); }}>
               Cancelar
             </Button>
-            <Button variant="success" onClick={handleComplete} loading={actionLoading} disabled={!resultado.trim()}>
+            <Button variant="success" onClick={handleComplete} loading={actionLoading} disabled={!observaciones.trim() && Object.keys(objResults).length === 0}>
               Completar Visita
             </Button>
           </div>
