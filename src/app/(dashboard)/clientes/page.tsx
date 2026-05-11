@@ -49,6 +49,7 @@ interface SmartResult {
   categoria_compra: string | null;
   reasons: string[];
   score: number;
+  matchType: 'etiqueta' | 'gestion' | 'mixto';
 }
 
 // Helper para obtener el estado simplificado
@@ -276,17 +277,24 @@ export default function ClientesPage() {
 
       {/* Smart Filter Results */}
       {smartActive && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-violet-500" />
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-              {smartTotal} cliente{smartTotal !== 1 ? 's' : ''} encontrado{smartTotal !== 1 ? 's' : ''}
-            </span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">para &ldquo;{smartQuery}&rdquo;</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-violet-500" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {smartTotal} cliente{smartTotal !== 1 ? 's' : ''} encontrado{smartTotal !== 1 ? 's' : ''}
+              </span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">para &ldquo;{smartQuery}&rdquo;</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">Etiqueta</span>
+              <span className="px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-500/30">Etiqueta + Gestión</span>
+              <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">Gestión</span>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {smartResults.map((result) => (
-              <SmartResultCard key={result.id} result={result} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {smartResults.map((result, idx) => (
+              <SmartResultCard key={result.id} result={result} rank={idx + 1} />
             ))}
           </div>
         </div>
@@ -395,9 +403,16 @@ export default function ClientesPage() {
   );
 }
 
-function SmartResultCard({ result }: { result: SmartResult }) {
+const MATCH_TYPE_CFG = {
+  etiqueta: { label: 'Etiqueta', bg: 'bg-emerald-50 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-500/30' },
+  mixto: { label: 'Etiqueta + Gestión', bg: 'bg-violet-50 dark:bg-violet-900/30', text: 'text-violet-700 dark:text-violet-400', border: 'border-violet-200 dark:border-violet-500/30' },
+  gestion: { label: 'Gestión', bg: 'bg-amber-50 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-500/30' },
+};
+
+function SmartResultCard({ result, rank }: { result: SmartResult; rank: number }) {
   const [showReasons, setShowReasons] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const mt = MATCH_TYPE_CFG[result.matchType];
 
   useEffect(() => {
     if (!showReasons) return;
@@ -412,15 +427,29 @@ function SmartResultCard({ result }: { result: SmartResult }) {
     };
   }, [showReasons]);
 
+  const tagReasons = result.reasons.filter(r => r.startsWith('🏷️') || r.startsWith('📦'));
+  const visitReasons = result.reasons.filter(r => r.startsWith('✅') || r.startsWith('👁️') || r.startsWith('🎯'));
+  const otherReasons = result.reasons.filter(r => r.startsWith('📝'));
+
   return (
-    <div className="relative rounded-xl border border-violet-200 dark:border-violet-500/30 bg-white dark:bg-dark-700 p-4 hover:shadow-md transition-all">
-      {/* Header: name + info button */}
+    <div className="relative rounded-xl border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 p-4 hover:shadow-md transition-all">
+      {/* Rank badge */}
+      <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center shadow">
+        {rank}
+      </div>
+
+      {/* Header: name + match type + info */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <Link href={`/clientes/${result.id}`} className="min-w-0 flex-1">
-          <h3 className="font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 transition-colors truncate">
-            {result.nombre}
-          </h3>
-        </Link>
+        <div className="min-w-0 flex-1">
+          <Link href={`/clientes/${result.id}`}>
+            <h3 className="font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 transition-colors truncate">
+              {result.nombre}
+            </h3>
+          </Link>
+          <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-medium border ${mt.bg} ${mt.text} ${mt.border}`}>
+            {mt.label}
+          </span>
+        </div>
         <div ref={ref} className="relative">
           <button
             onClick={() => setShowReasons(!showReasons)}
@@ -430,41 +459,78 @@ function SmartResultCard({ result }: { result: SmartResult }) {
             <Info className="h-5 w-5" />
           </button>
           {showReasons && (
-            <div className="absolute top-full right-0 mt-2 z-50 w-72 sm:w-80 animate-in fade-in-0 zoom-in-95">
-              <div className="bg-gray-900 dark:bg-dark-800 text-white text-xs rounded-xl px-4 py-3.5 shadow-xl border border-gray-700 dark:border-dark-500">
-                <p className="font-semibold text-violet-400 mb-2.5 flex items-center gap-1.5 text-sm">
+            <div className="absolute top-full right-0 mt-2 z-50 w-80 sm:w-96 animate-in fade-in-0 zoom-in-95">
+              <div className="bg-gray-900 dark:bg-dark-800 text-white text-xs rounded-xl px-4 py-3.5 shadow-xl border border-gray-700 dark:border-dark-500 max-h-[60vh] overflow-y-auto">
+                <p className="font-semibold text-violet-400 mb-3 flex items-center gap-1.5 text-sm">
                   <TrendingUp className="h-4 w-4" />
                   ¿Por qué aparece?
                 </p>
-                <ul className="space-y-2">
-                  {result.reasons.map((r, i) => (
-                    <li key={i} className="text-gray-200 leading-relaxed text-[13px]">
-                      {r}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="flex justify-end mr-4">
-                <div className="w-3 h-3 bg-gray-900 dark:bg-dark-800 rotate-45 -mt-1.5 border-l border-t border-gray-700 dark:border-dark-500" />
+
+                {tagReasons.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider mb-1.5">Etiquetas</p>
+                    <ul className="space-y-1.5">
+                      {tagReasons.map((r, i) => (
+                        <li key={i} className="text-gray-200 leading-relaxed text-[13px]">{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {visitReasons.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[10px] uppercase font-bold text-blue-400 tracking-wider mb-1.5">Gestión / Visitas</p>
+                    <ul className="space-y-1.5">
+                      {visitReasons.map((r, i) => (
+                        <li key={i} className="text-gray-200 leading-relaxed text-[13px]">{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {otherReasons.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-amber-400 tracking-wider mb-1.5">Otros</p>
+                    <ul className="space-y-1.5">
+                      {otherReasons.map((r, i) => (
+                        <li key={i} className="text-gray-200 leading-relaxed text-[13px]">{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* First reason preview */}
-      {result.reasons.length > 0 && (
-        <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg px-2.5 py-1.5 mb-2.5">
-          <p className="text-xs text-violet-700 dark:text-violet-300 font-medium leading-relaxed line-clamp-2">
-            {result.reasons[0]}
-          </p>
-          {result.reasons.length > 1 && (
-            <button onClick={() => setShowReasons(true)} className="text-[10px] text-violet-500 hover:text-violet-700 dark:hover:text-violet-300 mt-0.5">
-              +{result.reasons.length - 1} razón{result.reasons.length > 2 ? 'es' : ''} más
-            </button>
-          )}
-        </div>
-      )}
+      {/* Reasons preview (show up to 3) */}
+      <div className="space-y-1 mb-2.5">
+        {result.reasons.slice(0, 3).map((r, i) => (
+          <div key={i} className={`rounded-lg px-2.5 py-1.5 ${
+            r.startsWith('🏷️') || r.startsWith('📦')
+              ? 'bg-emerald-50 dark:bg-emerald-900/15'
+              : r.startsWith('✅') || r.startsWith('👁️') || r.startsWith('🎯')
+                ? 'bg-blue-50 dark:bg-blue-900/15'
+                : 'bg-gray-50 dark:bg-dark-600'
+          }`}>
+            <p className={`text-[11px] font-medium leading-relaxed line-clamp-2 ${
+              r.startsWith('🏷️') || r.startsWith('📦')
+                ? 'text-emerald-700 dark:text-emerald-300'
+                : r.startsWith('✅') || r.startsWith('👁️') || r.startsWith('🎯')
+                  ? 'text-blue-700 dark:text-blue-300'
+                  : 'text-gray-600 dark:text-gray-300'
+            }`}>
+              {r}
+            </p>
+          </div>
+        ))}
+        {result.reasons.length > 3 && (
+          <button onClick={() => setShowReasons(true)} className="text-[10px] text-violet-500 hover:text-violet-700 dark:hover:text-violet-300 font-medium pl-1">
+            +{result.reasons.length - 3} razón{result.reasons.length - 3 > 1 ? 'es' : ''} más...
+          </button>
+        )}
+      </div>
 
       {/* Details */}
       <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
@@ -485,13 +551,13 @@ function SmartResultCard({ result }: { result: SmartResult }) {
       {/* Tags */}
       {result.etiquetas.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100 dark:border-dark-500">
-          {result.etiquetas.slice(0, 4).map((t) => (
+          {result.etiquetas.slice(0, 5).map((t) => (
             <span key={t} className="px-1.5 py-0.5 rounded text-[10px] bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/30">
               {t}
             </span>
           ))}
-          {result.etiquetas.length > 4 && (
-            <span className="text-[10px] text-gray-400">+{result.etiquetas.length - 4}</span>
+          {result.etiquetas.length > 5 && (
+            <span className="text-[10px] text-gray-400">+{result.etiquetas.length - 5}</span>
           )}
         </div>
       )}

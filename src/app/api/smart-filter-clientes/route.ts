@@ -22,6 +22,7 @@ interface MatchedCustomer {
   notas: string | null;
   reasons: string[];
   score: number;
+  matchType: 'etiqueta' | 'gestion' | 'mixto';
 }
 
 export async function POST(req: NextRequest) {
@@ -54,11 +55,6 @@ export async function POST(req: NextRequest) {
 
     const assignedIds = new Set((assignedCustomers || []).map((a: any) => a.customer_id));
 
-    const allCustomerIds = new Set([
-      ...(customers || []).map((c: any) => c.id),
-      ...assignedIds,
-    ]);
-
     let assignedCustomerData: any[] = [];
     if (assignedIds.size > 0) {
       const missingIds = [...assignedIds].filter(id => !(customers || []).some((c: any) => c.id === id));
@@ -73,19 +69,15 @@ export async function POST(req: NextRequest) {
     }
 
     const allCustomers = [...(customers || []), ...assignedCustomerData];
-
     const customerIds = allCustomers.map((c: any) => c.id);
-
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 6);
 
     const { data: visits } = await supabase
       .from('visits')
-      .select('id, customer_id, resultado, observaciones, objetivo, status')
+      .select('id, customer_id, resultado, observaciones, objetivo, status, scheduled_at')
       .in('customer_id', customerIds)
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .gte('scheduled_at', threeMonthsAgo.toISOString());
+      .order('scheduled_at', { ascending: false });
 
     const visitsByCustomer = new Map<string, any[]>();
     for (const v of (visits || [])) {
@@ -100,77 +92,99 @@ export async function POST(req: NextRequest) {
     for (const customer of allCustomers) {
       const reasons: string[] = [];
       let score = 0;
+      let hasTagMatch = false;
+      let hasVisitMatch = false;
 
       const custVisits = visitsByCustomer.get(customer.id) || [];
-
       const etiquetas: string[] = Array.isArray(customer.etiquetas) ? customer.etiquetas : [];
       const etiquetasNorm = etiquetas.map(normalizeStr);
       const notasNorm = normalizeStr(customer.notas || '');
       const categoriaNorm = normalizeStr(customer.categoria_compra || '');
-      const nombreNorm = normalizeStr(customer.nombre || '');
-      const ciudadNorm = normalizeStr(customer.ciudad || '');
-      const zonaNorm = normalizeStr(customer.zona || '');
 
+      // --- ETIQUETAS (highest priority: 30 pts per match) ---
       for (const kw of keywords) {
         for (const [i, et] of etiquetasNorm.entries()) {
           if (et.includes(kw)) {
-            score += 10;
+            score += 30;
+            hasTagMatch = true;
             const tag = etiquetas[i];
-            if (!reasons.some(r => r.includes(`Etiqueta "${tag}"`))) {
-              reasons.push(`🏷️ Etiqueta "${tag}" coincide con "${kw}"`);
+            if (!reasons.some(r => r.includes(`Etiqueta: "${tag}"`))) {
+              reasons.push(`🏷️ Etiqueta: "${tag}"`);
             }
           }
         }
+      }
 
-        if (categoriaNorm.includes(kw)) {
-          score += 8;
-          if (!reasons.some(r => r.includes('Categoría'))) {
+      // --- CATEGORIA DE COMPRA (20 pts) ---
+      for (const kw of keywords) {
+        if (categoriaNorm && categoriaNorm.includes(kw)) {
+          score += 20;
+          if (!reasons.some(r => r.startsWith('📦'))) {
             reasons.push(`📦 Categoría de compra: "${customer.categoria_compra}"`);
           }
         }
+      }
 
-        if (notasNorm.includes(kw)) {
-          score += 6;
-          const snippet = extractSnippet(customer.notas || '', kw);
-          if (!reasons.some(r => r.includes('Notas'))) {
-            reasons.push(`📝 Notas del cliente: "...${snippet}..."`);
-          }
-        }
+      // --- RESULTADOS DE VISITA (specific per visit, 15 pts each) ---
+      for (const v of custVisits) {
+        const resultadoNorm = normalizeStr(v.resultado || '');
+        const obsNorm = normalizeStr(v.observaciones || '');
+        const objNorm = normalizeStr(v.objetivo || '');
+        const dateStr = formatVisitDate(v.scheduled_at);
 
-        for (const v of custVisits) {
-          const resultadoNorm = normalizeStr(v.resultado || '');
-          const obsNorm = normalizeStr(v.observaciones || '');
-          const objNorm = normalizeStr(v.objetivo || '');
-
+        for (const kw of keywords) {
           if (resultadoNorm.includes(kw)) {
-            score += 7;
-            const snippet = extractSnippet(v.resultado || '', kw);
-            if (!reasons.some(r => r.includes('Resultado de visita'))) {
-              reasons.push(`✅ Resultado de visita: "...${snippet}..."`);
-            }
-          }
-          if (obsNorm.includes(kw)) {
-            score += 5;
-            const snippet = extractSnippet(v.observaciones || '', kw);
-            if (!reasons.some(r => r.includes('Observación'))) {
-              reasons.push(`👁️ Observación de visita: "...${snippet}..."`);
-            }
-          }
-          if (objNorm.includes(kw)) {
-            score += 4;
-            const snippet = extractSnippet(v.objetivo || '', kw);
-            if (!reasons.some(r => r.includes('Objetivo'))) {
-              reasons.push(`🎯 Objetivo de visita: "...${snippet}..."`);
-            }
+            score += 15;
+            hasVisitMatch = true;
+            const snippet = extractSnippet(v.resultado, kw, 50);
+            reasons.push(`✅ Resultado (${dateStr}): "${snippet}"`);
+            break;
           }
         }
 
-        if (nombreNorm.includes(kw)) score += 3;
-        if (ciudadNorm.includes(kw)) score += 2;
-        if (zonaNorm.includes(kw)) score += 2;
+        for (const kw of keywords) {
+          if (obsNorm.includes(kw)) {
+            score += 10;
+            hasVisitMatch = true;
+            const snippet = extractSnippet(v.observaciones, kw, 50);
+            if (!reasons.some(r => r.includes(`Observación (${dateStr})`))) {
+              reasons.push(`👁️ Observación (${dateStr}): "${snippet}"`);
+            }
+            break;
+          }
+        }
+
+        for (const kw of keywords) {
+          if (objNorm.includes(kw)) {
+            score += 8;
+            hasVisitMatch = true;
+            const snippet = extractSnippet(v.objetivo, kw, 50);
+            if (!reasons.some(r => r.includes(`Objetivo (${dateStr})`))) {
+              reasons.push(`🎯 Objetivo (${dateStr}): "${snippet}"`);
+            }
+            break;
+          }
+        }
+      }
+
+      // --- NOTAS DEL CLIENTE (12 pts) ---
+      for (const kw of keywords) {
+        if (notasNorm.includes(kw)) {
+          score += 12;
+          const snippet = extractSnippet(customer.notas || '', kw, 60);
+          if (!reasons.some(r => r.startsWith('📝'))) {
+            reasons.push(`📝 Notas: "${snippet}"`);
+          }
+        }
       }
 
       if (score > 0 && reasons.length > 0) {
+        const matchType: 'etiqueta' | 'gestion' | 'mixto' = hasTagMatch && hasVisitMatch
+          ? 'mixto'
+          : hasTagMatch
+            ? 'etiqueta'
+            : 'gestion';
+
         results.push({
           id: customer.id,
           nombre: customer.nombre,
@@ -183,14 +197,21 @@ export async function POST(req: NextRequest) {
           notas: customer.notas,
           reasons,
           score,
+          matchType,
         });
       }
     }
 
-    results.sort((a, b) => b.score - a.score);
+    // Sort: etiqueta matches first, then mixto, then gestion; within each group by score
+    const typeOrder = { etiqueta: 0, mixto: 1, gestion: 2 };
+    results.sort((a, b) => {
+      const typeDiff = typeOrder[a.matchType] - typeOrder[b.matchType];
+      if (typeDiff !== 0) return typeDiff;
+      return b.score - a.score;
+    });
 
     return NextResponse.json({
-      results: results.slice(0, 50),
+      results: results.slice(0, 60),
       total: results.length,
       query,
     });
@@ -200,11 +221,28 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function extractSnippet(text: string, keyword: string, windowSize: number = 40): string {
+function extractSnippet(text: string, keyword: string, windowSize: number = 50): string {
   const norm = normalizeStr(text);
-  const idx = norm.indexOf(normalizeStr(keyword));
-  if (idx === -1) return text.slice(0, windowSize * 2);
+  const kwNorm = normalizeStr(keyword);
+  const idx = norm.indexOf(kwNorm);
+  if (idx === -1) return text.slice(0, windowSize * 2).trim();
   const start = Math.max(0, idx - windowSize);
   const end = Math.min(text.length, idx + keyword.length + windowSize);
-  return text.slice(start, end).trim();
+  let snippet = text.slice(start, end).trim();
+  if (start > 0) snippet = '...' + snippet;
+  if (end < text.length) snippet = snippet + '...';
+  return snippet;
+}
+
+function formatVisitDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const day = d.getDate();
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  } catch {
+    return '';
+  }
 }

@@ -442,7 +442,7 @@ export default function CalendarioPage() {
             body: `La actividad "${editFormData.titulo}" ha sido modificada`,
             type: 'actividad',
             reference_id: selectedActivity.id,
-            reference_url: '/calendario',
+            reference_url: `/actividades/${selectedActivity.id}`,
           });
         } catch {}
       }

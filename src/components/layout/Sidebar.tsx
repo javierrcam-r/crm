@@ -50,21 +50,8 @@ const adminNavigation = [
   { key: 'asistente', name: 'Asistente IA', href: '/asistente', icon: Sparkles },
 ];
 
-// Panel de supervisión - para supervisor y supervisor_nivel1
+// Panel de supervisión - para supervisor, supervisor_nivel1 y supervisor_vendedor
 const supervisorNavigation = [
-  { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
-  { key: 'dias_no_laborables', name: 'Días no laborables', href: '/calendario/dias-no-laborables', icon: CalendarOff },
-  { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
-  { key: 'vendedores', name: 'Ver Vendedores', href: '/supervisores/vendedores', icon: Users },
-  { key: 'gestion_clientes', name: 'Gestión Clientes', href: '/supervisores/clientes', icon: UserCheck },
-  { key: 'metas', name: 'Metas de Ventas', href: '/supervisores/metas', icon: BarChart3 },
-  { key: 'resumen_ventas', name: 'Resumen Ventas', href: '/resumen-ventas', icon: DollarSign },
-  { key: 'eventos', name: 'Eventos', href: '/eventos', icon: Calendar },
-  { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
-];
-
-// Navegación específica para supervisor_nivel1
-const supervisorN1Navigation = [
   { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
   { key: 'dias_no_laborables', name: 'Días no laborables', href: '/calendario/dias-no-laborables', icon: CalendarOff },
   { key: 'supervisores', name: 'Panel Supervisor', href: '/supervisores', icon: TrendingUp },
@@ -100,7 +87,16 @@ export default function Sidebar() {
 
   const filterByConfig = (items: { key: string; name: string; href: string; icon: any }[]) => {
     if (!userProfile || sidebarConfig.length === 0) return items;
-    return items.filter(item => isMenuVisible(sidebarConfig, item.key, userProfile.rol));
+    const rol = userProfile.rol;
+    return items.filter(item => {
+      const entry = sidebarConfig.find(c => c.menu_key === item.key && c.rol === rol);
+      if (entry) return entry.visible;
+      if (rol === 'supervisor') {
+        const n1Entry = sidebarConfig.find(c => c.menu_key === item.key && c.rol === 'supervisor_nivel1');
+        if (n1Entry) return n1Entry.visible;
+      }
+      return true;
+    });
   };
 
   const handleLogout = () => {
@@ -209,7 +205,7 @@ export default function Sidebar() {
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
                 Supervisión
               </p>
-              {filterByConfig(userProfile?.rol === 'supervisor_nivel1' ? supervisorN1Navigation : supervisorNavigation).map((item, index) => {
+              {filterByConfig(supervisorNavigation).map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (

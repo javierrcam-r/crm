@@ -171,7 +171,7 @@ function NuevaActividadContent() {
             body: `Has sido asignado a la actividad "${formData.titulo}" programada para ${format(new Date(formData.fecha_inicio), "d MMM yyyy, HH:mm")}`,
             type: 'actividad',
             reference_id: newActivity.id,
-            reference_url: '/calendario',
+            reference_url: `/actividades/${newActivity.id}`,
           });
         } catch (err) {
           console.error('Error sending notifications:', err);

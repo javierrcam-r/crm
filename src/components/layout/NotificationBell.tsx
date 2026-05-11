@@ -64,8 +64,12 @@ export default function NotificationBell() {
       setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
       setUnreadCount(prev => Math.max(0, prev - 1));
     }
-    if (n.reference_url) {
-      router.push(n.reference_url);
+    let url = n.reference_url;
+    if (n.type === 'actividad' && n.reference_id && (!url || url === '/calendario')) {
+      url = `/actividades/${n.reference_id}`;
+    }
+    if (url) {
+      router.push(url);
       setOpen(false);
     }
   };
