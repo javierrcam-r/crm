@@ -25,8 +25,10 @@ import {
   Filter,
   CalendarOff,
   Sparkles,
+  CalendarCheck,
 } from 'lucide-react';
 import CalendIAModal from '@/components/calendar/CalendIAModal';
+import RecomendCalendModal from '@/components/calendar/RecomendCalendModal';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -125,6 +127,7 @@ export default function CalendarioPage() {
   const [calendarFilter, setCalendarFilter] = useState<CalendarFilterType>('todos');
   const [blockedDaysSet, setBlockedDaysSet] = useState<Set<string>>(new Set());
   const [showCalendIA, setShowCalendIA] = useState(false);
+  const [showRecomendCalend, setShowRecomendCalend] = useState(false);
 
   // Detectar móvil
   useEffect(() => {
@@ -722,6 +725,15 @@ export default function CalendarioPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={() => setShowRecomendCalend(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs sm:text-sm font-medium hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 flex-shrink-0"
+              title="RecomendCalend"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">RecomendCalend</span>
+              <span className="sm:hidden">Recom.</span>
+            </button>
             <button
               onClick={() => setShowCalendIA(true)}
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs sm:text-sm font-medium hover:from-violet-600 hover:to-indigo-700 transition-all shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 flex-shrink-0"
@@ -2704,6 +2716,14 @@ export default function CalendarioPage() {
         isOpen={showCalendIA}
         onClose={() => setShowCalendIA(false)}
         onVisitCreated={() => loadData()}
+      />
+
+      <RecomendCalendModal
+        isOpen={showRecomendCalend}
+        onClose={() => setShowRecomendCalend(false)}
+        onVisitsCreated={() => loadData()}
+        userId={userProfile?.user_id || userProfile?.id || ''}
+        currentDate={currentDate}
       />
     </div>
   );
