@@ -21,6 +21,15 @@ import toast from 'react-hot-toast';
 import type { VisitInsert, Activity } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 
+const VISIT_OBJECTIVE_OPTIONS = [
+  { key: 'VENTA', label: 'Venta', icon: '💰', activeBg: 'bg-emerald-50 dark:bg-emerald-900/30', activeText: 'text-emerald-700 dark:text-emerald-400', activeBorder: 'border-emerald-300 dark:border-emerald-500/50' },
+  { key: 'COBRO', label: 'Cobro', icon: '🧾', activeBg: 'bg-blue-50 dark:bg-blue-900/30', activeText: 'text-blue-700 dark:text-blue-400', activeBorder: 'border-blue-300 dark:border-blue-500/50' },
+  { key: 'SEGUIMIENTO', label: 'Seguimiento', icon: '🔄', activeBg: 'bg-amber-50 dark:bg-amber-900/30', activeText: 'text-amber-700 dark:text-amber-400', activeBorder: 'border-amber-300 dark:border-amber-500/50' },
+  { key: 'PROSPECCION', label: 'Prospección', icon: '🔍', activeBg: 'bg-purple-50 dark:bg-purple-900/30', activeText: 'text-purple-700 dark:text-purple-400', activeBorder: 'border-purple-300 dark:border-purple-500/50' },
+  { key: 'ENTREGA', label: 'Entrega', icon: '📦', activeBg: 'bg-indigo-50 dark:bg-indigo-900/30', activeText: 'text-indigo-700 dark:text-indigo-400', activeBorder: 'border-indigo-300 dark:border-indigo-500/50' },
+  { key: 'RECLAMO', label: 'Reclamo', icon: '⚠️', activeBg: 'bg-red-50 dark:bg-red-900/30', activeText: 'text-red-700 dark:text-red-400', activeBorder: 'border-red-300 dark:border-red-500/50' },
+];
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
@@ -270,15 +279,43 @@ function NuevaVisitaContent() {
               required
             />
             <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-200 mb-1.5">Objetivo de la Visita</label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {VISIT_OBJECTIVE_OPTIONS.map(opt => {
+                  const selected = (formData.objetivo || '').includes(`[${opt.key}]`);
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => {
+                        const tag = `[${opt.key}]`;
+                        const current = formData.objetivo || '';
+                        const newVal = selected
+                          ? current.replace(tag, '').replace(/\s+/g, ' ').trim()
+                          : (current ? current + ' ' + tag : tag);
+                        setFormData({ ...formData, objetivo: newVal });
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                        selected
+                          ? `${opt.activeBg} ${opt.activeText} ${opt.activeBorder} shadow-sm`
+                          : 'bg-gray-50 dark:bg-dark-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-dark-500 hover:bg-gray-100 dark:hover:bg-dark-600'
+                      }`}
+                    >
+                      <span>{opt.icon}</span>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-200">Objetivo de la Visita</label>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Detalles adicionales</span>
                 <VoiceDictate size="sm" onTranscript={(t) => setFormData(prev => ({ ...prev, objetivo: (prev.objetivo || '') + (prev.objetivo ? ' ' : '') + t }))} />
               </div>
               <Textarea
                 value={formData.objetivo || ''}
                 onChange={(e) => setFormData({ ...formData, objetivo: e.target.value })}
-                placeholder="¿Cuál es el propósito de esta visita?"
-                rows={3}
+                placeholder="Selecciona los objetivos arriba y/o escribe detalles adicionales..."
+                rows={2}
               />
             </div>
             <Input

@@ -55,6 +55,21 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import VoiceDictate from '@/components/ui/VoiceDictate';
 
+const VISIT_OBJECTIVE_OPTIONS = [
+  { key: 'VENTA', label: 'Venta', icon: '💰', activeBg: 'bg-emerald-50 dark:bg-emerald-900/30', activeText: 'text-emerald-700 dark:text-emerald-400', activeBorder: 'border-emerald-300 dark:border-emerald-500/50' },
+  { key: 'COBRO', label: 'Cobro', icon: '🧾', activeBg: 'bg-blue-50 dark:bg-blue-900/30', activeText: 'text-blue-700 dark:text-blue-400', activeBorder: 'border-blue-300 dark:border-blue-500/50' },
+  { key: 'SEGUIMIENTO', label: 'Seguimiento', icon: '🔄', activeBg: 'bg-amber-50 dark:bg-amber-900/30', activeText: 'text-amber-700 dark:text-amber-400', activeBorder: 'border-amber-300 dark:border-amber-500/50' },
+  { key: 'PROSPECCION', label: 'Prospección', icon: '🔍', activeBg: 'bg-purple-50 dark:bg-purple-900/30', activeText: 'text-purple-700 dark:text-purple-400', activeBorder: 'border-purple-300 dark:border-purple-500/50' },
+  { key: 'ENTREGA', label: 'Entrega', icon: '📦', activeBg: 'bg-indigo-50 dark:bg-indigo-900/30', activeText: 'text-indigo-700 dark:text-indigo-400', activeBorder: 'border-indigo-300 dark:border-indigo-500/50' },
+  { key: 'RECLAMO', label: 'Reclamo', icon: '⚠️', activeBg: 'bg-red-50 dark:bg-red-900/30', activeText: 'text-red-700 dark:text-red-400', activeBorder: 'border-red-300 dark:border-red-500/50' },
+];
+
+function parseObjectiveTags(objetivo: string | null): string[] {
+  if (!objetivo) return [];
+  const matches = objetivo.match(/\[([A-Z]+)\]/g);
+  return matches ? matches.map(m => m.replace(/[\[\]]/g, '')) : [];
+}
+
 export default function VisitaDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -95,10 +110,14 @@ export default function VisitaDetailPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [aiListening, setAiListening] = useState(false);
 
+  // Objective result states (yes/no per objective tag)
+  const [objResults, setObjResults] = useState<Record<string, boolean | null>>({});
+
   const parseWithAI = useCallback(async (text: string) => {
     if (!text.trim()) return;
     setAiParsing(true);
     try {
+      const tags = parseObjectiveTags(visit?.objetivo || '');
       const res = await fetch('/api/parse-visit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,6 +125,7 @@ export default function VisitaDetailPage() {
           text,
           customerName: visit?.customer?.nombre || '',
           visitObjective: visit?.objetivo || '',
+          objectiveTags: tags,
         }),
       });
       if (!res.ok) throw new Error('Error del servidor');
@@ -114,6 +134,15 @@ export default function VisitaDetailPage() {
       if (data.observaciones) setObservaciones(data.observaciones);
       if (data.nextAction) setNextAction(data.nextAction);
       if (data.nextVisitDate) setNextVisitAt(data.nextVisitDate);
+      if (data.objectiveResults && typeof data.objectiveResults === 'object') {
+        setObjResults(prev => {
+          const updated = { ...prev };
+          for (const [key, val] of Object.entries(data.objectiveResults)) {
+            if (key in updated) updated[key] = val as boolean;
+          }
+          return updated;
+        });
+      }
       setAiFilled(true);
       setShowDetails(true);
       toast.success('Campos completados con IA');
@@ -181,9 +210,20 @@ export default function VisitaDetailPage() {
         ? new Date(nextVisitAt).toISOString()
         : undefined;
 
+      // Build full resultado including objective results
+      let fullResultado = resultado;
+      const objEntries = Object.entries(objResults).filter(([, v]) => v !== null);
+      if (objEntries.length > 0) {
+        const objSummary = objEntries.map(([tag, val]) => {
+          const opt = VISIT_OBJECTIVE_OPTIONS.find(o => o.key === tag);
+          return `${opt?.icon || ''} ${opt?.label || tag}: ${val ? 'Sí' : 'No'}`;
+        }).join(' | ');
+        fullResultado = `[${objSummary}] ${resultado}`;
+      }
+
       await completeVisit(
         visitId,
-        resultado,
+        fullResultado,
         observaciones || undefined,
         nextAction || undefined,
         nextVisitDate
@@ -479,7 +519,27 @@ export default function VisitaDetailPage() {
             {visit.objetivo && (
               <div className="pt-4 border-t border-gray-100 dark:border-dark-500">
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Objetivo</p>
-                <p className="text-gray-900 dark:text-white break-words">{visit.objetivo}</p>
+                {(() => {
+                  const tags = parseObjectiveTags(visit.objetivo);
+                  const freeText = visit.objetivo.replace(/\[[A-Z]+\]/g, '').trim();
+                  return (
+                    <div>
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-1.5">
+                          {tags.map(tag => {
+                            const opt = VISIT_OBJECTIVE_OPTIONS.find(o => o.key === tag);
+                            return opt ? (
+                              <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${opt.activeBg} ${opt.activeText} border ${opt.activeBorder}`}>
+                                {opt.icon} {opt.label}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                      {freeText && <p className="text-gray-900 dark:text-white break-words">{freeText}</p>}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -610,7 +670,13 @@ export default function VisitaDetailPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button
               variant="success"
-              onClick={() => setShowCompleteModal(true)}
+              onClick={() => {
+                const tags = parseObjectiveTags(visit?.objetivo || '');
+                const initial: Record<string, boolean | null> = {};
+                tags.forEach(t => { initial[t] = null; });
+                setObjResults(initial);
+                setShowCompleteModal(true);
+              }}
               icon={<CheckCircle className="h-4 w-4" />}
               className="w-full"
             >
@@ -661,15 +727,43 @@ export default function VisitaDetailPage() {
             required
           />
           <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-200 mb-1.5">Objetivo de la Visita</label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {VISIT_OBJECTIVE_OPTIONS.map(opt => {
+                const selected = editFormData.objetivo.includes(`[${opt.key}]`);
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => {
+                      const tag = `[${opt.key}]`;
+                      const current = editFormData.objetivo;
+                      const newVal = selected
+                        ? current.replace(tag, '').replace(/\s+/g, ' ').trim()
+                        : (current ? current + ' ' + tag : tag);
+                      setEditFormData({ ...editFormData, objetivo: newVal });
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                      selected
+                        ? `${opt.activeBg} ${opt.activeText} ${opt.activeBorder} shadow-sm`
+                        : 'bg-gray-50 dark:bg-dark-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-dark-500 hover:bg-gray-100 dark:hover:bg-dark-600'
+                    }`}
+                  >
+                    <span>{opt.icon}</span>
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-200">Objetivo de la Visita</label>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Detalles adicionales</span>
               <VoiceDictate size="sm" onTranscript={(t) => setEditFormData(prev => ({ ...prev, objetivo: (prev.objetivo ? prev.objetivo + ' ' : '') + t }))} />
             </div>
             <Textarea
               value={editFormData.objetivo}
               onChange={(e) => setEditFormData({ ...editFormData, objetivo: e.target.value })}
-              placeholder="¿Cuál es el propósito de esta visita?"
-              rows={3}
+              placeholder="Selecciona los objetivos arriba y/o escribe detalles adicionales..."
+              rows={2}
             />
           </div>
           <Input
@@ -796,6 +890,60 @@ export default function VisitaDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Objective Results - Yes/No per tag */}
+          {Object.keys(objResults).length > 0 && (
+            <div className="rounded-xl border border-gray-200 dark:border-dark-500 bg-gray-50 dark:bg-dark-700 p-4">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Resultado por objetivo</p>
+              <div className="space-y-3">
+                {Object.keys(objResults).map(tag => {
+                  const opt = VISIT_OBJECTIVE_OPTIONS.find(o => o.key === tag);
+                  if (!opt) return null;
+                  const val = objResults[tag];
+                  return (
+                    <div key={tag} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{opt.icon}</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                          {tag === 'VENTA' ? '¿Se vendió?' :
+                           tag === 'COBRO' ? '¿Se cobró?' :
+                           tag === 'SEGUIMIENTO' ? '¿Se dio seguimiento?' :
+                           tag === 'PROSPECCION' ? '¿Se prospectó?' :
+                           tag === 'ENTREGA' ? '¿Se entregó?' :
+                           tag === 'RECLAMO' ? '¿Se resolvió el reclamo?' :
+                           `¿Se completó ${opt.label}?`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setObjResults(prev => ({ ...prev, [tag]: true }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                            val === true
+                              ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/50 shadow-sm'
+                              : 'bg-white dark:bg-dark-600 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-dark-500 hover:border-emerald-300 dark:hover:border-emerald-500/40'
+                          }`}
+                        >
+                          ✓ Sí
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setObjResults(prev => ({ ...prev, [tag]: false }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                            val === false
+                              ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/50 shadow-sm'
+                              : 'bg-white dark:bg-dark-600 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-dark-500 hover:border-red-300 dark:hover:border-red-500/40'
+                          }`}
+                        >
+                          ✗ No
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Divider */}
           {aiFilled && (
