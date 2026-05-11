@@ -14,6 +14,8 @@ import {
   AlertTriangle,
   Calendar,
   Info,
+  Filter,
+  Search,
 } from 'lucide-react';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -24,6 +26,8 @@ interface Recommendation {
   customerId: string;
   customerName: string;
   customerAddress: string | null;
+  customerZona: string | null;
+  customerCiudad: string | null;
   date: string;
   dayOfWeek: number;
   dayName: string;
@@ -70,6 +74,10 @@ export default function RecomendCalendModal({
   const [generated, setGenerated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
+  const [instructions, setInstructions] = useState('');
+  const [filterCiudad, setFilterCiudad] = useState('');
+  const [filterZona, setFilterZona] = useState('');
+  const [maxPerDay, setMaxPerDay] = useState(8);
 
   const weekStart = startOfWeek(currentDate, { locale: es });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -83,6 +91,12 @@ export default function RecomendCalendModal({
         body: JSON.stringify({
           userId,
           weekStartDate: weekStart.toISOString(),
+          filters: {
+            ciudad: filterCiudad.trim() || undefined,
+            zona: filterZona.trim() || undefined,
+            instructions: instructions.trim() || undefined,
+            maxPerDay,
+          },
         }),
       });
 
@@ -106,14 +120,14 @@ export default function RecomendCalendModal({
       setGenerated(true);
 
       if (cells.length === 0) {
-        toast('No se encontraron recomendaciones para esta semana. Puede que no haya suficiente historial de visitas.', { icon: '📊' });
+        toast('No se encontraron recomendaciones para esta semana. Puede que no haya suficiente historial o no coincida con los filtros.', { icon: '📊' });
       }
     } catch (err: any) {
       toast.error(err.message || 'Error generando recomendaciones');
     } finally {
       setLoading(false);
     }
-  }, [userId, weekStart]);
+  }, [userId, weekStart, filterCiudad, filterZona, instructions, maxPerDay]);
 
   const updateCellStatus = (index: number, status: CellStatus, error?: string) => {
     setRecommendations(prev =>
@@ -179,6 +193,13 @@ export default function RecomendCalendModal({
     onClose();
   };
 
+  const handleRegenerate = () => {
+    setGenerated(false);
+    setRecommendations([]);
+    setPatterns([]);
+    setStats(null);
+  };
+
   const getRecommendationsForDay = (dateStr: string) =>
     recommendations.filter(r => r.date === dateStr);
 
@@ -220,22 +241,75 @@ export default function RecomendCalendModal({
 
         <div className="overflow-y-auto flex-1 p-4 sm:p-6">
           {!generated ? (
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              <div className="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl">
-                <TrendingUp className="h-16 w-16 text-emerald-500" />
+            <div className="flex flex-col items-center justify-center py-6 sm:py-10 space-y-6">
+              <div className="p-5 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl">
+                <TrendingUp className="h-12 w-12 text-emerald-500" />
               </div>
               <div className="text-center max-w-md">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Recomendaciones Inteligentes
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Analiza el historial de visitas de tus clientes para identificar patrones 
-                  (frecuencia, día preferido, hora habitual) y recomendar visitas para esta semana.
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                  Solo se consideran clientes que ya tienen al menos una visita registrada.
+                  Analiza el historial de visitas para recomendar a quién visitar esta semana.
                 </p>
               </div>
+
+              {/* Filters */}
+              <div className="w-full max-w-lg space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Filter className="h-4 w-4" />
+                  Filtros e instrucciones (opcional)
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Ciudad</label>
+                    <input
+                      type="text"
+                      value={filterCiudad}
+                      onChange={(e) => setFilterCiudad(e.target.value)}
+                      placeholder="Ej: Machala, Guayaquil..."
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Zona</label>
+                    <input
+                      type="text"
+                      value={filterZona}
+                      onChange={(e) => setFilterZona(e.target.value)}
+                      placeholder="Ej: Norte, Centro..."
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Máx. visitas por día</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={15}
+                    value={maxPerDay}
+                    onChange={(e) => setMaxPerDay(Math.max(1, Math.min(15, Number(e.target.value) || 8)))}
+                    className="w-24 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+                    Instrucciones adicionales
+                  </label>
+                  <textarea
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
+                    rows={2}
+                    placeholder="Ej: Solo clientes con calidad de pago buena, priorizar prospectos, solo etapa negociación..."
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                  />
+                </div>
+              </div>
+
               <button
                 onClick={generateRecommendations}
                 disabled={loading}
@@ -258,9 +332,9 @@ export default function RecomendCalendModal({
             <div className="space-y-4">
               {/* Stats bar */}
               {stats && (
-                <div className="flex flex-wrap items-center gap-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-lg font-medium">
-                    {stats.totalClientsAnalyzed} clientes analizados
+                    {stats.totalClientsAnalyzed} analizados
                   </span>
                   <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium">
                     {stats.totalRecommendations} recomendaciones
@@ -280,13 +354,64 @@ export default function RecomendCalendModal({
                       {rejectedCount} rechazadas
                     </span>
                   )}
+                </div>
+              )}
 
-                  <button
-                    onClick={() => setShowPatterns(!showPatterns)}
-                    className="ml-auto text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
-                  >
-                    {showPatterns ? 'Ocultar patrones' : 'Ver patrones detectados'}
-                  </button>
+              {/* Action buttons row */}
+              <div className="flex flex-wrap items-center gap-2">
+                {pendingCount > 0 && (
+                  <>
+                    <button
+                      onClick={acceptAll}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-all disabled:opacity-50 shadow-sm"
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+                      Aceptar Todas ({pendingCount})
+                    </button>
+                    <button
+                      onClick={rejectAll}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-all disabled:opacity-50 shadow-sm"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Rechazar Todas ({pendingCount})
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={handleRegenerate}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-dark-500 text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-50 dark:hover:bg-dark-600 transition-all ml-auto"
+                >
+                  <Filter className="h-4 w-4" />
+                  Cambiar filtros
+                </button>
+                <button
+                  onClick={() => setShowPatterns(!showPatterns)}
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
+                >
+                  {showPatterns ? 'Ocultar patrones' : 'Ver patrones'}
+                </button>
+              </div>
+
+              {/* Active filters display */}
+              {(filterCiudad || filterZona || instructions) && (
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  {filterCiudad && (
+                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md">
+                      Ciudad: {filterCiudad}
+                    </span>
+                  )}
+                  {filterZona && (
+                    <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-md">
+                      Zona: {filterZona}
+                    </span>
+                  )}
+                  {instructions && (
+                    <span className="px-2 py-1 bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-400 rounded-md truncate max-w-xs">
+                      {instructions}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -316,40 +441,14 @@ export default function RecomendCalendModal({
                 </div>
               )}
 
-              {/* Accept All / Reject All buttons */}
-              {pendingCount > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={acceptAll}
-                    disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-all disabled:opacity-50 shadow-sm"
-                  >
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCheck className="h-4 w-4" />
-                    )}
-                    Aceptar Todas ({pendingCount})
-                  </button>
-                  <button
-                    onClick={rejectAll}
-                    disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-all disabled:opacity-50 shadow-sm"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Rechazar Todas ({pendingCount})
-                  </button>
-                </div>
-              )}
-
               {/* Weekly grid */}
               {recommendations.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                   {weekDays.map((day) => {
                     const dateStr = format(day, 'yyyy-MM-dd');
                     const dayRecs = getRecommendationsForDay(dateStr);
                     const dow = day.getDay();
-                    if (dow === 0) return null;
+                    if (dow === 0 || dow === 6) return null;
 
                     return (
                       <div
@@ -358,7 +457,7 @@ export default function RecomendCalendModal({
                       >
                         <div className="bg-gray-50 dark:bg-dark-600 px-3 py-2 border-b border-gray-200 dark:border-dark-500">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 capitalize">
                               {format(day, 'EEEE', { locale: es })}
                             </span>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -367,13 +466,13 @@ export default function RecomendCalendModal({
                           </div>
                           {dayRecs.length > 0 && (
                             <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                              {dayRecs.length} visita{dayRecs.length > 1 ? 's' : ''} recomendada{dayRecs.length > 1 ? 's' : ''}
+                              {dayRecs.length} visita{dayRecs.length > 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
-                        <div className="p-2 space-y-2 min-h-[80px]">
+                        <div className="p-2 space-y-2 min-h-[60px]">
                           {dayRecs.length === 0 ? (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">
+                            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">
                               Sin recomendaciones
                             </p>
                           ) : (
@@ -398,7 +497,7 @@ export default function RecomendCalendModal({
                 <div className="flex flex-col items-center py-12 text-gray-400 dark:text-gray-500">
                   <Calendar className="h-12 w-12 mb-3" />
                   <p className="text-sm">No hay recomendaciones para esta semana</p>
-                  <p className="text-xs mt-1">Asegúrate de tener historial de visitas con tus clientes</p>
+                  <p className="text-xs mt-1">Intenta con otros filtros o revisa tu historial de visitas</p>
                 </div>
               )}
             </div>
@@ -427,32 +526,32 @@ function InfoTooltip({ reasons }: { reasons: string[] }) {
   }, [open]);
 
   return (
-    <div ref={ref} className="relative inline-flex">
+    <div ref={ref} className="relative inline-flex flex-shrink-0">
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="p-0.5 rounded-full text-indigo-400 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+        className="p-2 -m-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 active:bg-indigo-200 transition-colors"
         aria-label="¿Por qué esta recomendación?"
       >
-        <Info className="h-3.5 w-3.5" />
+        <Info className="h-5 w-5" />
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 z-50 w-64 sm:w-72 animate-in fade-in-0 zoom-in-95">
-          <div className="bg-gray-900 dark:bg-dark-800 text-white text-xs rounded-xl px-3 py-3 shadow-xl border border-gray-700 dark:border-dark-500">
-            <p className="font-semibold text-emerald-400 mb-2 flex items-center gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5" />
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-72 sm:w-80 animate-in fade-in-0 zoom-in-95">
+          <div className="bg-gray-900 dark:bg-dark-800 text-white text-xs rounded-xl px-4 py-3.5 shadow-xl border border-gray-700 dark:border-dark-500">
+            <p className="font-semibold text-emerald-400 mb-2.5 flex items-center gap-1.5 text-sm">
+              <TrendingUp className="h-4 w-4" />
               ¿Por qué aquí?
             </p>
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {reasons.map((r, i) => (
-                <li key={i} className="text-gray-200 leading-relaxed">
+                <li key={i} className="text-gray-200 leading-relaxed text-[13px]">
                   {r}
                 </li>
               ))}
             </ul>
           </div>
-          <div className="ml-4">
-            <div className="w-2.5 h-2.5 bg-gray-900 dark:bg-dark-800 rotate-45 -mt-1.5 border-r border-b border-gray-700 dark:border-dark-500" />
+          <div className="flex justify-center">
+            <div className="w-3 h-3 bg-gray-900 dark:bg-dark-800 rotate-45 -mt-1.5 border-r border-b border-gray-700 dark:border-dark-500" />
           </div>
         </div>
       )}
@@ -479,77 +578,83 @@ function RecommendationCard({
   };
 
   return (
-    <div
-      className={`rounded-lg border p-2.5 transition-all ${statusStyles[rec.status]}`}
-    >
-      <div className="flex items-start justify-between gap-1">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {rec.customerName}
-            </p>
-            <InfoTooltip reasons={rec.reasons?.length ? rec.reasons : [rec.reason]} />
-          </div>
-          <div className="flex items-center gap-1 mt-0.5">
-            <Clock className="h-3 w-3 text-gray-400 flex-shrink-0" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">{rec.time}</span>
-          </div>
-          {rec.customerAddress && (
-            <div className="flex items-center gap-1 mt-0.5">
-              <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
-              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {rec.customerAddress}
-              </span>
-            </div>
-          )}
-          <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-1 font-medium truncate">
-            {rec.reason}
-          </p>
-        </div>
+    <div className={`rounded-xl border p-3 transition-all ${statusStyles[rec.status]}`}>
+      {/* Row 1: Name + Info button */}
+      <div className="flex items-center gap-2 mb-1.5">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate flex-1">
+          {rec.customerName}
+        </p>
+        <InfoTooltip reasons={rec.reasons?.length ? rec.reasons : [rec.reason]} />
+      </div>
 
-        {rec.status === 'pending' && (
-          <div className="flex flex-col gap-1 flex-shrink-0">
-            <button
-              onClick={onAccept}
-              className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800/40 transition-colors"
-              title="Aceptar"
-            >
-              <Check className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={onReject}
-              className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
-              title="Rechazar"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
+      {/* Row 2: Reason (clearly visible) */}
+      <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg px-2.5 py-1.5 mb-2">
+        <p className="text-xs text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
+          {rec.reason}
+        </p>
+      </div>
 
-        {rec.status === 'creating' && (
-          <Loader2 className="h-4 w-4 text-indigo-500 animate-spin flex-shrink-0" />
-        )}
-
-        {rec.status === 'created' && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Check className="h-4 w-4 text-emerald-500" />
-            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Creada</span>
-          </div>
-        )}
-
-        {rec.status === 'rejected' && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <X className="h-4 w-4 text-red-400" />
-            <span className="text-[10px] text-red-500 font-medium">Rechazada</span>
-          </div>
-        )}
-
-        {rec.status === 'error' && (
-          <div className="flex items-center gap-1 flex-shrink-0" title={rec.error}>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </div>
+      {/* Row 3: Time + Address */}
+      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
+        <span className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {rec.time}
+        </span>
+        {rec.customerAddress && (
+          <span className="flex items-center gap-1 truncate">
+            <MapPin className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{rec.customerAddress}</span>
+          </span>
         )}
       </div>
+
+      {/* Row 4: Action buttons */}
+      {rec.status === 'pending' && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onAccept}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
+          >
+            <Check className="h-4 w-4" />
+            Aceptar
+          </button>
+          <button
+            onClick={onReject}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-800/40 active:bg-red-300 transition-colors"
+          >
+            <X className="h-4 w-4" />
+            Rechazar
+          </button>
+        </div>
+      )}
+
+      {rec.status === 'creating' && (
+        <div className="flex items-center justify-center gap-2 py-2 text-xs text-indigo-500">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Creando...
+        </div>
+      )}
+
+      {rec.status === 'created' && (
+        <div className="flex items-center justify-center gap-1.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+          <Check className="h-4 w-4" />
+          Visita creada
+        </div>
+      )}
+
+      {rec.status === 'rejected' && (
+        <div className="flex items-center justify-center gap-1.5 py-1.5 text-xs text-red-500 font-medium">
+          <X className="h-4 w-4" />
+          Rechazada
+        </div>
+      )}
+
+      {rec.status === 'error' && (
+        <div className="flex items-center justify-center gap-1.5 py-1.5 text-xs text-red-500" title={rec.error}>
+          <AlertTriangle className="h-4 w-4" />
+          Error al crear
+        </div>
+      )}
     </div>
   );
 }

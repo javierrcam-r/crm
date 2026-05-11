@@ -34,6 +34,7 @@ interface CustomerPattern {
   customerName: string;
   customerAddress: string | null;
   customerZona: string | null;
+  customerCiudad: string | null;
   avgDaysBetweenVisits: number;
   preferredDayOfWeek: number;
   dayOfWeekConfidence: number;
@@ -52,6 +53,8 @@ interface Recommendation {
   customerId: string;
   customerName: string;
   customerAddress: string | null;
+  customerZona: string | null;
+  customerCiudad: string | null;
   date: string;
   dayOfWeek: number;
   dayName: string;
@@ -135,6 +138,7 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
     customerName: customer.nombre,
     customerAddress: customer.direccion || null,
     customerZona: customer.zona || null,
+    customerCiudad: customer.ciudad || null,
     avgDaysBetweenVisits: Math.round(avgInterval),
     preferredDayOfWeek: preferredDay,
     dayOfWeekConfidence: dayConfidence,
@@ -155,7 +159,9 @@ const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes
 function generateRecommendations(
   patterns: CustomerPattern[],
   weekStart: Date,
-  existingVisits: VisitRecord[]
+  existingVisits: VisitRecord[],
+  blockedDates: Set<string>,
+  maxPerDay: number = 8
 ): Recommendation[] {
   const recommendations: Recommendation[] = [];
 
@@ -187,7 +193,7 @@ function generateRecommendations(
     return bUrgency - aUrgency;
   });
 
-  const MAX_PER_DAY = 8;
+  const MAX_PER_DAY = maxPerDay;
 
   for (const pattern of sortedPatterns) {
     const urgencyRatio = pattern.daysSinceLastVisit / (pattern.avgDaysBetweenVisits || 14);
@@ -198,9 +204,10 @@ function generateRecommendations(
 
     for (const day of weekDays) {
       const dow = day.getDay();
-      if (dow === 0) continue;
+      if (dow === 0 || dow === 6) continue;
 
       const dateKey = day.toISOString().slice(0, 10);
+      if (blockedDates.has(dateKey)) continue;
       const slotCount = slotsPerDay.get(dateKey) || 0;
       if (slotCount >= MAX_PER_DAY) continue;
 
@@ -301,6 +308,8 @@ function generateRecommendations(
       customerId: pattern.customerId,
       customerName: pattern.customerName,
       customerAddress: pattern.customerAddress,
+      customerZona: pattern.customerZona,
+      customerCiudad: pattern.customerCiudad,
       date: dateKey,
       dayOfWeek: dow,
       dayName: dayNames[dow],
@@ -319,12 +328,21 @@ function generateRecommendations(
   });
 }
 
+function normalizeStr(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { userId, weekStartDate } = await req.json();
+    const { userId, weekStartDate, filters } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'userId requerido' }, { status: 400 });
     }
+
+    const filterCiudad = filters?.ciudad ? normalizeStr(filters.ciudad) : '';
+    const filterZona = filters?.zona ? normalizeStr(filters.zona) : '';
+    const filterInstructions = filters?.instructions?.trim() || '';
+    const filterMaxPerDay = filters?.maxPerDay || 8;
 
     const weekStart = weekStartDate ? new Date(weekStartDate) : (() => {
       const now = new Date();
@@ -360,22 +378,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Error consultando visitas' }, { status: 500 });
     }
 
-    const { data: weekVisits, error: weekError } = await supabase
-      .from('visits')
-      .select(`
-        id, customer_id, scheduled_at, status,
-        customer:customers(id, nombre, direccion, zona, ciudad)
-      `)
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .gte('scheduled_at', weekStart.toISOString())
-      .lte('scheduled_at', weekEnd.toISOString())
-      .in('status', ['programada']);
+    const [weekVisitsResult, blockedDaysResult] = await Promise.all([
+      supabase
+        .from('visits')
+        .select(`
+          id, customer_id, scheduled_at, status,
+          customer:customers(id, nombre, direccion, zona, ciudad)
+        `)
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .gte('scheduled_at', weekStart.toISOString())
+        .lte('scheduled_at', weekEnd.toISOString())
+        .in('status', ['programada']),
+      supabase
+        .from('calendar_blocked_days')
+        .select('fecha')
+        .gte('fecha', weekStart.toISOString().slice(0, 10))
+        .lte('fecha', weekEnd.toISOString().slice(0, 10)),
+    ]);
 
+    const { data: weekVisits, error: weekError } = weekVisitsResult;
     if (weekError) {
       console.error('Error fetching week visits:', weekError);
       return NextResponse.json({ error: 'Error consultando visitas de la semana' }, { status: 500 });
     }
+
+    const blockedDates = new Set<string>(
+      (blockedDaysResult.data || []).map((d: { fecha: string }) => d.fecha)
+    );
 
     const visitsByCustomer = new Map<string, VisitRecord[]>();
     for (const v of (historicalVisits as VisitRecordRaw[]).map(normalizeVisit)) {
@@ -386,11 +416,36 @@ export async function POST(req: NextRequest) {
       visitsByCustomer.get(v.customer_id)!.push(v);
     }
 
-    const patterns: CustomerPattern[] = [];
+    let patterns: CustomerPattern[] = [];
     for (const [, customerVisits] of visitsByCustomer) {
       const pattern = analyzePatternsForCustomer(customerVisits);
       if (pattern) {
         patterns.push(pattern);
+      }
+    }
+
+    if (filterCiudad) {
+      patterns = patterns.filter(p => {
+        const ciudad = p.customerCiudad ? normalizeStr(p.customerCiudad) : '';
+        return ciudad.includes(filterCiudad) || filterCiudad.includes(ciudad);
+      });
+    }
+    if (filterZona) {
+      patterns = patterns.filter(p => {
+        const zona = p.customerZona ? normalizeStr(p.customerZona) : '';
+        return zona.includes(filterZona) || filterZona.includes(zona);
+      });
+    }
+
+    if (filterInstructions) {
+      const instructionKeywords = normalizeStr(filterInstructions).split(/\s+/).filter(w => w.length > 2);
+      if (instructionKeywords.length > 0) {
+        patterns = patterns.filter(p => {
+          const searchable = normalizeStr(
+            `${p.customerName} ${p.customerAddress || ''} ${p.customerZona || ''} ${p.customerCiudad || ''}`
+          );
+          return instructionKeywords.some(kw => searchable.includes(kw));
+        });
       }
     }
 
@@ -399,7 +454,9 @@ export async function POST(req: NextRequest) {
     const recommendations = generateRecommendations(
       patterns,
       weekStart,
-      normalizedWeekVisits
+      normalizedWeekVisits,
+      blockedDates,
+      filterMaxPerDay
     );
 
     return NextResponse.json({
