@@ -2,9 +2,10 @@
 
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { X, Download, ZoomIn } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Shirt, X, Download, ZoomIn } from 'lucide-react';
 import type { Event, EventParticipant } from '@/lib/services/events';
 import samraWatermarkImage from '../../../samra_inv_persona.png';
+import samraSignatureImage from '../../../samra letras.png';
 
 interface InvitationPDFProps {
   participant: EventParticipant;
@@ -15,9 +16,10 @@ interface InvitationPDFProps {
 
 const DEFAULT_CAT = '#d4a843';
 const GOLD = '#d4a843';
-const W = 1100;
-const H = 460;
+const W = 1200;
+const H = 540;
 const SAMRA_WATERMARK_SRC = typeof samraWatermarkImage === 'string' ? samraWatermarkImage : samraWatermarkImage.src;
+const SAMRA_SIGNATURE_SRC = typeof samraSignatureImage === 'string' ? samraSignatureImage : samraSignatureImage.src;
 
 function fmtDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -63,11 +65,146 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
   participant: EventParticipant; event: Event; catColor: string;
   date: ReturnType<typeof fmtDate>; qrValue: string; logoSrc: string; isSamraEvent: boolean;
 }) {
+  if (isSamraEvent) {
+    return (
+      <div style={{ width: `${W}px`, height: `${H}px`, display: 'flex', flexDirection: 'row', fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", background: '#0e0e0e', overflow: 'hidden', borderRadius: '20px', border: `2px solid ${GOLD}55`, position: 'relative' }}>
+        <div style={{ position: 'absolute', inset: '12px', border: `1px solid ${GOLD}22`, borderRadius: '15px', pointerEvents: 'none', zIndex: 5 }} />
+
+        {/* ====== LEFT ====== */}
+        <div style={{ width: '840px', height: `${H}px`, position: 'relative', padding: '26px 36px 24px', overflow: 'hidden', boxSizing: 'border-box', background: 'linear-gradient(155deg, #181818 0%, #0e0e0e 50%, #141414 100%)' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={SAMRA_WATERMARK_SRC} alt="" style={{ position: 'absolute', right: '-2px', bottom: '0px', width: '440px', height: 'auto', objectFit: 'contain', objectPosition: 'center bottom', opacity: 0.94, filter: 'saturate(92%) contrast(108%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(14,14,14,0.97) 0%, rgba(14,14,14,0.78) 36%, rgba(14,14,14,0.08) 60%, rgba(14,14,14,0.0) 100%)' }} />
+
+          <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoSrc} alt="" style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '8px' }} />
+                <div style={{ fontSize: '9px', fontWeight: 700, color: '#fff', letterSpacing: '5px', lineHeight: 1.35 }}>DISFERO<br />PRESENTA</div>
+              </div>
+              <div style={{ color: `${GOLD}75`, fontSize: '10px', fontWeight: 700, letterSpacing: '3px' }}>N° {(p.id || '').substring(0, 8).toUpperCase()}</div>
+            </div>
+
+            {/* Invitation label */}
+            <div style={{ fontSize: '11px', fontWeight: 700, color: GOLD, letterSpacing: '9px', textAlign: 'center', maxWidth: '660px' }}>✦ INVITACIÓN ✦</div>
+
+            {/* Signature — centered */}
+            <div
+              aria-label="Gabriel Samra"
+              style={{
+                width: '660px',
+                height: '175px',
+                margin: '4px auto 0',
+                background: `linear-gradient(175deg, #fff 0%, #f2e2bf 40%, ${GOLD} 100%)`,
+                WebkitMaskImage: `url("${SAMRA_SIGNATURE_SRC}")`,
+                maskImage: `url("${SAMRA_SIGNATURE_SRC}")`,
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center center',
+                maskPosition: 'center center',
+                WebkitMaskSize: 'contain',
+                maskSize: 'contain',
+                filter: `drop-shadow(0 0 18px ${GOLD}35)`,
+              }}
+            />
+            <div style={{ color: `${GOLD}68`, fontSize: '15px', letterSpacing: '20px', textAlign: 'center', marginTop: '-22px', maxWidth: '660px' }}>EXPERIENCE</div>
+
+            {/* Info row */}
+            <div style={{ marginTop: '14px', display: 'flex', gap: '0', alignItems: 'stretch', maxWidth: '660px' }}>
+              <div style={{ flex: '0 0 90px', textAlign: 'center', padding: '0 8px' }}>
+                <div style={{ width: '38px', height: '38px', border: `1.5px solid ${GOLD}60`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 7px', color: GOLD }}><CalendarDays size={19} strokeWidth={1.7} /></div>
+                <div style={{ fontSize: '8px', color: `${GOLD}85`, fontWeight: 800, letterSpacing: '3px', marginBottom: '4px' }}>FECHA</div>
+                <div style={{ fontSize: '30px', color: '#fff', fontWeight: 900, lineHeight: 0.88 }}>{date.day}</div>
+                <div style={{ fontSize: '11px', color: '#fff', fontWeight: 800, letterSpacing: '3px', marginTop: '5px' }}>{date.shortMonth}</div>
+                <div style={{ fontSize: '10px', color: `${GOLD}75`, fontWeight: 700, letterSpacing: '3px', marginTop: '3px' }}>{date.year}</div>
+              </div>
+
+              <div style={{ width: '1px', background: `linear-gradient(transparent, ${GOLD}40, transparent)`, alignSelf: 'stretch', margin: '8px 0' }} />
+
+              <div style={{ flex: '0 0 100px', textAlign: 'center', padding: '0 12px' }}>
+                <div style={{ width: '38px', height: '38px', border: `1.5px solid ${GOLD}60`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 7px', color: GOLD }}><Clock size={19} strokeWidth={1.7} /></div>
+                <div style={{ fontSize: '8px', color: `${GOLD}85`, fontWeight: 800, letterSpacing: '3px', marginBottom: '8px' }}>HORA</div>
+                <div style={{ fontSize: '15px', color: '#fff', fontWeight: 800, lineHeight: 1.2 }}>{date.time}</div>
+              </div>
+
+              <div style={{ width: '1px', background: `linear-gradient(transparent, ${GOLD}40, transparent)`, alignSelf: 'stretch', margin: '8px 0' }} />
+
+              <div style={{ flex: '1 1 auto', textAlign: 'center', padding: '0 14px' }}>
+                <div style={{ width: '38px', height: '38px', border: `1.5px solid ${GOLD}60`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 7px', color: GOLD }}><MapPin size={19} strokeWidth={1.7} /></div>
+                <div style={{ fontSize: '8px', color: `${GOLD}85`, fontWeight: 800, letterSpacing: '3px', marginBottom: '8px' }}>LUGAR</div>
+                <div style={{ fontSize: '12px', color: '#fff', fontWeight: 700, lineHeight: 1.3, maxHeight: '46px', overflow: 'hidden' }}>{ev.ubicacion || 'Por confirmar'}</div>
+              </div>
+
+              <div style={{ width: '1px', background: `linear-gradient(transparent, ${GOLD}40, transparent)`, alignSelf: 'stretch', margin: '8px 0' }} />
+
+              <div style={{ flex: '0 0 110px', textAlign: 'center', padding: '0 8px' }}>
+                <div style={{ width: '38px', height: '38px', border: `1.5px solid ${GOLD}60`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 7px', color: GOLD }}><Shirt size={19} strokeWidth={1.7} /></div>
+                <div style={{ fontSize: '8px', color: `${GOLD}85`, fontWeight: 800, letterSpacing: '3px', marginBottom: '8px' }}>VESTIMENTA</div>
+                <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, lineHeight: 1.3, letterSpacing: '3px' }}>NEGRO<br />CASUAL</div>
+              </div>
+            </div>
+
+            {/* Bottom: participant + seat + category */}
+            <div style={{ height: '1px', background: `linear-gradient(90deg, transparent, ${GOLD}40, transparent)`, margin: '14px 30px 0', maxWidth: '600px' }} />
+            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '20px', paddingLeft: '30px', paddingRight: '20px', maxWidth: '660px' }}>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+                <div style={{ fontSize: '8px', color: `${GOLD}85`, fontWeight: 800, letterSpacing: '4px', marginBottom: '8px' }}>PARTICIPANTE</div>
+                <div style={{ color: '#fff', fontWeight: 900, fontSize: '15px', letterSpacing: '1px', lineHeight: 1.25, maxHeight: '40px', overflow: 'hidden' }}>{p.nombre}</div>
+                {p.empresa && <div style={{ color: '#aaa', fontWeight: 700, fontSize: '11px', letterSpacing: '0.8px', lineHeight: 1.2, marginTop: '3px', maxHeight: '28px', overflow: 'hidden' }}>{p.empresa}</div>}
+              </div>
+              {p.numero_asiento && (
+                <div style={{ width: '82px', border: `1.5px solid ${GOLD}55`, borderRadius: '11px', padding: '8px 6px', textAlign: 'center', background: `${GOLD}08` }}>
+                  <div style={{ fontSize: '7px', color: `${GOLD}85`, fontWeight: 900, letterSpacing: '2px', marginBottom: '5px' }}>ASIENTO</div>
+                  <div style={{ color: GOLD, fontSize: '20px', fontWeight: 900 }}>{p.numero_asiento}</div>
+                </div>
+              )}
+              {p.categoria && (
+                <div style={{ minWidth: '94px', background: catColor, borderRadius: '10px', padding: '12px 16px', textAlign: 'center', boxShadow: `0 8px 24px rgba(0,0,0,0.3)` }}>
+                  <span style={{ color: '#fff', fontSize: '11px', fontWeight: 900, letterSpacing: '2px', textTransform: 'uppercase' }}>{p.categoria}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ====== PERFORATION ====== */}
+        <div style={{ width: '2px', height: `${H}px`, position: 'relative', flexShrink: 0, zIndex: 4 }}>
+          <div style={{ position: 'absolute', top: '-16px', left: '-14px', width: '30px', height: '30px', borderRadius: '50%', background: GOLD, boxShadow: `0 0 14px ${GOLD}50` }} />
+          <div style={{ position: 'absolute', bottom: '-16px', left: '-14px', width: '30px', height: '30px', borderRadius: '50%', background: GOLD, boxShadow: `0 0 14px ${GOLD}50` }} />
+          {Array.from({ length: 22 }).map((_, i) => (
+            <div key={i} style={{ width: '3px', height: '8px', borderRadius: '3px', background: `${GOLD}70`, margin: '10px 0 0 -0.5px' }} />
+          ))}
+        </div>
+
+        {/* ====== RIGHT — QR ====== */}
+        <div style={{ width: '358px', height: `${H}px`, position: 'relative', padding: '40px 28px 30px', boxSizing: 'border-box', background: 'linear-gradient(160deg, #181818 0%, #0e0e0e 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ color: `${GOLD}88`, fontSize: '9px', fontWeight: 800, letterSpacing: '5px', marginBottom: '22px' }}>ESCANEA TU ENTRADA ✦</div>
+          <div style={{ width: '290px', height: '290px', borderRadius: '20px', background: '#fff', padding: '15px', boxSizing: 'border-box', border: `2px solid ${GOLD}40`, boxShadow: `0 0 0 8px rgba(212,168,67,0.035), 0 16px 40px rgba(0,0,0,0.45)` }}>
+            <div style={{ position: 'relative', width: '260px', height: '260px' }}>
+              <QRCodeSVG value={qrValue} size={260} level="H" bgColor="#ffffff" fgColor="#111111" style={{ width: '260px', height: '260px', display: 'block' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoSrc} alt="" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px', borderRadius: '8px', background: '#fff', padding: '5px', boxSizing: 'content-box' }} />
+            </div>
+          </div>
+          <div style={{ marginTop: '34px', color: `${GOLD}65`, fontSize: '8px', fontWeight: 800, letterSpacing: '5px' }}>— ADMIT ONE —</div>
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <div style={{ width: '34px', height: '1px', background: `${GOLD}30` }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoSrc} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain', borderRadius: '4px', opacity: 0.85 }} />
+            <div style={{ width: '34px', height: '1px', background: `${GOLD}30` }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: `${W}px`, height: `${H}px`, display: 'flex', flexDirection: 'row', fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", background: '#1a1a1a', overflow: 'hidden', borderRadius: '16px', border: `2px solid ${GOLD}40` }}>
 
       {/* ====== LEFT ====== */}
-      <div style={{ width: '680px', height: `${H}px`, position: 'relative', padding: '30px 36px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: 'linear-gradient(160deg, #232323 0%, #1a1a1a 50%, #181818 100%)', overflow: 'hidden' }}>
+      <div style={{ width: '782px', height: `${H}px`, position: 'relative', padding: '30px 36px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: 'linear-gradient(160deg, #232323 0%, #1a1a1a 50%, #181818 100%)', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '3px', background: `linear-gradient(90deg, ${GOLD}, ${GOLD}80, ${GOLD})` }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '3px', background: `linear-gradient(90deg, ${GOLD}, ${GOLD}80, ${GOLD})` }} />
         <div style={{ position: 'absolute', top: '10px', left: '10px', width: '28px', height: '28px', borderTop: `2px solid ${GOLD}50`, borderLeft: `2px solid ${GOLD}50` }} />
@@ -88,13 +225,13 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
                 height: '540px',
                 objectFit: 'cover',
                 objectPosition: 'center top',
-                opacity: 0.18,
-                filter: 'grayscale(10%) saturate(85%) contrast(110%)',
+                opacity: 0.28,
+                filter: 'grayscale(5%) saturate(95%) contrast(112%)',
                 mixBlendMode: 'screen',
                 pointerEvents: 'none',
               }}
             />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(26,26,26,0.96) 0%, rgba(26,26,26,0.82) 48%, rgba(26,26,26,0.35) 100%)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(26,26,26,0.94) 0%, rgba(26,26,26,0.72) 48%, rgba(26,26,26,0.18) 100%)' }} />
           </>
         )}
 
