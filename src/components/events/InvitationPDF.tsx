@@ -4,6 +4,7 @@ import { useRef, useCallback, useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Download, ZoomIn } from 'lucide-react';
 import type { Event, EventParticipant } from '@/lib/services/events';
+import samraWatermarkImage from '../../../samra_inv_persona.png';
 
 interface InvitationPDFProps {
   participant: EventParticipant;
@@ -16,6 +17,7 @@ const DEFAULT_CAT = '#d4a843';
 const GOLD = '#d4a843';
 const W = 1100;
 const H = 460;
+const SAMRA_WATERMARK_SRC = typeof samraWatermarkImage === 'string' ? samraWatermarkImage : samraWatermarkImage.src;
 
 function fmtDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -57,9 +59,9 @@ function useLogoDataUrl() {
    TICKET DESIGN (pure inline styles)
    QR uses SVG (not Canvas) for reliable PDF capture.
    ========================================================= */
-function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, logoSrc }: {
+function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, logoSrc, isSamraEvent }: {
   participant: EventParticipant; event: Event; catColor: string;
-  date: ReturnType<typeof fmtDate>; qrValue: string; logoSrc: string;
+  date: ReturnType<typeof fmtDate>; qrValue: string; logoSrc: string; isSamraEvent: boolean;
 }) {
   return (
     <div style={{ width: `${W}px`, height: `${H}px`, display: 'flex', flexDirection: 'row', fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", background: '#1a1a1a', overflow: 'hidden', borderRadius: '16px', border: `2px solid ${GOLD}40` }}>
@@ -72,6 +74,29 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
         <div style={{ position: 'absolute', top: '10px', right: '10px', width: '28px', height: '28px', borderTop: `2px solid ${GOLD}50`, borderRight: `2px solid ${GOLD}50` }} />
         <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '28px', height: '28px', borderBottom: `2px solid ${GOLD}50`, borderLeft: `2px solid ${GOLD}50` }} />
         <div style={{ position: 'absolute', top: '-80px', left: '50%', width: '400px', height: '250px', borderRadius: '50%', background: `radial-gradient(ellipse, ${GOLD}06, transparent 70%)`, transform: 'translateX(-50%)' }} />
+        {isSamraEvent && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={SAMRA_WATERMARK_SRC}
+              alt=""
+              style={{
+                position: 'absolute',
+                right: '-40px',
+                bottom: '-88px',
+                width: '390px',
+                height: '540px',
+                objectFit: 'cover',
+                objectPosition: 'center top',
+                opacity: 0.18,
+                filter: 'grayscale(10%) saturate(85%) contrast(110%)',
+                mixBlendMode: 'screen',
+                pointerEvents: 'none',
+              }}
+            />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(26,26,26,0.96) 0%, rgba(26,26,26,0.82) 48%, rgba(26,26,26,0.35) 100%)' }} />
+          </>
+        )}
 
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -105,6 +130,15 @@ function InvitationTicket({ participant: p, event: ev, catColor, date, qrValue, 
               <div style={{ fontSize: '8px', fontWeight: 700, color: `${GOLD}70`, letterSpacing: '2px', marginBottom: '3px' }}>LUGAR</div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginTop: '6px' }}>{ev.ubicacion}</div>
             </div>
+          )}
+          {isSamraEvent && (
+            <>
+              <div style={{ width: '1px', height: '50px', background: `${GOLD}20`, alignSelf: 'center' }} />
+              <div style={{ maxWidth: '120px' }}>
+                <div style={{ fontSize: '8px', fontWeight: 700, color: `${GOLD}70`, letterSpacing: '2px', marginBottom: '3px' }}>VESTIMENTA</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', lineHeight: 1.25, marginTop: '6px', letterSpacing: '0.4px' }}>NEGRO CASUAL</div>
+              </div>
+            </>
           )}
         </div>
 
@@ -196,6 +230,8 @@ export function InvitationDownloadButton({
   const eventDate = event.fecha_fin || event.fecha_inicio || new Date().toISOString();
   const date = fmtDate(eventDate);
   const qrValue = `${baseUrl || ''}/eventos/${event.id}/checkin/${participant.id}`;
+  const normalizedEventName = (event.nombre || '').toLowerCase();
+  const isSamraEvent = normalizedEventName.includes('gabriel') && normalizedEventName.includes('samra');
 
   useEffect(() => {
     if (showPreview) document.body.style.overflow = 'hidden';
@@ -309,7 +345,7 @@ export function InvitationDownloadButton({
     }
   }, [downloading, participant.nombre, captureViaForeignObject, captureViaHtmlToImage]);
 
-  const ticketProps = { participant, event, catColor, date, qrValue, logoSrc };
+  const ticketProps = { participant, event, catColor, date, qrValue, logoSrc, isSamraEvent };
 
   return (
     <>
