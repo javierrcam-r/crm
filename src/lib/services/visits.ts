@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
-import type { Visit, VisitInsert, VisitUpdate, VisitFilters } from '@/types/database';
+import type { Visit, VisitInsert, VisitUpdate, VisitFilters, VisitStatus } from '@/types/database';
 import { getCurrentUserId, isCurrentUserAdmin, isCurrentUserSupervisor } from '@/lib/auth/getCurrentUserId';
 
 export async function getVisits(filters?: VisitFilters) {
@@ -209,7 +209,36 @@ export async function updateVisit(id: string, visit: VisitUpdate) {
     .single();
 
   if (error) throw error;
+  if (visit.status) {
+    await updateRecommendationOutcome(id, visit.status);
+  }
   return data as Visit;
+}
+
+async function updateRecommendationOutcome(visitId: string, status: VisitStatus) {
+  const supabase = getSupabaseClient();
+  const recommendationStatus: Record<VisitStatus, string | null> = {
+    programada: null,
+    completada: 'completed',
+    cancelada: 'cancelled',
+    no_atendio: 'no_show',
+    reprogramada: 'reprogrammed',
+  };
+
+  const outcome = recommendationStatus[status];
+  if (!outcome) return;
+
+  const { error } = await supabase
+    .from('agenda_recommendations')
+    .update({
+      status: outcome,
+      outcome_at: new Date().toISOString(),
+    })
+    .eq('created_visit_id', visitId);
+
+  if (error) {
+    console.error('Error actualizando resultado de recomendación:', error);
+  }
 }
 
 export async function completeVisit(
@@ -239,6 +268,7 @@ export async function completeVisit(
     .single();
 
   if (error) throw error;
+  await updateRecommendationOutcome(id, 'completada');
 
   // Si hay siguiente visita programada, crearla automáticamente
   if (nextVisitAt && visit) {

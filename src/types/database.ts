@@ -15,6 +15,7 @@ export type ActivityStatus = 'planificacion' | 'haciendo' | 'realizado' | 'cance
 export type ActivityPriority = 'baja' | 'media' | 'alta' | 'urgente';
 export type ParticipantConfirmation = 'pendiente' | 'confirmado' | 'rechazado' | 'tentativo';
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'weekdays';
+export type AgendaRecommendationStatus = 'generated' | 'accepted' | 'rejected' | 'created' | 'completed' | 'cancelled' | 'no_show' | 'reprogrammed';
 
 // =====================================================
 // CUSTOMER
@@ -108,6 +109,50 @@ export interface VisitInsert {
 }
 
 export interface VisitUpdate extends Partial<VisitInsert> {}
+
+// =====================================================
+// AGENDA RECOMMENDATIONS
+// =====================================================
+export interface AgendaRecommendation {
+  id: string;
+  generation_id: string;
+  user_id: string;
+  customer_id: string;
+  created_visit_id: string | null;
+  recommended_date: string;
+  recommended_time: string;
+  status: AgendaRecommendationStatus;
+  score_total: number;
+  score_breakdown: Record<string, unknown>;
+  features: Record<string, unknown>;
+  reason: string | null;
+  reasons: string[];
+  feedback_reason: string | null;
+  responded_at: string | null;
+  outcome_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgendaRecommendationInsert {
+  generation_id?: string;
+  user_id: string;
+  customer_id: string;
+  created_visit_id?: string | null;
+  recommended_date: string;
+  recommended_time: string;
+  status?: AgendaRecommendationStatus;
+  score_total?: number;
+  score_breakdown?: Record<string, unknown>;
+  features?: Record<string, unknown>;
+  reason?: string | null;
+  reasons?: string[];
+  feedback_reason?: string | null;
+  responded_at?: string | null;
+  outcome_at?: string | null;
+}
+
+export interface AgendaRecommendationUpdate extends Partial<Omit<AgendaRecommendationInsert, 'user_id' | 'customer_id' | 'recommended_date' | 'recommended_time'>> {}
 
 // =====================================================
 // CALENDAR BLOCKED DAYS (días no laborables)

@@ -23,6 +23,7 @@ import { createVisit } from '@/lib/services/visits';
 import toast from 'react-hot-toast';
 
 interface Recommendation {
+  recommendationId?: string;
   customerId: string;
   customerName: string;
   customerAddress: string | null;
@@ -34,6 +35,9 @@ interface Recommendation {
   time: string;
   reason: string;
   reasons: string[];
+  scoreTotal?: number;
+  scoreBreakdown?: Record<string, number>;
+  features?: Record<string, unknown>;
 }
 
 interface PatternInfo {
@@ -70,7 +74,15 @@ export default function RecomendCalendModal({
   const [loading, setLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<RecommendationCell[]>([]);
   const [patterns, setPatterns] = useState<PatternInfo[]>([]);
-  const [stats, setStats] = useState<{ totalClientsAnalyzed: number; totalRecommendations: number } | null>(null);
+  const [stats, setStats] = useState<{
+    totalClientsAnalyzed: number;
+    totalRecommendations: number;
+    feedbackSamples: number;
+    feedbackAccepted: number;
+    feedbackRejected: number;
+    feedbackCompleted: number;
+    feedbackNegativeOutcome: number;
+  } | null>(null);
   const [generated, setGenerated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
@@ -116,6 +128,11 @@ export default function RecomendCalendModal({
       setStats({
         totalClientsAnalyzed: data.totalClientsAnalyzed || 0,
         totalRecommendations: data.totalRecommendations || 0,
+        feedbackSamples: data.feedbackStats?.samples || 0,
+        feedbackAccepted: data.feedbackStats?.accepted || 0,
+        feedbackRejected: data.feedbackStats?.rejected || 0,
+        feedbackCompleted: data.feedbackStats?.completed || 0,
+        feedbackNegativeOutcome: data.feedbackStats?.negativeOutcome || 0,
       });
       setGenerated(true);
 
@@ -135,19 +152,43 @@ export default function RecomendCalendModal({
     );
   };
 
+  const sendRecommendationFeedback = async (
+    rec: RecommendationCell,
+    status: 'accepted' | 'rejected' | 'created',
+    visitId?: string
+  ) => {
+    if (!rec.recommendationId) return;
+
+    try {
+      await fetch('/api/recomend-calend/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recommendationId: rec.recommendationId,
+          status,
+          visitId,
+        }),
+      });
+    } catch (err) {
+      console.error('Error guardando feedback de recomendación:', err);
+    }
+  };
+
   const acceptRecommendation = async (index: number) => {
     const rec = recommendations[index];
     if (rec.status !== 'pending') return;
 
     updateCellStatus(index, 'creating');
     try {
+      await sendRecommendationFeedback(rec, 'accepted');
       const scheduledAt = `${rec.date}T${rec.time}:00`;
-      await createVisit({
+      const visit = await createVisit({
         customer_id: rec.customerId,
         scheduled_at: new Date(scheduledAt).toISOString(),
         status: 'programada',
         objetivo: `Visita recomendada - ${rec.reason}`,
       });
+      await sendRecommendationFeedback(rec, 'created', visit.id);
       updateCellStatus(index, 'created');
       toast.success(`Visita a ${rec.customerName} programada`);
     } catch (err: any) {
@@ -157,8 +198,10 @@ export default function RecomendCalendModal({
   };
 
   const rejectRecommendation = (index: number) => {
-    if (recommendations[index].status !== 'pending') return;
+    const rec = recommendations[index];
+    if (rec.status !== 'pending') return;
     updateCellStatus(index, 'rejected');
+    sendRecommendationFeedback(rec, 'rejected');
   };
 
   const acceptAll = async () => {
@@ -176,9 +219,11 @@ export default function RecomendCalendModal({
   };
 
   const rejectAll = () => {
+    const pending = recommendations.filter(r => r.status === 'pending');
     setRecommendations(prev =>
       prev.map(r => (r.status === 'pending' ? { ...r, status: 'rejected' as CellStatus } : r))
     );
+    pending.forEach(rec => sendRecommendationFeedback(rec, 'rejected'));
     toast('Todas las recomendaciones rechazadas', { icon: '❌' });
   };
 
@@ -339,6 +384,11 @@ export default function RecomendCalendModal({
                   <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium">
                     {stats.totalRecommendations} recomendaciones
                   </span>
+                  {stats.feedbackSamples > 0 && (
+                    <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg font-medium">
+                      Aprende de {stats.feedbackSamples} feedbacks
+                    </span>
+                  )}
                   {pendingCount > 0 && (
                     <span className="px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-lg">
                       {pendingCount} pendientes
@@ -508,7 +558,15 @@ export default function RecomendCalendModal({
   );
 }
 
-function InfoTooltip({ reasons }: { reasons: string[] }) {
+function InfoTooltip({
+  reasons,
+  scoreTotal,
+  scoreBreakdown,
+}: {
+  reasons: string[];
+  scoreTotal?: number;
+  scoreBreakdown?: Record<string, number>;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -549,6 +607,26 @@ function InfoTooltip({ reasons }: { reasons: string[] }) {
                 </li>
               ))}
             </ul>
+            {scoreBreakdown && (
+              <div className="mt-3 pt-3 border-t border-gray-700 dark:border-dark-500">
+                {typeof scoreTotal === 'number' && (
+                  <p className="font-semibold text-indigo-300 mb-1">Score: {scoreTotal.toFixed(1)}</p>
+                )}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-gray-300">
+                  {Object.entries(scoreBreakdown)
+                    .filter(([, value]) => Math.abs(value) > 0)
+                    .slice(0, 10)
+                    .map(([key, value]) => (
+                      <span key={key} className="flex justify-between gap-2">
+                        <span className="truncate">{key}</span>
+                        <span className={value >= 0 ? 'text-emerald-300' : 'text-red-300'}>
+                          {value >= 0 ? '+' : ''}{value.toFixed(1)}
+                        </span>
+                      </span>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex justify-center">
             <div className="w-3 h-3 bg-gray-900 dark:bg-dark-800 rotate-45 -mt-1.5 border-r border-b border-gray-700 dark:border-dark-500" />
@@ -584,7 +662,11 @@ function RecommendationCard({
         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate flex-1">
           {rec.customerName}
         </p>
-        <InfoTooltip reasons={rec.reasons?.length ? rec.reasons : [rec.reason]} />
+        <InfoTooltip
+          reasons={rec.reasons?.length ? rec.reasons : [rec.reason]}
+          scoreTotal={rec.scoreTotal}
+          scoreBreakdown={rec.scoreBreakdown}
+        />
       </div>
 
       {/* Row 2: Reason (clearly visible) */}
