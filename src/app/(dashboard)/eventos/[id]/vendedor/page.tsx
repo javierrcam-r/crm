@@ -109,15 +109,32 @@ export default function VendorEventPage() {
     return ids.map(id => ({ id, name: getUserName(id) }));
   }, [participants, allUsers]);
 
+  const getParticipantSearchText = (p: EventParticipant) => [
+    p.nombre,
+    p.email,
+    p.telefono,
+    p.empresa,
+    p.categoria,
+    p.estado_inscripcion,
+    p.estado_inscripcion.replace('_', ' '),
+    p.estado_pago,
+    p.numero_asiento,
+    p.numero_asiento ? `asiento ${p.numero_asiento}` : 'sin asiento',
+    String(p.monto_pagado),
+    Number(p.monto_pagado).toLocaleString(),
+    String(p.cupos_adicionales),
+    p.cupos_adicionales > 0 ? `${p.cupos_adicionales} cupos adicionales` : 'sin cupos adicionales',
+    p.asistencia ? 'asistio presente asistencia confirmada' : 'pendiente sin asistencia',
+    p.certificado_emitido ? 'certificado emitido' : 'certificado pendiente',
+    p.registered_by ? getUserName(p.registered_by) : null,
+    p.notas,
+  ].filter(Boolean).join(' ').toLowerCase();
+
   const filteredParticipants = useMemo(() => {
     return participants.filter(p => {
       if (partSearch) {
         const q = partSearch.toLowerCase();
-        const match = (p.nombre || '').toLowerCase().includes(q)
-          || (p.email || '').toLowerCase().includes(q)
-          || (p.telefono || '').toLowerCase().includes(q)
-          || (p.empresa || '').toLowerCase().includes(q);
-        if (!match) return false;
+        if (!getParticipantSearchText(p).includes(q)) return false;
       }
       if (filterCategoria && p.categoria !== filterCategoria) return false;
       if (filterPago && p.estado_pago !== filterPago) return false;
@@ -407,7 +424,7 @@ export default function VendorEventPage() {
                 <div className="flex flex-col gap-3">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input type="text" value={partSearch} onChange={e => setPartSearch(e.target.value)} placeholder="Buscar por nombre, email, teléfono, empresa..."
+                    <input type="text" value={partSearch} onChange={e => setPartSearch(e.target.value)} placeholder="Buscar por nombre, email, asiento, pago, estado, registrado por..."
                       className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-dark-500 rounded-lg text-sm bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

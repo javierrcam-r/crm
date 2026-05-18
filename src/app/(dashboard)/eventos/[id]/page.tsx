@@ -7,6 +7,7 @@ import {
   ArrowLeft, Calendar, DollarSign, Users, Target, CheckCircle, Clock,
   Plus, Trash2, Edit, AlertTriangle, TrendingUp, BarChart3, X,
   FileText, Award, MapPin, Video, Save, ChevronRight, Eye, QrCode, Download, LayoutGrid,
+  Filter, Search,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 const VenueDesigner = dynamic(() => import('@/components/events/VenueDesigner'), { ssr: false });
@@ -72,6 +73,14 @@ export default function EventDetailPage() {
   const [expenseForm, setExpenseForm] = useState({ categoria: '', descripcion: '', proveedor: '', monto: '', fecha: '', estado: 'cotizado' as ExpenseStatus, comprobante: '', num_comprobante: '', num_factura: '', notas: '' });
   const [activityForm, setActivityForm] = useState({ nombre: '', descripcion: '', tipo: 'operativa' as EventActivityType, responsable_id: '', fecha_inicio: '', fecha_fin: '', prioridad: 'media', estado: 'pendiente' as EventActivityStatus, porcentaje_avance: 0, es_hito: false, notas: '' });
   const [participantForm, setParticipantForm] = useState({ nombre: '', email: '', telefono: '', empresa: '', estado_inscripcion: 'pre_inscrito' as any, estado_pago: 'pendiente' as any, monto_pagado: '', categoria: '', notas: '', numero_asiento: '' });
+  const [participantSearch, setParticipantSearch] = useState('');
+  const [participantFilterCategoria, setParticipantFilterCategoria] = useState('');
+  const [participantFilterPago, setParticipantFilterPago] = useState('');
+  const [participantFilterInscripcion, setParticipantFilterInscripcion] = useState('');
+  const [participantFilterAsistencia, setParticipantFilterAsistencia] = useState('');
+  const [participantFilterCertificado, setParticipantFilterCertificado] = useState('');
+  const [participantFilterRegistradoPor, setParticipantFilterRegistradoPor] = useState('');
+  const [showParticipantFilters, setShowParticipantFilters] = useState(false);
 
   const [redirecting, setRedirecting] = useState(false);
 
@@ -109,6 +118,64 @@ export default function EventDetailPage() {
     if (!catName || !event) return null;
     const cat = (event.categorias_participantes || []).find((c: any) => c.nombre === catName);
     return cat?.color || null;
+  };
+
+  const getParticipantSearchText = (p: EventParticipant) => [
+    p.nombre,
+    p.email,
+    p.telefono,
+    p.empresa,
+    p.categoria,
+    p.estado_inscripcion,
+    p.estado_inscripcion.replace('_', ' '),
+    p.estado_pago,
+    p.numero_asiento,
+    p.numero_asiento ? `asiento ${p.numero_asiento}` : 'sin asiento',
+    String(p.monto_pagado),
+    Number(p.monto_pagado).toLocaleString(),
+    String(p.cupos_adicionales),
+    p.cupos_adicionales > 0 ? `${p.cupos_adicionales} cupos adicionales` : 'sin cupos adicionales',
+    p.asistencia ? 'asistio presente asistencia confirmada' : 'pendiente sin asistencia',
+    p.certificado_emitido ? 'certificado emitido' : 'certificado pendiente',
+    p.registered_by ? getUserName(p.registered_by) : null,
+    p.notas,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const uniqueParticipantCategories = [...new Set(participants.map(p => p.categoria).filter(Boolean))] as string[];
+  const uniqueParticipantRegistrants = ([...new Set(participants.map(p => p.registered_by).filter(Boolean))] as string[])
+    .map(id => ({ id, name: getUserName(id) }));
+
+  const filteredParticipants = participants.filter(p => {
+    if (participantSearch.trim() && !getParticipantSearchText(p).includes(participantSearch.trim().toLowerCase())) return false;
+    if (participantFilterCategoria && p.categoria !== participantFilterCategoria) return false;
+    if (participantFilterPago && p.estado_pago !== participantFilterPago) return false;
+    if (participantFilterInscripcion && p.estado_inscripcion !== participantFilterInscripcion) return false;
+    if (participantFilterAsistencia === 'asistieron' && !p.asistencia) return false;
+    if (participantFilterAsistencia === 'pendientes' && p.asistencia) return false;
+    if (participantFilterCertificado === 'emitidos' && !p.certificado_emitido) return false;
+    if (participantFilterCertificado === 'pendientes' && p.certificado_emitido) return false;
+    if (participantFilterRegistradoPor && p.registered_by !== participantFilterRegistradoPor) return false;
+    return true;
+  });
+
+  const hasParticipantFilters = !!(
+    participantSearch ||
+    participantFilterCategoria ||
+    participantFilterPago ||
+    participantFilterInscripcion ||
+    participantFilterAsistencia ||
+    participantFilterCertificado ||
+    participantFilterRegistradoPor
+  );
+
+  const clearParticipantFilters = () => {
+    setParticipantSearch('');
+    setParticipantFilterCategoria('');
+    setParticipantFilterPago('');
+    setParticipantFilterInscripcion('');
+    setParticipantFilterAsistencia('');
+    setParticipantFilterCertificado('');
+    setParticipantFilterRegistradoPor('');
   };
 
   const handleStatusChange = async (newStatus: EventStatus) => {
@@ -630,16 +697,83 @@ export default function EventDetailPage() {
       {/* ============= TAB: PARTICIPANTES ============= */}
       {tab === 'participantes' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-gray-900">Participantes ({participants.length})</h3>
-            <div className="flex gap-2">
-              {participants.length > 0 && (
-                <Button size="sm" variant="secondary" onClick={() => exportParticipantsToExcel({ event, participants, getUserName })}>
-                  <Download className="h-3.5 w-3.5 mr-1" />Excel
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900">
+                Participantes ({hasParticipantFilters ? `${filteredParticipants.length}/${participants.length}` : participants.length})
+              </h3>
+              <div className="flex gap-2">
+                <Button size="sm" variant={showParticipantFilters ? 'primary' : 'secondary'} onClick={() => setShowParticipantFilters(!showParticipantFilters)}>
+                  <Filter className="h-3.5 w-3.5 mr-1" />Filtros
+                  {hasParticipantFilters && <span className="ml-1 w-4 h-4 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center">!</span>}
                 </Button>
-              )}
-              <Button size="sm" onClick={() => openParticipantModal()}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
+                {participants.length > 0 && (
+                  <Button size="sm" variant="secondary" onClick={() => exportParticipantsToExcel({ event, participants: filteredParticipants, getUserName })}>
+                    <Download className="h-3.5 w-3.5 mr-1" />Excel
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => openParticipantModal()}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
+              </div>
             </div>
+
+            {showParticipantFilters && (
+              <Card className="!p-3">
+                <div className="flex flex-col gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                      type="text"
+                      value={participantSearch}
+                      onChange={e => setParticipantSearch(e.target.value)}
+                      placeholder="Buscar por nombre, email, asiento, pago, estado, registrado por..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <select value={participantFilterCategoria} onChange={e => setParticipantFilterCategoria(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700">
+                      <option value="">Categoría: Todas</option>
+                      {uniqueParticipantCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <select value={participantFilterPago} onChange={e => setParticipantFilterPago(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700">
+                      <option value="">Pago: Todos</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="parcial">Parcial</option>
+                      <option value="pagado">Pagado</option>
+                      <option value="reembolsado">Reembolsado</option>
+                      <option value="exento">Exento</option>
+                    </select>
+                    <select value={participantFilterInscripcion} onChange={e => setParticipantFilterInscripcion(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700">
+                      <option value="">Inscripción: Todas</option>
+                      <option value="pre_inscrito">Pre-inscrito</option>
+                      <option value="confirmado">Confirmado</option>
+                      <option value="lista_espera">Lista espera</option>
+                      <option value="cancelado">Cancelado</option>
+                    </select>
+                    <select value={participantFilterAsistencia} onChange={e => setParticipantFilterAsistencia(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700">
+                      <option value="">Asistencia: Todos</option>
+                      <option value="asistieron">Asistieron</option>
+                      <option value="pendientes">Pendientes</option>
+                    </select>
+                    <select value={participantFilterCertificado} onChange={e => setParticipantFilterCertificado(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700">
+                      <option value="">Certificado: Todos</option>
+                      <option value="emitidos">Emitidos</option>
+                      <option value="pendientes">Pendientes</option>
+                    </select>
+                    <select value={participantFilterRegistradoPor} onChange={e => setParticipantFilterRegistradoPor(e.target.value)} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700 sm:col-span-2">
+                      <option value="">Registrado por: Todos</option>
+                      {uniqueParticipantRegistrants.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  </div>
+                  {hasParticipantFilters && (
+                    <div className="flex justify-end">
+                      <button onClick={clearParticipantFilters} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                        <X className="h-3 w-3" /> Limpiar filtros
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
 
           {/* Resumen por categorías */}
@@ -707,9 +841,9 @@ export default function EventDetailPage() {
 
           {/* Mobile card layout */}
           <div className="md:hidden space-y-2">
-            {participants.length === 0 ? (
-              <Card><p className="text-center py-4 text-gray-500 text-sm">Sin participantes</p></Card>
-            ) : participants.map(p => (
+            {filteredParticipants.length === 0 ? (
+              <Card><p className="text-center py-4 text-gray-500 text-sm">{hasParticipantFilters ? 'Sin resultados para estos filtros' : 'Sin participantes'}</p></Card>
+            ) : filteredParticipants.map(p => (
               <Card key={p.id} padding="none">
                 <div className="p-3">
                   <div className="flex items-start justify-between gap-2">
@@ -755,7 +889,7 @@ export default function EventDetailPage() {
               <table className="w-full text-sm">
                 <thead><tr className="bg-gray-50 border-b"><th className="text-center px-4 py-3 w-16">Asiento</th><th className="text-left px-4 py-3">Nombre</th><th className="text-left px-4 py-3">Contacto</th><th className="text-center px-4 py-3">Inscripción</th><th className="text-center px-4 py-3">Pago</th><th className="text-center px-4 py-3">Asist.</th><th className="text-center px-4 py-3">Cert.</th><th className="text-left px-4 py-3 hidden lg:table-cell">Registrado por</th><th className="text-center px-4 py-3 w-20">Acción</th></tr></thead>
                 <tbody className="divide-y">
-                  {participants.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-500">Sin participantes</td></tr> : participants.map(p => (
+                  {filteredParticipants.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-500">{hasParticipantFilters ? 'Sin resultados para estos filtros' : 'Sin participantes'}</td></tr> : filteredParticipants.map(p => (
                     <tr key={p.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-center">
                         <button onClick={() => setSeatPickerParticipant(p)} className="group" title="Cambiar asiento">

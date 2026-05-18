@@ -62,6 +62,27 @@ export default function EventAssistancePage() {
 
   const getUserName = (id: string) => users.find(u => u.id === id)?.nombre_completo || 'Desconocido';
 
+  const getParticipantSearchText = (p: EventParticipant) => [
+    p.nombre,
+    p.email,
+    p.telefono,
+    p.empresa,
+    p.categoria,
+    p.estado_inscripcion,
+    p.estado_inscripcion.replace('_', ' '),
+    p.estado_pago,
+    p.numero_asiento,
+    p.numero_asiento ? `asiento ${p.numero_asiento}` : 'sin asiento',
+    String(p.monto_pagado),
+    Number(p.monto_pagado).toLocaleString(),
+    String(p.cupos_adicionales),
+    p.cupos_adicionales > 0 ? `${p.cupos_adicionales} cupos adicionales` : 'sin cupos adicionales',
+    p.asistencia ? 'asistio presente asistencia confirmada' : 'pendiente sin asistencia',
+    p.certificado_emitido ? 'certificado emitido' : 'certificado pendiente',
+    p.registered_by ? getUserName(p.registered_by) : null,
+    p.notas,
+  ].filter(Boolean).join(' ');
+
   const getCatColor = (catName: string | null) => {
     if (!catName || !event) return null;
     const cat = (event.categorias_participantes || []).find((c: any) => c.nombre === catName);
@@ -167,13 +188,7 @@ export default function EventAssistancePage() {
 
   const filteredParticipants = (() => {
     if (!searchTerm.trim()) return participants;
-    return participants.filter(p => {
-      return fuzzySearch(searchTerm, p.nombre) > 0 ||
-        fuzzySearch(searchTerm, p.email || '') > 0 ||
-        fuzzySearch(searchTerm, p.telefono || '') > 0 ||
-        fuzzySearch(searchTerm, p.empresa || '') > 0 ||
-        fuzzySearch(searchTerm, p.categoria || '') > 0;
-    });
+    return participants.filter(p => fuzzySearch(searchTerm, getParticipantSearchText(p)) > 0);
   })();
 
   if (loading || !event) return (
@@ -329,7 +344,7 @@ export default function EventAssistancePage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, email, teléfono..."
+                placeholder="Buscar por nombre, email, asiento, pago, estado, registrado por..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
