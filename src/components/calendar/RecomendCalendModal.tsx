@@ -15,7 +15,7 @@ import {
   Calendar,
   Info,
   Filter,
-  Search,
+  Plus,
 } from 'lucide-react';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -86,17 +86,37 @@ export default function RecomendCalendModal({
   const [generated, setGenerated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
-  const [instructions, setInstructions] = useState('');
-  const [filterCiudad, setFilterCiudad] = useState('');
-  const [filterZona, setFilterZona] = useState('');
+  const [instructionInput, setInstructionInput] = useState('');
+  const [instructionTags, setInstructionTags] = useState<string[]>([]);
   const [maxPerDay, setMaxPerDay] = useState(8);
+  const instructionExamples = [
+    'El martes me voy a Azogues',
+    'Los viernes a las 12 voy al banco',
+    'El jueves priorizar zona norte',
+  ];
 
   const weekStart = startOfWeek(currentDate, { locale: es });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
+  const addInstructionTag = useCallback((value: string) => {
+    const next = value.trim().replace(/\s+/g, ' ');
+    if (!next) return;
+
+    setInstructionTags(prev => {
+      const exists = prev.some(tag => tag.toLowerCase() === next.toLowerCase());
+      return exists ? prev : [...prev, next];
+    });
+    setInstructionInput('');
+  }, []);
+
+  const removeInstructionTag = (tagToRemove: string) => {
+    setInstructionTags(prev => prev.filter(tag => tag !== tagToRemove));
+  };
+
   const generateRecommendations = useCallback(async () => {
     setLoading(true);
     try {
+      const instructions = instructionTags.join('\n');
       const res = await fetch('/api/recomend-calend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,9 +124,7 @@ export default function RecomendCalendModal({
           userId,
           weekStartDate: weekStart.toISOString(),
           filters: {
-            ciudad: filterCiudad.trim() || undefined,
-            zona: filterZona.trim() || undefined,
-            instructions: instructions.trim() || undefined,
+            instructions: instructions || undefined,
             maxPerDay,
           },
         }),
@@ -137,14 +155,14 @@ export default function RecomendCalendModal({
       setGenerated(true);
 
       if (cells.length === 0) {
-        toast('No se encontraron recomendaciones para esta semana. Puede que no haya suficiente historial o no coincida con los filtros.', { icon: '📊' });
+        toast('No se encontraron recomendaciones para esta semana. Puede que no haya suficiente historial disponible.', { icon: '📊' });
       }
     } catch (err: any) {
       toast.error(err.message || 'Error generando recomendaciones');
     } finally {
       setLoading(false);
     }
-  }, [userId, weekStart, filterCiudad, filterZona, instructions, maxPerDay]);
+  }, [userId, weekStart, instructionTags, maxPerDay]);
 
   const updateCellStatus = (index: number, status: CellStatus, error?: string) => {
     setRecommendations(prev =>
@@ -303,30 +321,7 @@ export default function RecomendCalendModal({
               <div className="w-full max-w-lg space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   <Filter className="h-4 w-4" />
-                  Filtros e instrucciones (opcional)
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Ciudad</label>
-                    <input
-                      type="text"
-                      value={filterCiudad}
-                      onChange={(e) => setFilterCiudad(e.target.value)}
-                      placeholder="Ej: Machala, Guayaquil..."
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Zona</label>
-                    <input
-                      type="text"
-                      value={filterZona}
-                      onChange={(e) => setFilterZona(e.target.value)}
-                      placeholder="Ej: Norte, Centro..."
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                  </div>
+                  Instrucciones para esta semana
                 </div>
 
                 <div>
@@ -345,13 +340,56 @@ export default function RecomendCalendModal({
                   <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
                     Instrucciones adicionales
                   </label>
-                  <textarea
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                    rows={2}
-                    placeholder="Ej: Solo clientes con calidad de pago buena, priorizar prospectos, solo etapa negociación..."
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={instructionInput}
+                      onChange={(e) => setInstructionInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addInstructionTag(instructionInput);
+                        }
+                      }}
+                      placeholder="Ej: El martes me voy a Azogues"
+                      className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addInstructionTag(instructionInput)}
+                      className="inline-flex items-center justify-center w-10 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
+                      aria-label="Agregar instrucción"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                    Agrega una instrucción por tag. Entiende ciudades, sectores y bloqueos de hora.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {instructionTags.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => removeInstructionTag(tag)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-dark-600 text-gray-700 dark:text-gray-300 text-[11px] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-300 transition-colors"
+                        title="Quitar instrucción"
+                      >
+                        {tag}
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                    {instructionExamples.map(example => (
+                      <button
+                        key={example}
+                        type="button"
+                        onClick={() => addInstructionTag(example)}
+                        className="px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-[11px] hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                      >
+                        + {example}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -434,7 +472,7 @@ export default function RecomendCalendModal({
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-dark-500 text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-50 dark:hover:bg-dark-600 transition-all ml-auto"
                 >
                   <Filter className="h-4 w-4" />
-                  Cambiar filtros
+                  Cambiar instrucciones
                 </button>
                 <button
                   onClick={() => setShowPatterns(!showPatterns)}
@@ -445,23 +483,16 @@ export default function RecomendCalendModal({
               </div>
 
               {/* Active filters display */}
-              {(filterCiudad || filterZona || instructions) && (
+              {instructionTags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 text-xs">
-                  {filterCiudad && (
-                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md">
-                      Ciudad: {filterCiudad}
+                  {instructionTags.map(tag => (
+                    <span
+                      key={tag}
+                      className="px-2 py-1 bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-400 rounded-md truncate max-w-xs"
+                    >
+                      {tag}
                     </span>
-                  )}
-                  {filterZona && (
-                    <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-md">
-                      Zona: {filterZona}
-                    </span>
-                  )}
-                  {instructions && (
-                    <span className="px-2 py-1 bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-400 rounded-md truncate max-w-xs">
-                      {instructions}
-                    </span>
-                  )}
+                  ))}
                 </div>
               )}
 
@@ -547,7 +578,7 @@ export default function RecomendCalendModal({
                 <div className="flex flex-col items-center py-12 text-gray-400 dark:text-gray-500">
                   <Calendar className="h-12 w-12 mb-3" />
                   <p className="text-sm">No hay recomendaciones para esta semana</p>
-                  <p className="text-xs mt-1">Intenta con otros filtros o revisa tu historial de visitas</p>
+                  <p className="text-xs mt-1">Revisa el historial de visitas o ajusta las instrucciones</p>
                 </div>
               )}
             </div>

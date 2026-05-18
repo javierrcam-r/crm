@@ -135,10 +135,174 @@ interface BusinessStats {
   lastSaleMonth: string | null;
 }
 
+interface InstructionPreferences {
+  dayLocationPreferences: Map<number, string[]>;
+  blockedHours: Map<number, Set<number>>;
+  blockedWeekDays: Set<number>;
+  generalKeywords: string[];
+  notes: string[];
+}
+
 const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const BUSINESS_START_HOUR = 8;
+const BUSINESS_END_HOUR = 18;
+const DEFAULT_RECOMMENDATION_HOUR = 9;
+const dayAliases = [
+  ['domingo'],
+  ['lunes'],
+  ['martes'],
+  ['miercoles', 'miércoles'],
+  ['jueves'],
+  ['viernes'],
+  ['sabado', 'sábado'],
+];
 
 function formatDateES(d: Date): string {
   return `${d.getDate()} de ${monthNames[d.getMonth()]}`;
+}
+
+function isBusinessHour(hour: number): boolean {
+  return hour >= BUSINESS_START_HOUR && hour <= BUSINESS_END_HOUR;
+}
+
+function clampBusinessHour(hour: number): number {
+  if (!Number.isFinite(hour)) return DEFAULT_RECOMMENDATION_HOUR;
+  return Math.min(BUSINESS_END_HOUR, Math.max(BUSINESS_START_HOUR, Math.round(hour)));
+}
+
+function chooseRecommendationHour(
+  preferredHour: number,
+  blockedHours?: Set<number>,
+  usedHours?: Set<number>
+): number | null {
+  const preferred = clampBusinessHour(preferredHour);
+  const isUnavailable = (hour: number) => blockedHours?.has(hour) || usedHours?.has(hour);
+  if (!isUnavailable(preferred)) return preferred;
+
+  for (let offset = 1; offset <= BUSINESS_END_HOUR - BUSINESS_START_HOUR; offset++) {
+    const earlier = preferred - offset;
+    if (earlier >= BUSINESS_START_HOUR && !isUnavailable(earlier)) return earlier;
+
+    const later = preferred + offset;
+    if (later <= BUSINESS_END_HOUR && !isUnavailable(later)) return later;
+  }
+
+  return null;
+}
+
+function getPreferredBusinessHour(hourCounts: number[]): number {
+  let bestHour = DEFAULT_RECOMMENDATION_HOUR;
+  let bestCount = 0;
+
+  for (let hour = BUSINESS_START_HOUR; hour <= BUSINESS_END_HOUR; hour++) {
+    const count = hourCounts[hour] || 0;
+    if (count > bestCount) {
+      bestCount = count;
+      bestHour = hour;
+    }
+  }
+
+  return bestHour;
+}
+
+function extractInstructionSegments(normalized: string) {
+  const matches: { dow: number; index: number; alias: string }[] = [];
+  dayAliases.forEach((aliases, dow) => {
+    aliases.forEach(alias => {
+      const re = new RegExp(`\\b${alias}\\b`, 'g');
+      let match: RegExpExecArray | null;
+      while ((match = re.exec(normalized)) !== null) {
+        matches.push({ dow, index: match.index, alias });
+      }
+    });
+  });
+
+  matches.sort((a, b) => a.index - b.index);
+  const segments = matches.map((match, idx) => {
+    const next = matches[idx + 1]?.index ?? normalized.length;
+    const punctuationEnd = normalized.slice(match.index, next).search(/[.;,\n]/);
+    const end = punctuationEnd >= 0 ? match.index + punctuationEnd : next;
+    return {
+      dow: match.dow,
+      text: normalized.slice(match.index, end).trim(),
+    };
+  });
+
+  return segments.map((segment, idx) => {
+    const nextSegment = segments[idx + 1];
+    if (nextSegment && /^\w+\s+y$/.test(segment.text)) {
+      const nextWithoutDay = nextSegment.text.replace(/^\w+\s+/, '').trim();
+      return { ...segment, text: `${segment.text} ${nextWithoutDay}`.trim() };
+    }
+    return segment;
+  });
+}
+
+function parseInstructionPreferences(instructions: string): InstructionPreferences {
+  const normalized = normalizeStr(instructions || '');
+  const dayLocationPreferences = new Map<number, string[]>();
+  const blockedHours = new Map<number, Set<number>>();
+  const blockedWeekDays = new Set<number>();
+  const notes: string[] = [];
+  const consumedSegments: string[] = [];
+  const stopWords = new Set([
+    'domingo', 'lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado',
+    'el', 'la', 'los', 'las', 'un', 'una', 'me', 'voy', 'ir', 'ire', 'estar', 'estare', 'ruta',
+    'zona', 'ciudad', 'sector', 'a', 'al', 'en', 'por', 'para', 'de', 'del', 'las', 'los', 'con',
+    'a-las', 'alas', 'visitar', 'visito',
+  ]);
+  const blockMarkers = ['banco', 'cita', 'reunion', 'ocupado', 'ocupada', 'bloqueado', 'bloqueada', 'no puedo', 'no visitar'];
+
+  for (const segment of extractInstructionSegments(normalized)) {
+    consumedSegments.push(segment.text);
+
+    const hourMatch = segment.text.match(/\b(?:a\s+las|alas|a)\s+(\d{1,2})(?::(\d{2}))?\b/);
+    const isBlock = blockMarkers.some(marker => segment.text.includes(marker));
+    if (hourMatch && isBlock) {
+      const hour = clampBusinessHour(Number(hourMatch[1]));
+      if (!blockedHours.has(segment.dow)) blockedHours.set(segment.dow, new Set());
+      blockedHours.get(segment.dow)!.add(hour);
+      notes.push(`${dayNames[segment.dow]} ${hour.toString().padStart(2, '0')}:00 bloqueado por instrucción`);
+    } else if (isBlock) {
+      blockedWeekDays.add(segment.dow);
+      notes.push(`${dayNames[segment.dow]} bloqueado por instrucción`);
+    }
+
+    if (!isBlock) {
+      const cleanedTerms = segment.text
+        .replace(/\b(?:a\s+las|alas|a)\s+\d{1,2}(?::\d{2})?\b/g, ' ')
+        .split(/\s+/)
+        .map(w => w.trim())
+        .filter(w => w.length > 2 && !stopWords.has(w));
+
+      if (cleanedTerms.length > 0) {
+        dayLocationPreferences.set(segment.dow, cleanedTerms);
+        notes.push(`${dayNames[segment.dow]} priorizar ${cleanedTerms.join(' ')}`);
+      }
+    }
+  }
+
+  let remaining = normalized;
+  consumedSegments.forEach(segment => {
+    remaining = remaining.replace(segment, ' ');
+  });
+  const generalKeywords = remaining.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+
+  return { dayLocationPreferences, blockedHours, blockedWeekDays, generalKeywords, notes };
+}
+
+function matchesInstructionLocation(pattern: CustomerPattern, terms: string[]): boolean {
+  if (terms.length === 0) return false;
+  const searchable = normalizeStr([
+    pattern.customerName,
+    pattern.customerAddress || '',
+    pattern.customerZona || '',
+    pattern.customerCiudad || '',
+    pattern.customerCategoriaCompra || '',
+    pattern.customerEtiquetas.join(' '),
+  ].join(' '));
+
+  return terms.some(term => searchable.includes(term));
 }
 
 function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | null {
@@ -176,7 +340,10 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
   for (const v of visitsForPattern) {
     const d = new Date(v.scheduled_at);
     dayOfWeekCounts[d.getDay()] += 1;
-    hourCounts[d.getHours()] += 1;
+    const hour = d.getHours();
+    if (isBusinessHour(hour)) {
+      hourCounts[hour] += 1;
+    }
   }
 
   const maxDayCount = Math.max(...dayOfWeekCounts);
@@ -200,8 +367,7 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
     }
   }
 
-  const maxHourCount = Math.max(...hourCounts);
-  const preferredHour = hourCounts.indexOf(maxHourCount);
+  const preferredHour = getPreferredBusinessHour(hourCounts);
 
   const lastVisitSource = completedVisits.length > 0 ? completedVisits[completedVisits.length - 1] : sortedVisits[sortedVisits.length - 1];
   const lastVisit = new Date(lastVisitSource.scheduled_at);
@@ -226,7 +392,7 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
     dayOfWeekConfidence: dayConfidence,
     weekPositionPattern,
     weekPositionConfidence,
-    preferredHour: preferredHour || 9,
+    preferredHour,
     lastVisitDate: lastVisit.toISOString(),
     lastVisitDateFormatted: formatDateES(lastVisit),
     daysSinceLastVisit: Math.round(daysSinceLast),
@@ -460,6 +626,7 @@ function generateRecommendations(
   territoryDayPatterns: Map<number, TerritoryDayPattern>,
   feedbackStats: FeedbackStats,
   businessStats: Map<number, BusinessStats>,
+  instructionPreferences: InstructionPreferences,
   maxPerDay: number = 8
 ): Recommendation[] {
   const recommendations: Recommendation[] = [];
@@ -479,14 +646,21 @@ function generateRecommendations(
 
   const slotsPerDay = new Map<string, number>();
   const dayLocationCounts = new Map<string, { cities: Map<string, number>; zones: Map<string, number> }>();
+  const primaryCityByDay = new Map<string, string>();
+  const usedHoursByDay = new Map<string, Set<number>>();
   for (const d of weekDays) {
     const dateKey = d.toISOString().slice(0, 10);
     slotsPerDay.set(dateKey, 0);
     dayLocationCounts.set(dateKey, { cities: new Map(), zones: new Map() });
+    usedHoursByDay.set(dateKey, new Set());
   }
   for (const v of existingVisits) {
-    const dateKey = new Date(v.scheduled_at).toISOString().slice(0, 10);
+    const scheduledAt = new Date(v.scheduled_at);
+    const dateKey = scheduledAt.toISOString().slice(0, 10);
     slotsPerDay.set(dateKey, (slotsPerDay.get(dateKey) || 0) + 1);
+    const usedHours = usedHoursByDay.get(dateKey);
+    const existingHour = scheduledAt.getHours();
+    if (usedHours && isBusinessHour(existingHour)) usedHours.add(existingHour);
     const locations = dayLocationCounts.get(dateKey);
     if (locations) {
       const city = locationKey(v.customer?.ciudad || null);
@@ -496,11 +670,29 @@ function generateRecommendations(
     }
   }
 
+  for (const [dateKey, locations] of dayLocationCounts.entries()) {
+    let bestCity = '';
+    let bestCount = 0;
+    for (const [city, count] of locations.cities.entries()) {
+      if (count > bestCount) {
+        bestCity = city;
+        bestCount = count;
+      }
+    }
+    if (bestCity) primaryCityByDay.set(dateKey, bestCity);
+  }
+
   const sortedPatterns = [...patterns].sort((a, b) => {
     return calculateHistoryScore(b) - calculateHistoryScore(a);
   });
 
   const MAX_PER_DAY = maxPerDay;
+  const workingDayCount = weekDays.filter(day => {
+    const dow = day.getDay();
+    const dateKey = day.toISOString().slice(0, 10);
+    return dow !== 0 && dow !== 6 && !blockedDates.has(dateKey) && !instructionPreferences.blockedWeekDays.has(dow);
+  }).length || 5;
+  const softTargetPerDay = Math.max(1, Math.min(MAX_PER_DAY, Math.ceil(sortedPatterns.length / workingDayCount)));
 
   for (const pattern of sortedPatterns) {
     const urgencyRatio = pattern.daysSinceLastVisit / (pattern.avgDaysBetweenVisits || 14);
@@ -512,6 +704,7 @@ function generateRecommendations(
     for (const day of weekDays) {
       const dow = day.getDay();
       if (dow === 0 || dow === 6) continue;
+      if (instructionPreferences.blockedWeekDays.has(dow)) continue;
 
       const dateKey = day.toISOString().slice(0, 10);
       if (blockedDates.has(dateKey)) continue;
@@ -519,6 +712,16 @@ function generateRecommendations(
       if (slotCount >= MAX_PER_DAY) continue;
 
       if (existingSet.has(`${pattern.customerId}_${dateKey}`)) continue;
+      const dayBlockedHours = instructionPreferences.blockedHours.get(dow);
+      const city = locationKey(pattern.customerCiudad);
+      const primaryCity = primaryCityByDay.get(dateKey);
+      const usedHours = usedHoursByDay.get(dateKey);
+      if (chooseRecommendationHour(pattern.preferredHour, dayBlockedHours, usedHours) === null) continue;
+      const constrainedInstructionDays = Array.from(instructionPreferences.dayLocationPreferences.entries())
+        .filter(([, terms]) => matchesInstructionLocation(pattern, terms))
+        .map(([instructionDow]) => instructionDow);
+      if (constrainedInstructionDays.length > 0 && !constrainedInstructionDays.includes(dow)) continue;
+      if (primaryCity && city && city !== primaryCity) continue;
 
       let score = 0;
 
@@ -531,7 +734,6 @@ function generateRecommendations(
       score += pattern.completionRate * 8;
 
       const locations = dayLocationCounts.get(dateKey);
-      const city = locationKey(pattern.customerCiudad);
       const zone = locationKey(pattern.customerZona);
       const sameZoneCount = zone ? (locations?.zones.get(zone) || 0) : 0;
       const sameCityCount = city ? (locations?.cities.get(city) || 0) : 0;
@@ -564,8 +766,21 @@ function generateRecommendations(
       score += feedback.score;
       const business = getBusinessScore(pattern, businessStats);
       score += business.score;
+      const instructionTerms = instructionPreferences.dayLocationPreferences.get(dow) || [];
+      const instructionMatch = matchesInstructionLocation(pattern, instructionTerms);
+      if (instructionMatch) {
+        score += 120;
+      } else if (instructionTerms.length > 0) {
+        score -= 35;
+      }
+      if (dayBlockedHours?.has(clampBusinessHour(pattern.preferredHour))) {
+        score -= 10;
+      }
 
-      score -= slotCount * 5;
+      score -= slotCount * 10;
+      if (slotCount >= softTargetPerDay) {
+        score -= (slotCount - softTargetPerDay + 1) * 28;
+      }
 
       if (bestDay === null || score > bestScore) {
         bestScore = score;
@@ -601,6 +816,9 @@ function generateRecommendations(
     );
     const feedback = getFeedbackScore(pattern, dow, feedbackStats);
     const business = getBusinessScore(pattern, businessStats);
+    const instructionTerms = instructionPreferences.dayLocationPreferences.get(dow) || [];
+    const instructionMatch = matchesInstructionLocation(pattern, instructionTerms);
+    const dayBlockedHours = instructionPreferences.blockedHours.get(dow);
     const urgencyScore = urgencyRatio * 20;
     const historyScore = Math.min(16, pattern.completedCount * 3) + pattern.completionRate * 8;
     const dayPatternScore = dow === pattern.preferredDayOfWeek ? 30 * pattern.dayOfWeekConfidence : 0;
@@ -614,13 +832,19 @@ function generateRecommendations(
       : matchesHabitualCity
       ? Math.min(22, 12 + (territoryPattern?.cityConfidence || 0) * 14)
       : 0;
-    const loadPenalty = -1 * (slotsPerDay.get(dateKey) || 0) * 5;
+    const slotCountForBreakdown = slotsPerDay.get(dateKey) || 0;
+    const loadPenalty = -1 * (
+      slotCountForBreakdown * 10 +
+      (slotCountForBreakdown >= softTargetPerDay ? (slotCountForBreakdown - softTargetPerDay + 1) * 28 : 0)
+    );
+    const instructionScore = instructionMatch ? 120 : instructionTerms.length > 0 ? -35 : 0;
     const scoreBreakdown = {
       urgency: Number(urgencyScore.toFixed(2)),
       history: Number(historyScore.toFixed(2)),
       dayPattern: Number(dayPatternScore.toFixed(2)),
       sameRoute: Number(sameRouteScore.toFixed(2)),
       habitualTerritory: Number(habitualTerritoryScore.toFixed(2)),
+      instructions: Number(instructionScore.toFixed(2)),
       loadPenalty: Number(loadPenalty.toFixed(2)),
       ...feedback.breakdown,
       ...business.breakdown,
@@ -631,7 +855,7 @@ function generateRecommendations(
       zone: pattern.customerZona,
       dayOfWeek: dow,
       dayName: dayNames[dow],
-      hour: pattern.preferredHour || 9,
+      hour: clampBusinessHour(pattern.preferredHour),
       urgencyRatio: Number(urgencyRatio.toFixed(2)),
       avgDaysBetweenVisits: pattern.avgDaysBetweenVisits,
       daysSinceLastVisit: pattern.daysSinceLastVisit,
@@ -643,6 +867,11 @@ function generateRecommendations(
       sameCityCount,
       matchesHabitualZone,
       matchesHabitualCity,
+      instructionTerms,
+      instructionMatch,
+      blockedHours: Array.from(dayBlockedHours || []),
+      blockedWeekDays: Array.from(instructionPreferences.blockedWeekDays),
+      softTargetPerDay,
       customerCategoriaCompra: pattern.customerCategoriaCompra,
       customerEtiquetas: pattern.customerEtiquetas,
       customerTipo: pattern.customerTipo,
@@ -677,6 +906,9 @@ function generateRecommendations(
       reasons.push(`📍 Patrón territorial: los ${dayNames[dow]} sueles ir a ${territoryPattern.city} (${Math.round(territoryPattern.cityConfidence * 100)}% de tus visitas completadas ese día)`);
     } else if (pattern.customerZona || pattern.customerCiudad) {
       reasons.push(`📍 Ubicación considerada: ${[pattern.customerZona, pattern.customerCiudad].filter(Boolean).join(', ')}`);
+    }
+    if (pattern.customerCiudad) {
+      reasons.push(`🚗 Regla de ruta: este día se mantiene en ${pattern.customerCiudad}, sin alternar entre ciudades`);
     }
 
     // 4. Day-of-week pattern
@@ -728,6 +960,16 @@ function generateRecommendations(
       reasons.push('💼 Señal comercial: cliente en etapa de negociación');
     }
 
+    if (instructionMatch) {
+      reasons.push(`📝 Instrucción aplicada: ${dayNames[dow]} priorizar ${instructionTerms.join(' ')}`);
+    }
+    if (dayBlockedHours && dayBlockedHours.size > 0) {
+      reasons.push(`📝 Instrucción aplicada: evitar ${Array.from(dayBlockedHours).map(h => `${h.toString().padStart(2, '0')}:00`).join(', ')} ese día`);
+    }
+    if (slotCountForBreakdown >= softTargetPerDay) {
+      reasons.push(`⚖️ Balance semanal: se evita saturar más de ${softTargetPerDay} visita${softTargetPerDay > 1 ? 's' : ''} por día cuando hay espacio en otros días`);
+    }
+
     // Primary reason (short summary for backward compat)
     let reason: string;
     if (sameZoneCount > 0 && urgencyRatio >= 0.8 && pattern.customerZona) {
@@ -751,8 +993,11 @@ function generateRecommendations(
       reason = `Cada ~${pattern.avgDaysBetweenVisits} días, última: ${pattern.lastVisitDateFormatted}`;
     }
 
-    const hour = pattern.preferredHour || 9;
+    const usedHours = usedHoursByDay.get(dateKey);
+    const hour = chooseRecommendationHour(pattern.preferredHour, dayBlockedHours, usedHours);
+    if (hour === null) continue;
     const time = `${hour.toString().padStart(2, '0')}:00`;
+    reasons.push(`⏰ Regla de horario: no se repite la hora ${time} con otra visita del mismo día`);
 
     recommendations.push({
       customerId: pattern.customerId,
@@ -777,6 +1022,10 @@ function generateRecommendations(
       if (city) locationCounts.cities.set(city, (locationCounts.cities.get(city) || 0) + 1);
       if (zone) locationCounts.zones.set(zone, (locationCounts.zones.get(zone) || 0) + 1);
     }
+    if (city && !primaryCityByDay.has(dateKey)) {
+      primaryCityByDay.set(dateKey, city);
+    }
+    usedHoursByDay.get(dateKey)?.add(hour);
     existingSet.add(`${pattern.customerId}_${dateKey}`);
   }
 
@@ -800,6 +1049,7 @@ export async function POST(req: NextRequest) {
     const filterCiudad = filters?.ciudad ? normalizeStr(filters.ciudad) : '';
     const filterZona = filters?.zona ? normalizeStr(filters.zona) : '';
     const filterInstructions = filters?.instructions?.trim() || '';
+    const instructionPreferences = parseInstructionPreferences(filterInstructions);
     const filterMaxPerDay = filters?.maxPerDay || 8;
 
     const weekStart = weekStartDate ? new Date(weekStartDate) : (() => {
@@ -923,19 +1173,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (filterInstructions) {
-      const instructionKeywords = normalizeStr(filterInstructions).split(/\s+/).filter(w => w.length > 2);
-      if (instructionKeywords.length > 0) {
-        patterns = patterns.filter(p => {
-          const etiquetasStr = p.customerEtiquetas.join(' ');
-          const searchable = normalizeStr(
-            `${p.customerName} ${p.customerAddress || ''} ${p.customerZona || ''} ${p.customerCiudad || ''} ${p.customerCategoriaCompra || ''} ${etiquetasStr}`
-          );
-          return instructionKeywords.some(kw => searchable.includes(kw));
-        });
-      }
-    }
-
     const normalizedWeekVisits = ((weekVisits || []) as VisitRecordRaw[]).map(normalizeVisit);
 
     const recommendations = generateRecommendations(
@@ -946,6 +1183,7 @@ export async function POST(req: NextRequest) {
       territoryDayPatterns,
       feedbackStats,
       businessStats,
+      instructionPreferences,
       filterMaxPerDay
     );
 
@@ -1014,6 +1252,7 @@ export async function POST(req: NextRequest) {
         completed: feedbackStats.global.completed,
         negativeOutcome: feedbackStats.global.negativeOutcome,
       },
+      instructionNotes: instructionPreferences.notes,
     });
   } catch (err: any) {
     console.error('RecomendCalend error:', err);
