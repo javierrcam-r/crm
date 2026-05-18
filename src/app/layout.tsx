@@ -15,6 +15,10 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'CRM Disfero',
   description: 'Sistema de gestión comercial - Clientes, visitas y pedidos',
+  icons: {
+    icon: '/logo-disfero.png',
+    apple: '/logo-disfero.png',
+  },
 };
 
 export default function RootLayout({

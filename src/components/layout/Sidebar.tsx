@@ -24,7 +24,7 @@ import {
   Sparkles,
   DollarSign,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +33,6 @@ import toast from 'react-hot-toast';
 import { getSidebarConfig, isMenuVisible, type SidebarConfigItem } from '@/lib/services/sidebarConfig';
 import NotificationBell from './NotificationBell';
 
-// Menú principal para VENDEDORES (único rol con dashboard)
 const vendedorNavigation = [
   { key: 'dashboard', name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { key: 'clientes', name: 'Clientes', href: '/clientes', icon: Users },
@@ -50,7 +49,6 @@ const adminNavigation = [
   { key: 'asistente', name: 'Asistente IA', href: '/asistente', icon: Sparkles },
 ];
 
-// Panel de supervisión - para supervisor, supervisor_nivel1 y supervisor_vendedor
 const supervisorNavigation = [
   { key: 'calendario', name: 'Calendario', href: '/calendario', icon: Calendar },
   { key: 'dias_no_laborables', name: 'Días no laborables', href: '/calendario/dias-no-laborables', icon: CalendarOff },
@@ -63,7 +61,6 @@ const supervisorNavigation = [
   { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
 ];
 
-// Actividades estratégicas y vacaciones - disponible para todos los roles
 const actividadesEstrategicas = [
   { key: 'actividades', name: 'Objetivos Estratégicos', href: '/actividades', icon: ClipboardList },
   { key: 'vacaciones', name: 'Vacaciones', href: '/vacaciones', icon: Palmtree },
@@ -73,6 +70,63 @@ const quickActions = [
   { name: 'Nueva Visita', href: '/calendario/nueva', icon: Calendar },
   { name: 'Nuevo Cliente', href: '/clientes/nuevo', icon: Users },
 ];
+
+const glassBase = 'bg-white/[0.12] dark:bg-white/[0.06] backdrop-blur-lg border border-white/30 dark:border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_1px_3px_rgba(0,0,0,0.2)]';
+const glassHover = 'hover:bg-white/[0.22] dark:hover:bg-white/[0.10] hover:border-white/40 dark:hover:border-white/[0.12] hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.4),0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.3)]';
+const glassActive = 'bg-indigo-100/30 dark:bg-indigo-400/[0.10] backdrop-blur-lg border border-indigo-200/40 dark:border-indigo-400/[0.15] shadow-[inset_0_1px_2px_rgba(255,255,255,0.4),0_2px_8px_rgba(99,102,241,0.08)] dark:shadow-[inset_0_1px_2px_rgba(255,255,255,0.08),0_2px_8px_rgba(99,102,241,0.15)]';
+
+function NavLink({
+  href,
+  icon: Icon,
+  name,
+  active,
+  index,
+  onClose,
+}: {
+  href: string;
+  icon: any;
+  name: string;
+  active: boolean;
+  index: number;
+  onClose: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClose}
+      className={cn(
+        'flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all duration-200 text-[13px]',
+        'animate-slide-in opacity-0',
+        active
+          ? cn(glassActive, 'text-indigo-700 dark:text-indigo-300 font-medium')
+          : cn('border border-transparent', glassHover, 'text-gray-600 dark:text-gray-300')
+      )}
+      style={{ animationDelay: `${index * 0.04}s`, animationFillMode: 'forwards' }}
+    >
+      <div
+        className={cn(
+          'flex items-center justify-center w-7 h-7 rounded-lg transition-colors duration-200',
+          active
+            ? 'bg-indigo-200/40 dark:bg-indigo-400/20 text-indigo-600 dark:text-indigo-400'
+            : 'bg-white/20 dark:bg-white/[0.05] text-gray-500 dark:text-gray-400'
+        )}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <span>{name}</span>
+    </Link>
+  );
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase();
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -103,11 +157,7 @@ export default function Sidebar() {
     localStorage.removeItem('crm_user_profile');
     localStorage.clear();
     sessionStorage.clear();
-    
-    if (logout) {
-      logout();
-    }
-    
+    if (logout) logout();
     window.location.href = '/login';
   };
 
@@ -116,33 +166,34 @@ export default function Sidebar() {
     return pathname.startsWith(href);
   };
 
+  const closeMobile = () => setMobileOpen(false);
+
+  const initials = useMemo(
+    () => (userProfile?.nombre_completo ? getInitials(userProfile.nombre_completo) : ''),
+    [userProfile?.nombre_completo]
+  );
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo - Fixed */}
-      <div className="flex-shrink-0 px-3 sm:px-4 md:px-5 py-4 border-b border-gray-100 dark:border-dark-700">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Image
-            src="/logo-disfero.png"
-            alt="Disfero"
-            width={40}
-            height={40}
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain flex-shrink-0"
-          />
+      {/* Logo */}
+      <div className="flex-shrink-0 px-4 py-3.5 border-b border-white/10 dark:border-white/[0.04]">
+        <div className="flex items-center gap-3">
+          <Image src="/logo-disfero.png" alt="Disfero" width={36} height={36} className="w-9 h-9 object-contain flex-shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight truncate leading-tight">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight truncate leading-tight">
               CRM <span className="text-indigo-600 dark:text-indigo-400">Disfero</span>
             </h1>
-            <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-300 leading-tight">Sistema de Gestión</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">Sistema de Gestión</p>
           </div>
         </div>
       </div>
 
-      {/* Scrollable Content Area */}
+      {/* Scrollable */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
-        {/* Quick Actions - Solo para vendedores y vendedor+técnico */}
+        {/* Quick Actions */}
         {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'vendedor_tecnico') && (
-          <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-dark-700">
-            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
+          <div className="px-3 pt-4 pb-3 border-b border-white/10 dark:border-white/[0.04]">
+            <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
               Acciones Rápidas
             </p>
             <div className="space-y-1">
@@ -150,13 +201,14 @@ export default function Sidebar() {
                 <Link
                   key={action.name}
                   href={action.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 sm:gap-2.5 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 dark:text-white rounded-xl
-                           hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200
-                           group"
+                  onClick={closeMobile}
+                  className={cn(
+                    'flex items-center gap-2.5 px-2.5 py-2 text-[13px] text-gray-600 dark:text-gray-300 rounded-xl transition-all duration-200 group',
+                    'border border-transparent', glassHover
+                  )}
                 >
-                  <div className="p-1 rounded-lg bg-gray-100 dark:bg-dark-700 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800 transition-colors">
-                    <Plus className="h-3 w-3" />
+                  <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/20 dark:bg-white/[0.05] group-hover:bg-indigo-200/30 dark:group-hover:bg-indigo-400/15 transition-colors">
+                    <Plus className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
                   </div>
                   {action.name}
                 </Link>
@@ -165,251 +217,111 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Navigation */}
-        <nav className="p-3 sm:p-4 space-y-1">
-          {/* Menú Principal - Para VENDEDORES, SUPERVISOR+VENDEDOR y VENDEDOR+TÉCNICO */}
+        <nav className="px-3 py-3 space-y-0.5">
+          {/* Vendedor */}
           {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'vendedor_tecnico') && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
+              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
                 Menú Principal
               </p>
-              {filterByConfig(vendedorNavigation).map((item, index) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
-                      'animate-slide-in opacity-0 text-sm',
-                      active
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
-                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
-                    )}
-                    style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
-                  >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-              <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
+              {filterByConfig(vendedorNavigation).map((item, index) => (
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} />
+              ))}
+              <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
             </>
           )}
 
-          {/* Panel Supervisor - para supervisor, supervisor_nivel1, supervisor_vendedor y admin */}
+          {/* Supervisor */}
           {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor') && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
+              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
                 Supervisión
               </p>
-              {filterByConfig(supervisorNavigation).map((item, index) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
-                      'animate-slide-in opacity-0 text-sm',
-                      active
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
-                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
-                    )}
-                    style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
-                  >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-              <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
+              {filterByConfig(supervisorNavigation).map((item, index) => (
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} />
+              ))}
+              <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
             </>
           )}
 
-          {/* Calendario para Marketing y Técnico */}
+          {/* Marketing/Técnico Calendar */}
           {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico') && isMenuVisible(sidebarConfig, 'calendario', userProfile?.rol || '') && (
-            <Link
-              href="/calendario"
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200 text-sm mb-1',
-                isActive('/calendario')
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
-                  : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
-              )}
-            >
-              <Calendar className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/calendario') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
-              <span>Calendario</span>
-            </Link>
+            <NavLink href="/calendario" icon={Calendar} name="Calendario" active={isActive('/calendario')} index={0} onClose={closeMobile} />
           )}
 
-          {/* Eventos para Marketing, Técnico y Event Assistant */}
+          {/* Marketing/Técnico/EventAssistant Events */}
           {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
-            <Link
-              href="/eventos"
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200 text-sm mb-1',
-                isActive('/eventos')
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
-                  : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
-              )}
-            >
-              <Calendar className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/eventos') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
-              <span>Eventos</span>
-            </Link>
+            <NavLink href="/eventos" icon={Calendar} name="Eventos" active={isActive('/eventos')} index={1} onClose={closeMobile} />
           )}
 
-          {/* Objetivos Estratégicos - Disponible para todos los roles excepto event_assistant */}
+          {/* Gestión */}
           {userProfile && userProfile.rol !== 'event_assistant' && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
+              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
                 {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
               </p>
-              {filterByConfig(actividadesEstrategicas).map((item, index) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
-                      'animate-slide-in opacity-0 text-sm',
-                      active
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
-                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
-                    )}
-                    style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'forwards' }}
-                  >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+              {filterByConfig(actividadesEstrategicas).map((item, index) => (
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} />
+              ))}
             </>
           )}
 
-          {/* Admin Navigation */}
+          {/* Admin */}
           {isUserAdmin && (
             <>
-              <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-2 sm:mb-3">
+              <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
+              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
                 Administración
               </p>
-              {adminNavigation.map((item, index) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200',
-                      'animate-slide-in opacity-0 text-sm',
-                      active
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
-                        : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
-                    )}
-                    style={{ animationDelay: `${(supervisorNavigation.length + index) * 0.05}s`, animationFillMode: 'forwards' }}
-                  >
-                    <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+              {adminNavigation.map((item, index) => (
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={supervisorNavigation.length + index} onClose={closeMobile} />
+              ))}
             </>
           )}
 
-          {/* Configuración - Accesible para todos */}
-          <div className="my-3 sm:my-4 border-t border-gray-100 dark:border-dark-700"></div>
-          <Link
-            href="/configuracion"
-            onClick={() => setMobileOpen(false)}
-            className={cn(
-              'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all duration-200 text-sm',
-              isActive('/configuracion')
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
-                : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
-            )}
-          >
-            <Settings className={cn('h-4 w-4 sm:h-5 sm:w-5', isActive('/configuracion') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-300')} />
-            <span>Configuración</span>
-          </Link>
+          {/* Configuración */}
+          <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
+          <NavLink href="/configuracion" icon={Settings} name="Configuración" active={isActive('/configuracion')} index={0} onClose={closeMobile} />
         </nav>
       </div>
 
-      {/* Footer - Fixed */}
-      <div className="flex-shrink-0 p-3 sm:p-4 border-t border-gray-100 dark:border-dark-700 bg-white dark:bg-dark-900">
+      {/* Footer */}
+      <div className="flex-shrink-0 px-3 py-3 border-t border-white/10 dark:border-white/[0.04]">
         {userProfile && (
-          <div className="mb-2 sm:mb-3 pb-2 sm:pb-3 border-b border-gray-100 dark:border-dark-700">
-            <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-300 mb-0.5">
-              Usuario:
-            </p>
-            <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">
-              {userProfile.nombre_completo}
-            </p>
-            {isUserAdmin && (
-              <Badge variant="red" className="mt-1 text-[10px]">
-                Admin
-              </Badge>
-            )}
-            {userProfile?.rol === 'supervisor' && (
-              <Badge variant="blue" className="mt-1 text-[10px]">
-                Supervisor
-              </Badge>
-            )}
-            {userProfile?.rol === 'supervisor_nivel1' && (
-              <Badge variant="purple" className="mt-1 text-[10px]">
-                Supervisor N1
-              </Badge>
-            )}
-            {userProfile?.rol === 'supervisor_vendedor' && (
-              <Badge variant="blue" className="mt-1 text-[10px]">
-                Sup. + Vendedor
-              </Badge>
-            )}
-            {userProfile?.rol === 'marketing' && (
-              <Badge variant="green" className="mt-1 text-[10px]">
-                Marketing
-              </Badge>
-            )}
-            {userProfile?.rol === 'tecnico' && (
-              <Badge variant="yellow" className="mt-1 text-[10px]">
-                Técnico
-              </Badge>
-            )}
-            {userProfile?.rol === 'vendedor_tecnico' && (
-              <Badge variant="yellow" className="mt-1 text-[10px]">
-                Vendedor + Técnico
-              </Badge>
+          <div className="flex items-center gap-2.5 mb-2.5 pb-2.5 border-b border-white/10 dark:border-white/[0.04]">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mb-0.5">Usuario:</p>
+              <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{userProfile.nombre_completo}</p>
+            </div>
+            {initials && (
+              <div className={cn(
+                'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-[11px] font-bold',
+                'bg-indigo-100/40 dark:bg-indigo-400/15 text-indigo-600 dark:text-indigo-400',
+                'border border-indigo-200/40 dark:border-indigo-400/20',
+                'shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]'
+              )}>
+                {initials}
+              </div>
             )}
           </div>
         )}
         
-        {/* Botón de Logout */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 dark:text-white rounded-xl
-                   hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-400 transition-all duration-200
-                   group mb-2"
+          className={cn(
+            'w-full flex items-center gap-2.5 px-2.5 py-2 text-[13px] text-gray-500 dark:text-gray-400 rounded-xl transition-all duration-200 group',
+            'border border-transparent',
+            'hover:bg-red-100/20 dark:hover:bg-red-400/[0.08] hover:border-red-200/30 dark:hover:border-red-400/[0.12] hover:text-red-600 dark:hover:text-red-400',
+            'hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),0_2px_6px_rgba(239,68,68,0.06)] dark:hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.06),0_2px_6px_rgba(239,68,68,0.12)]'
+          )}
         >
-          <div className="p-1 rounded-lg bg-gray-100 dark:bg-dark-700 group-hover:bg-red-100 dark:group-hover:bg-red-900/50 transition-colors">
-            <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/20 dark:bg-white/[0.05] group-hover:bg-red-200/30 dark:group-hover:bg-red-400/15 transition-colors">
+            <LogOut className="h-4 w-4" />
           </div>
           <span>Cerrar Sesión</span>
         </button>
 
-        <p className="text-[9px] sm:text-[10px] text-gray-400 dark:text-gray-400 text-center">
-          CRM Disfero v1.0
-        </p>
+        <p className="text-[9px] text-gray-300 dark:text-gray-600 text-center mt-2">CRM Disfero v1.0</p>
       </div>
     </div>
   );
@@ -420,37 +332,34 @@ export default function Sidebar() {
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 py-2">
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2.5 rounded-xl bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 shadow-md active:scale-95 transition-transform"
+          className={cn(
+            'p-2 rounded-xl active:scale-95 transition-transform',
+            glassBase
+          )}
           aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
         >
-          {mobileOpen ? (
-            <X className="h-5 w-5 text-gray-600 dark:text-white" />
-          ) : (
-            <Menu className="h-5 w-5 text-gray-600 dark:text-white" />
-          )}
+          {mobileOpen ? <X className="h-5 w-5 text-gray-600 dark:text-white" /> : <Menu className="h-5 w-5 text-gray-600 dark:text-white" />}
         </button>
         <NotificationBell />
       </div>
 
-      {/* Desktop notification bell */}
       <div className="hidden md:block fixed top-3 right-4 z-50">
         <NotificationBell />
       </div>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-30"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="md:hidden fixed inset-0 bg-black/10 backdrop-blur-sm z-30" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full w-[240px] sm:w-64 bg-white dark:bg-dark-900 border-r border-gray-100 dark:border-dark-800',
+          'fixed left-0 top-0 h-full w-[240px] sm:w-64',
+          'bg-gray-100/60 dark:bg-dark-900/70 backdrop-blur-2xl',
+          'border-r border-white/20 dark:border-white/[0.05]',
           'z-40 transition-transform duration-300',
-          'md:translate-x-0 shadow-sm',
+          'md:translate-x-0',
+          'shadow-[1px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[1px_0_20px_rgba(0,0,0,0.3)]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
