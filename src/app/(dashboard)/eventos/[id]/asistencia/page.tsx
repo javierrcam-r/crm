@@ -39,6 +39,7 @@ export default function EventAssistancePage() {
   const [selectedParticipant, setSelectedParticipant] = useState<EventParticipant | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
   const [scanResult, setScanResult] = useState<'success' | 'already' | 'not_found' | null>(null);
+  const [manualSearch, setManualSearch] = useState('');
   const scannerRef = useRef<any>(null);
   const scannerContainerId = 'qr-reader';
 
@@ -161,6 +162,22 @@ export default function EventAssistancePage() {
     }
   };
 
+  const handleManualCheckin = (p: EventParticipant) => {
+    setManualSearch('');
+    setSelectedParticipant(p);
+    if (p.asistencia) {
+      setScanResult('already');
+      try { navigator.vibrate?.(200); } catch {}
+    } else {
+      setScanResult('success');
+      try { navigator.vibrate?.([100, 50, 100]); } catch {}
+    }
+  };
+
+  const manualResults = manualSearch.trim().length >= 2
+    ? participants.filter(p => fuzzySearch(manualSearch, `${p.nombre} ${p.email || ''} ${p.telefono || ''} ${p.empresa || ''}`) > 0).slice(0, 6)
+    : [];
+
   const toggleAttendance = async (p: EventParticipant) => {
     try {
       const newVal = !p.asistencia;
@@ -264,14 +281,70 @@ export default function EventAssistancePage() {
       {tab === 'scanner' && (
         <div className="space-y-4">
           {!scannerActive && !selectedParticipant && (
-            <div className="text-center py-8">
-              <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-full p-6 inline-block mb-4">
-                <Camera className="h-12 w-12 text-indigo-500 dark:text-indigo-400" />
+            <div className="space-y-4">
+              <div className="text-center py-6">
+                <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-full p-6 inline-block mb-4">
+                  <Camera className="h-12 w-12 text-indigo-500 dark:text-indigo-400" />
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">Escanea el código QR del participante</p>
+                <Button onClick={startScanner} className="px-8 py-3 text-base">
+                  <Camera className="h-5 w-5 mr-2" /> Abrir Cámara
+                </Button>
               </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">Escanea el código QR del participante</p>
-              <Button onClick={startScanner} className="px-8 py-3 text-base">
-                <Camera className="h-5 w-5 mr-2" /> Abrir Cámara
-              </Button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200 dark:bg-dark-600" />
+                <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-medium">o buscar por nombre</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-dark-600" />
+              </div>
+
+              {/* Manual search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Escribe el nombre del participante..."
+                  value={manualSearch}
+                  onChange={e => setManualSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                />
+              </div>
+
+              {manualResults.length > 0 && (
+                <div className="space-y-1.5">
+                  {manualResults.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleManualCheckin(p)}
+                      className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all flex items-center gap-3"
+                    >
+                      <div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${
+                        p.asistencia ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-dark-600 text-gray-400 dark:text-gray-500'
+                      }`}>
+                        {p.asistencia ? <CheckCircle className="h-4 w-4" /> : p.nombre.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{p.nombre}</p>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">
+                          {[p.empresa, p.categoria, p.numero_asiento ? `Asiento ${p.numero_asiento}` : null].filter(Boolean).join(' · ') || p.email || ''}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {p.asistencia ? (
+                          <span className="text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">Presente</span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-full">Check-in</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {manualSearch.trim().length >= 2 && manualResults.length === 0 && (
+                <p className="text-center py-3 text-sm text-gray-400 dark:text-gray-500">No se encontró ningún participante</p>
+              )}
             </div>
           )}
 
@@ -313,8 +386,8 @@ export default function EventAssistancePage() {
                 </div>
               )}
 
-              <Button onClick={startScanner} variant="secondary" className="w-full">
-                <ScanLine className="h-4 w-4 mr-1" /> Escanear Otro
+              <Button onClick={() => { setScanResult(null); setSelectedParticipant(null); setManualSearch(''); }} variant="secondary" className="w-full">
+                <ScanLine className="h-4 w-4 mr-1" /> Buscar Otro
               </Button>
             </div>
           )}
