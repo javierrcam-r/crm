@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useDeferredValue } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -40,6 +40,8 @@ export default function EventAssistancePage() {
   const [scannerActive, setScannerActive] = useState(false);
   const [scanResult, setScanResult] = useState<'success' | 'already' | 'not_found' | null>(null);
   const [manualSearch, setManualSearch] = useState('');
+  const deferredManualSearch = useDeferredValue(manualSearch);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const scannerRef = useRef<any>(null);
   const scannerContainerId = 'qr-reader';
 
@@ -175,7 +177,7 @@ export default function EventAssistancePage() {
   };
 
   const manualResults = (() => {
-    const q = manualSearch.trim();
+    const q = deferredManualSearch.trim();
     if (q.length === 0) return [];
     const norm = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return participants.filter(p => {
@@ -211,8 +213,14 @@ export default function EventAssistancePage() {
   };
 
   const filteredParticipants = (() => {
-    if (!searchTerm.trim()) return participants;
-    return participants.filter(p => fuzzySearch(searchTerm, getParticipantSearchText(p)) > 0);
+    const q = deferredSearchTerm.trim();
+    if (!q) return participants;
+    const norm = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return participants.filter(p => {
+      const text = getParticipantSearchText(p).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (text.includes(norm)) return true;
+      return fuzzySearch(q, text) > 0;
+    });
   })();
 
   if (loading || !event) return (
@@ -310,15 +318,16 @@ export default function EventAssistancePage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <input
-                  type="search"
-                  inputMode="search"
+                  type="text"
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
+                  enterKeyHint="search"
                   placeholder="Escribe el nombre del participante..."
                   value={manualSearch}
                   onChange={e => setManualSearch(e.target.value)}
+                  onInput={e => setManualSearch((e.target as HTMLInputElement).value)}
                   className="w-full pl-10 pr-9 py-2.5 border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
                 {manualSearch && (
@@ -477,15 +486,16 @@ export default function EventAssistancePage() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <input
-                    type="search"
-                    inputMode="search"
+                    type="text"
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
+                    enterKeyHint="search"
                     placeholder="Buscar por nombre, email, asiento..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
+                    onInput={e => setSearchTerm((e.target as HTMLInputElement).value)}
                     className="w-full pl-10 pr-9 py-2.5 border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
                   {searchTerm && searchTerm !== '__attended__' && searchTerm !== '__pending__' && (
