@@ -233,19 +233,19 @@ export default function RuletaPage() {
             </div>
 
             {/* Main container */}
-            <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-xl"
-              style={{ boxShadow: '0 0 60px rgba(168,85,247,0.08), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+            <div className="relative rounded-2xl overflow-hidden border border-purple-500/20"
+              style={{ background: '#0d1117', boxShadow: '0 0 60px rgba(168,85,247,0.1), inset 0 1px 0 rgba(255,255,255,0.03)' }}>
 
               {/* Center highlight zone */}
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ width: ITEM_W }}>
-                <div className="absolute inset-0 bg-purple-500/[0.06]" />
-                <div className="absolute inset-y-0 left-0 w-[2px] bg-purple-500/40" style={{ boxShadow: '0 0 12px rgba(168,85,247,0.5)' }} />
-                <div className="absolute inset-y-0 right-0 w-[2px] bg-purple-500/40" style={{ boxShadow: '0 0 12px rgba(168,85,247,0.5)' }} />
+                <div className="absolute inset-0 bg-purple-500/[0.08]" />
+                <div className="absolute inset-y-0 left-0 w-[2px]" style={{ background: 'linear-gradient(to bottom, transparent, #a855f7, transparent)', boxShadow: '0 0 16px rgba(168,85,247,0.6)' }} />
+                <div className="absolute inset-y-0 right-0 w-[2px]" style={{ background: 'linear-gradient(to bottom, transparent, #a855f7, transparent)', boxShadow: '0 0 16px rgba(168,85,247,0.6)' }} />
               </div>
 
               {/* Side fades */}
-              <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#060911] to-transparent z-10 pointer-events-none" />
-              <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#060911] to-transparent z-10 pointer-events-none" />
+              <div className="absolute inset-y-0 left-0 w-28 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, #0d1117, transparent)' }} />
+              <div className="absolute inset-y-0 right-0 w-28 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, #0d1117, transparent)' }} />
 
               {/* Track */}
               <div ref={trackRef} className="relative overflow-hidden" style={{ height: 96 }}>
@@ -253,8 +253,8 @@ export default function RuletaPage() {
 
                 {/* Idle */}
                 {phase === 'idle' && !pickedWinner && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
-                    <p className="text-white/30 text-sm tracking-wide">Presiona <span className="text-purple-400 font-bold">GIRAR</span> para sortear</p>
+                  <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: '#0d1117' }}>
+                    <p className="text-white/25 text-sm tracking-wide">Presiona <span className="text-purple-400 font-semibold">GIRAR</span> para sortear</p>
                   </div>
                 )}
 
@@ -429,7 +429,7 @@ export default function RuletaPage() {
         }
         @keyframes reveal-bg {
           from { background: transparent; }
-          to { background: rgba(6,9,17,0.85); backdrop-filter: blur(8px); }
+          to { background: rgba(13,17,23,0.9); backdrop-filter: blur(8px); }
         }
         .roulette-bounce {
           animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;

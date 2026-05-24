@@ -38,15 +38,7 @@ export default function DashboardLayout({
   }
 
   if (userProfile.rol === 'ruleta') {
-    return (
-      <div className="min-h-screen bg-gray-50/50 dark:bg-dark-800">
-        <main className="min-h-screen">
-          <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
-    );
+    return <>{children}</>;
   }
 
   return <MainLayout>{children}</MainLayout>;
