@@ -34,14 +34,15 @@ export default function EventAssistancePage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'scanner' | 'list'>('scanner');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [listFilter, setListFilter] = useState<'all' | 'attended' | 'pending'>('all');
 
   const [selectedParticipant, setSelectedParticipant] = useState<EventParticipant | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
   const [scanResult, setScanResult] = useState<'success' | 'already' | 'not_found' | null>(null);
-  const [manualSearch, setManualSearch] = useState('');
   const [manualQuery, setManualQuery] = useState('');
   const [listQuery, setListQuery] = useState('');
+  const manualInputRef = useRef<HTMLInputElement>(null);
+  const listInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<any>(null);
   const scannerContainerId = 'qr-reader';
 
@@ -165,7 +166,7 @@ export default function EventAssistancePage() {
   };
 
   const handleManualCheckin = (p: EventParticipant) => {
-    setManualSearch('');
+    if (manualInputRef.current) manualInputRef.current.value = '';
     setManualQuery('');
     setSelectedParticipant(p);
     if (p.asistencia) {
@@ -177,12 +178,15 @@ export default function EventAssistancePage() {
     }
   };
 
-  const triggerManualSearch = () => {
-    setManualQuery(manualSearch.trim());
+  const doManualSearch = () => {
+    const v = manualInputRef.current?.value.trim() || '';
+    setManualQuery(v);
   };
 
-  const triggerListSearch = () => {
-    setListQuery(searchTerm.trim());
+  const doListSearch = () => {
+    const v = listInputRef.current?.value.trim() || '';
+    setListQuery(v);
+    setListFilter('all');
   };
 
   const manualResults = (() => {
@@ -324,20 +328,20 @@ export default function EventAssistancePage() {
               </div>
 
               {/* Manual search */}
-              <form onSubmit={e => { e.preventDefault(); triggerManualSearch(); }} className="flex gap-2">
+              <form onSubmit={e => { e.preventDefault(); doManualSearch(); }} className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <input
+                    ref={manualInputRef}
                     type="text"
                     autoComplete="off"
                     placeholder="Nombre del participante..."
-                    value={manualSearch}
-                    onChange={e => setManualSearch(e.target.value)}
+                    defaultValue=""
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
                 </div>
-                <Button type="submit" disabled={!manualSearch.trim()} className="px-4 flex-shrink-0">
-                  <Search className="h-4 w-4 mr-1" /> Buscar
+                <Button type="submit" className="px-4 flex-shrink-0">
+                  <Search className="h-4 w-4" />
                 </Button>
               </form>
 
@@ -372,7 +376,7 @@ export default function EventAssistancePage() {
                 </div>
               )}
 
-              {manualSearch.trim().length >= 1 && manualResults.length === 0 && (
+              {manualQuery.length >= 1 && manualResults.length === 0 && (
                 <p className="text-center py-3 text-sm text-gray-400 dark:text-gray-500">No se encontró ningún participante</p>
               )}
             </div>
@@ -416,7 +420,7 @@ export default function EventAssistancePage() {
                 </div>
               )}
 
-              <Button onClick={() => { setScanResult(null); setSelectedParticipant(null); setManualSearch(''); setManualQuery(''); }} variant="secondary" className="w-full">
+              <Button onClick={() => { setScanResult(null); setSelectedParticipant(null); setManualQuery(''); if (manualInputRef.current) manualInputRef.current.value = ''; }} variant="secondary" className="w-full">
                 <ScanLine className="h-4 w-4 mr-1" /> Buscar Otro
               </Button>
             </div>
@@ -482,50 +486,50 @@ export default function EventAssistancePage() {
             </div>
           ) : (
             <>
-              <form onSubmit={e => { e.preventDefault(); triggerListSearch(); }} className="flex items-center gap-2">
+              <form onSubmit={e => { e.preventDefault(); doListSearch(); }} className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <input
+                    ref={listInputRef}
                     type="text"
                     autoComplete="off"
                     placeholder="Buscar por nombre, email, asiento..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
+                    defaultValue=""
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
                 </div>
                 <Button type="submit" className="px-4 flex-shrink-0">
-                  <Search className="h-4 w-4 mr-1" /> Buscar
+                  <Search className="h-4 w-4" />
                 </Button>
-                <VoiceSearch onResult={(text) => { setSearchTerm(text); setListQuery(text.trim()); }} />
+                <VoiceSearch onResult={(text) => { if (listInputRef.current) listInputRef.current.value = text; setListQuery(text.trim()); setListFilter('all'); }} />
               </form>
 
               {/* Filter buttons */}
               <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
-                  onClick={() => { setSearchTerm(''); setListQuery(''); }}
-                  className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${!searchTerm ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 font-semibold' : 'bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-400'}`}
+                  onClick={() => { setListFilter('all'); setListQuery(''); if (listInputRef.current) listInputRef.current.value = ''; }}
+                  className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${listFilter === 'all' && !listQuery ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 font-semibold' : 'bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-400'}`}
                 >
                   Todos ({participants.length})
                 </button>
                 <button
-                  onClick={() => { setSearchTerm('__attended__'); setListQuery(''); }}
-                  className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${searchTerm === '__attended__' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-semibold' : 'bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-400'}`}
+                  onClick={() => { setListFilter('attended'); setListQuery(''); if (listInputRef.current) listInputRef.current.value = ''; }}
+                  className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${listFilter === 'attended' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-semibold' : 'bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-400'}`}
                 >
                   Asistieron ({attendedCount})
                 </button>
                 <button
-                  onClick={() => { setSearchTerm('__pending__'); setListQuery(''); }}
-                  className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${searchTerm === '__pending__' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 font-semibold' : 'bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-400'}`}
+                  onClick={() => { setListFilter('pending'); setListQuery(''); if (listInputRef.current) listInputRef.current.value = ''; }}
+                  className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${listFilter === 'pending' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 font-semibold' : 'bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-400'}`}
                 >
                   Pendientes ({participants.length - attendedCount})
                 </button>
               </div>
 
               <div className="space-y-2">
-                {(searchTerm === '__attended__'
+                {(listFilter === 'attended'
                   ? participants.filter(p => p.asistencia)
-                  : searchTerm === '__pending__'
+                  : listFilter === 'pending'
                   ? participants.filter(p => !p.asistencia)
                   : filteredParticipants
                 ).map(p => (
@@ -569,7 +573,7 @@ export default function EventAssistancePage() {
                     </div>
                   </button>
                 ))}
-                {filteredParticipants.length === 0 && searchTerm && searchTerm !== '__attended__' && searchTerm !== '__pending__' && (
+                {filteredParticipants.length === 0 && listQuery && listFilter === 'all' && (
                   <p className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">No se encontraron participantes</p>
                 )}
               </div>

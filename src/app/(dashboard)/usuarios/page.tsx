@@ -19,6 +19,7 @@ import {
   Megaphone,
   Wrench,
   ScanLine,
+  Dices,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -51,6 +52,7 @@ const getRoleBadge = (rol: UserRole) => {
     marketing: { label: 'Marketing', variant: 'green', icon: Megaphone },
     tecnico: { label: 'Técnico', variant: 'yellow', icon: Wrench },
     event_assistant: { label: 'Asist. Evento', variant: 'purple', icon: ScanLine },
+    ruleta: { label: 'Ruleta', variant: 'yellow', icon: Dices },
   };
   return roles[rol];
 };
@@ -365,6 +367,7 @@ export default function UsuariosPage() {
               <option value="marketing">Marketing</option>
               <option value="tecnico">Técnico</option>
               <option value="event_assistant">Asist. Evento</option>
+              <option value="ruleta">Ruleta</option>
             </Select>
             <Select
               value={filterActivo}
@@ -585,6 +588,7 @@ export default function UsuariosPage() {
               <option value="marketing">Marketing</option>
               <option value="tecnico">Técnico</option>
               <option value="event_assistant">Asist. Evento</option>
+              <option value="ruleta">Ruleta</option>
               <option value="admin">Administrador</option>
             </Select>
           </div>

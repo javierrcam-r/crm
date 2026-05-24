@@ -50,7 +50,8 @@ export default function EventosPage() {
 
   const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
   const isVendor = userProfile?.rol === 'vendedor' || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant';
-  const canView = isSupervisor || isVendor;
+  const isRuleta = userProfile?.rol === 'ruleta';
+  const canView = isSupervisor || isVendor || isRuleta;
 
   useEffect(() => {
     if (canView && userProfile) loadEvents();
@@ -67,6 +68,14 @@ export default function EventosPage() {
         setEvents(data);
         setAllExpenses(expenses);
         setAllParticipants(participants);
+      } else if (isRuleta) {
+        const data = await getEvents();
+        const active = data.find(e => e.estado === 'en_ejecucion') || data[0];
+        if (active) {
+          router.replace(`/eventos/${active.id}/ruleta`);
+          return;
+        }
+        setEvents(data);
       } else if (isVendor && userProfile) {
         const data = await getVendorEvents(userProfile.id);
         setEvents(data);

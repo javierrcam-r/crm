@@ -72,7 +72,7 @@ export default function DashboardPage() {
         router.replace('/supervisores');
       } else if (rol === 'marketing' || rol === 'tecnico') {
         router.replace('/actividades');
-      } else if (rol === 'event_assistant') {
+      } else if (rol === 'event_assistant' || rol === 'ruleta') {
         router.replace('/eventos');
       }
     }

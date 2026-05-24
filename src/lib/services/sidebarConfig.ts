@@ -35,6 +35,7 @@ export const ALL_ROLES = [
   { key: 'marketing', label: 'Marketing' },
   { key: 'tecnico', label: 'Técnico' },
   { key: 'event_assistant', label: 'Asist. Evento' },
+  { key: 'ruleta', label: 'Ruleta' },
 ];
 
 export async function getSidebarConfig(): Promise<SidebarConfigItem[]> {

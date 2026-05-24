@@ -7,7 +7,7 @@ import {
   ArrowLeft, Calendar, DollarSign, Users, Target, CheckCircle, Clock,
   Plus, Trash2, Edit, AlertTriangle, TrendingUp, BarChart3, X,
   FileText, Award, MapPin, Video, Save, ChevronRight, Eye, QrCode, Download, LayoutGrid,
-  Filter, Search,
+  Filter, Search, Dices,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 const VenueDesigner = dynamic(() => import('@/components/events/VenueDesigner'), { ssr: false });
@@ -91,6 +91,8 @@ export default function EventDetailPage() {
       setRedirecting(true);
       if (userProfile.rol === 'event_assistant') {
         router.replace(`/eventos/${eventId}/asistencia`);
+      } else if (userProfile.rol === 'ruleta') {
+        router.replace(`/eventos/${eventId}/ruleta`);
       } else {
         router.replace(`/eventos/${eventId}/vendedor`);
       }
@@ -399,6 +401,7 @@ export default function EventDetailPage() {
           {event.estado === 'planeado' && <Button size="sm" onClick={() => handleStatusChange('en_ejecucion')}>▶ Iniciar</Button>}
           {event.estado === 'en_ejecucion' && <Button size="sm" onClick={() => handleStatusChange('finalizado')}>✅ Finalizar</Button>}
           {event.estado !== 'cancelado' && event.estado !== 'finalizado' && <Button size="sm" variant="danger" onClick={() => handleStatusChange('cancelado')}>Cancelar</Button>}
+          <Link href={`/eventos/${eventId}/ruleta`}><Button size="sm" variant="secondary"><Dices className="h-4 w-4 mr-1" />Ruleta</Button></Link>
         </div>
       </div>
 

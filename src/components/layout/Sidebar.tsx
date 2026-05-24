@@ -249,13 +249,13 @@ export default function Sidebar() {
             <NavLink href="/calendario" icon={Calendar} name="Calendario" active={isActive('/calendario')} index={0} onClose={closeMobile} />
           )}
 
-          {/* Marketing/Técnico/EventAssistant Events */}
-          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
+          {/* Marketing/Técnico/EventAssistant/Ruleta Events */}
+          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant' || userProfile?.rol === 'ruleta') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
             <NavLink href="/eventos" icon={Calendar} name="Eventos" active={isActive('/eventos')} index={1} onClose={closeMobile} />
           )}
 
           {/* Gestión */}
-          {userProfile && userProfile.rol !== 'event_assistant' && (
+          {userProfile && userProfile.rol !== 'event_assistant' && userProfile.rol !== 'ruleta' && (
             <>
               <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
                 {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
