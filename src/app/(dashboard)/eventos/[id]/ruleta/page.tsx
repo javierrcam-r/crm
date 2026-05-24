@@ -313,11 +313,11 @@ export default function RuletaPage() {
         {/* Action buttons */}
         <div className="w-full max-w-md flex gap-3">
           {phase !== 'winner' ? (
-            <button onClick={spin} disabled={!canSpin || phase === 'spinning'}
+            <button onClick={spin} disabled={!canSpin}
               className="flex-1 py-5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-purple-600 hover:from-purple-500 hover:via-fuchsia-500 hover:to-purple-500 disabled:opacity-25 disabled:cursor-not-allowed text-white font-black text-xl sm:text-2xl rounded-2xl transition-all shadow-[0_4px_40px_rgba(168,85,247,0.4)] hover:shadow-[0_8px_60px_rgba(168,85,247,0.6)] active:scale-[0.97] flex items-center justify-center gap-3 uppercase tracking-wider relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <Dices className={`h-7 w-7 ${phase === 'spinning' ? 'animate-spin' : ''}`} />
-              {phase === 'spinning' ? 'Sorteando...' : 'GIRAR'}
+              <Dices className={`h-7 w-7 ${phase !== 'idle' ? 'animate-spin' : ''}`} />
+              {phase === 'idle' ? 'GIRAR' : 'Sorteando...'}
             </button>
           ) : (
             <>
