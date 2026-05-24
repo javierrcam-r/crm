@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft, Plus, Trash2, Trophy, Gift, Users, Dices, X,
   Settings, UserCheck, UsersRound, Sparkles, Crown, ChevronDown,
 } from 'lucide-react';
-import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getEvent, getEventParticipants,
@@ -22,9 +22,9 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
-const SPIN_MS = 5000;
-const ITEM_W = 200;
-const TOTAL_ITEMS = 80;
+const SPIN_MS = 5200;
+const ITEM_W = 220;
+const TOTAL_ITEMS = 70;
 
 function shuffled(pool: string[], count: number): string[] {
   const r: string[] = [];
@@ -48,7 +48,7 @@ export default function RuletaPage() {
 
   const [selectedPrizeId, setSelectedPrizeId] = useState('');
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'winner'>('idle');
-  const [winner, setWinner] = useState<EventParticipant | null>(null);
+  const [pickedWinner, setPickedWinner] = useState<EventParticipant | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
   const [eligibilityMode, setEligibilityMode] = useState<'asistentes' | 'todos'>('asistentes');
@@ -80,10 +80,11 @@ export default function RuletaPage() {
     finally { setLoading(false); }
   };
 
-  const eligible = participants.filter(p => {
+  const eligible = useMemo(() => participants.filter(p => {
+    if (p.categoria && p.categoria.toLowerCase() === 'staff') return false;
     if (eligibilityMode === 'asistentes' && !p.asistencia) return false;
     return !winners.some(w => w.participant_id === p.id);
-  });
+  }), [participants, eligibilityMode, winners]);
 
   const getPrizeAwarded = (pid: string) => winners.filter(w => w.prize_id === pid).length;
   const getPrizeRemaining = (p: EventPrize) => p.cantidad - getPrizeAwarded(p.id);
@@ -99,7 +100,7 @@ export default function RuletaPage() {
   };
 
   const handleDeletePrize = async (id: string) => {
-    if (getPrizeAwarded(id) > 0) { toast.error('Premio con ganadores, no se puede eliminar'); return; }
+    if (getPrizeAwarded(id) > 0) { toast.error('Premio con ganadores'); return; }
     try { await deleteEventPrize(id); toast.success('Eliminado'); loadData(); }
     catch { toast.error('Error'); }
   };
@@ -118,11 +119,11 @@ export default function RuletaPage() {
 
     const picked = eligible[Math.floor(Math.random() * eligible.length)];
     const pool = eligible.map(p => p.nombre);
-    while (pool.length < 6) pool.push(...eligible.map(p => p.nombre));
+    while (pool.length < 8) pool.push(...eligible.map(p => p.nombre));
 
     const names = [...shuffled(pool, TOTAL_ITEMS), picked.nombre];
 
-    setWinner(null);
+    setPickedWinner(null);
     setShowConfetti(false);
     setPhase('spinning');
 
@@ -131,43 +132,42 @@ export default function RuletaPage() {
     if (!track || !strip) return;
 
     strip.innerHTML = '';
-    names.forEach((n, idx) => {
+    names.forEach(n => {
       const el = document.createElement('div');
-      el.style.cssText = `min-width:${ITEM_W}px;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:600;white-space:nowrap;padding:0 16px;flex-shrink:0;`;
-      el.style.color = idx === names.length - 1 ? '#fff' : 'rgba(255,255,255,0.5)';
+      el.className = 'slot-item';
       el.textContent = n;
       strip.appendChild(el);
     });
 
     const trackW = track.offsetWidth;
-    const totalScrollDist = (names.length - 1) * ITEM_W - (trackW / 2 - ITEM_W / 2);
+    const totalDist = (names.length - 1) * ITEM_W - (trackW / 2 - ITEM_W / 2);
 
     strip.style.transition = 'none';
     strip.style.transform = 'translateX(0)';
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        strip.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
-        strip.style.transform = `translateX(-${totalScrollDist}px)`;
+        strip.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
+        strip.style.transform = `translateX(-${totalDist}px)`;
       });
     });
 
     timerRef.current = window.setTimeout(() => {
       setPhase('winner');
-      setWinner(picked);
+      setPickedWinner(picked);
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000);
-    }, SPIN_MS + 200);
+      setTimeout(() => setShowConfetti(false), 6000);
+    }, SPIN_MS + 300);
   }, [eligible, selectedPrizeId, prizes, winners]);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const confirmWinner = async () => {
-    if (!winner || !selectedPrizeId) return;
+    if (!pickedWinner || !selectedPrizeId) return;
     try {
-      await savePrizeWinner(eventId, selectedPrizeId, winner.id, winner.nombre);
-      toast.success(`${winner.nombre} registrado`);
-      setWinner(null); setPhase('idle'); loadData();
+      await savePrizeWinner(eventId, selectedPrizeId, pickedWinner.id, pickedWinner.nombre);
+      toast.success(`${pickedWinner.nombre} registrado`);
+      setPickedWinner(null); setPhase('idle'); loadData();
     } catch (e: any) {
       if (e.message?.includes('unique') || e.code === '23505') toast.error('Ya tiene premio');
       else toast.error('Error al registrar');
@@ -175,134 +175,157 @@ export default function RuletaPage() {
   };
 
   if (loading || !event) return (
-    <div className="flex items-center justify-center min-h-screen bg-[#080b14]">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500" />
+    <div className="flex items-center justify-center min-h-screen bg-[#060911]">
+      <div className="animate-spin rounded-full h-12 w-12 border-2 border-purple-500 border-t-transparent" />
     </div>
   );
 
   const attended = participants.filter(p => p.asistencia).length;
   const poolSize = eligibilityMode === 'asistentes' ? attended : participants.length;
   const canSpin = phase === 'idle' && eligible.length > 0 && availablePrizes.length > 0;
+  const selectedPrize = prizes.find(p => p.id === selectedPrizeId);
 
   return (
-    <div className="min-h-screen bg-[#080b14] text-white relative overflow-hidden">
-      {/* Ambient glow */}
-      <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-100px] right-[-100px] w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-[#060911] text-white relative overflow-hidden select-none">
+      {/* Ambient orbs */}
+      <div className="absolute top-[-300px] left-1/4 w-[700px] h-[700px] bg-purple-600/[0.07] rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[-200px] right-[-100px] w-[500px] h-[500px] bg-fuchsia-600/[0.05] rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-[-200px] w-[400px] h-[400px] bg-indigo-600/[0.06] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between p-4 sm:p-6">
+      <header className="relative z-10 flex items-center justify-between px-4 sm:px-8 py-4">
         <div className="flex items-center gap-3">
           <Link href={`/eventos/${eventId}`}>
-            <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-              <ArrowLeft className="h-4 w-4 text-white/60" />
-            </button>
+            <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] backdrop-blur-md transition-all">
+              <ArrowLeft className="h-4 w-4 text-white/50" />
+            </div>
           </Link>
-          <div>
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-yellow-400" /> Ruleta de Premios
-            </h1>
-            <p className="text-[11px] text-white/40">{event.nombre}</p>
+          <div className="flex items-center gap-3">
+            <Image src="/logo-disfero.png" alt="Disfero" width={36} height={36} className="rounded-xl" />
+            <div>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight">{event.nombre}</h1>
+              <p className="text-[10px] text-white/30">{format(new Date(event.fecha_inicio), "d 'de' MMMM yyyy", { locale: es })}</p>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Stats pills */}
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-medium">
-              <Users className="h-3 w-3 inline mr-1" />{eligible.length} elegibles
-            </span>
-            <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-medium">
-              <Gift className="h-3 w-3 inline mr-1" />{availablePrizes.reduce((s, p) => s + getPrizeRemaining(p), 0)} premios
-            </span>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">
-              <Trophy className="h-3 w-3 inline mr-1" />{winners.length} ganadores
-            </span>
+          <div className="hidden sm:flex items-center gap-1.5">
+            {[
+              { icon: Users, val: eligible.length, label: 'elegibles', color: 'purple' },
+              { icon: Gift, val: availablePrizes.reduce((s, p) => s + getPrizeRemaining(p), 0), label: 'premios', color: 'amber' },
+              { icon: Trophy, val: winners.length, label: 'ganadores', color: 'emerald' },
+            ].map(s => (
+              <div key={s.label} className={`px-3 py-1.5 rounded-xl bg-${s.color}-500/10 border border-${s.color}-500/20 backdrop-blur-md`}>
+                <span className={`text-${s.color}-400 text-xs font-semibold`}>{s.val}</span>
+                <span className="text-white/30 text-[10px] ml-1">{s.label}</span>
+              </div>
+            ))}
           </div>
           <button onClick={() => setShowPanel(!showPanel)}
-            className={`p-2 rounded-xl transition-colors ${showPanel ? 'bg-purple-500/30 text-purple-300' : 'bg-white/5 hover:bg-white/10 text-white/60'}`}>
+            className={`p-2.5 rounded-2xl border backdrop-blur-md transition-all ${showPanel ? 'bg-purple-500/20 border-purple-500/30 text-purple-300' : 'bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.08] text-white/50'}`}>
             <Settings className="h-5 w-5" />
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Mobile stats */}
-      <div className="sm:hidden flex items-center gap-2 px-4 pb-3 overflow-x-auto">
-        <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-medium whitespace-nowrap">
-          {eligible.length} elegibles
-        </span>
-        <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-medium whitespace-nowrap">
-          {availablePrizes.reduce((s, p) => s + getPrizeRemaining(p), 0)} premios
-        </span>
-        <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium whitespace-nowrap">
-          {winners.length} ganadores
-        </span>
+      <div className="sm:hidden flex items-center gap-1.5 px-4 pb-3 overflow-x-auto">
+        {[
+          { val: eligible.length, label: 'elegibles', c: 'purple' },
+          { val: availablePrizes.reduce((s, p) => s + getPrizeRemaining(p), 0), label: 'premios', c: 'amber' },
+          { val: winners.length, label: 'ganadores', c: 'emerald' },
+        ].map(s => (
+          <div key={s.label} className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] whitespace-nowrap">
+            <span className="text-white/70 text-xs font-semibold">{s.val}</span>
+            <span className="text-white/30 text-[10px] ml-1">{s.label}</span>
+          </div>
+        ))}
       </div>
 
-      {/* ===== MAIN SLOT AREA ===== */}
-      <div className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-8" style={{ minHeight: 'calc(100vh - 160px)' }}>
+      {/* Main area */}
+      <div className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-8" style={{ minHeight: 'calc(100vh - 180px)' }}>
 
-        {/* Prize selector */}
-        {availablePrizes.length > 0 && (
-          <div className="mb-6 w-full max-w-md">
+        {/* Current prize badge */}
+        {selectedPrize && (
+          <div className="mb-8 flex flex-col items-center gap-2">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Sorteando</p>
             <div className="relative">
-              <Trophy className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-yellow-400 z-10" />
               <select value={selectedPrizeId} onChange={e => setSelectedPrizeId(e.target.value)} disabled={phase === 'spinning'}
-                className="w-full pl-10 pr-10 py-3 bg-white/5 border border-white/10 text-white rounded-2xl text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-md appearance-none cursor-pointer">
-                {availablePrizes.map(p => <option key={p.id} value={p.id} className="bg-[#111631]">{p.nombre} — {getPrizeRemaining(p)} disponibles</option>)}
+                className="appearance-none pl-5 pr-10 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-base font-bold text-center backdrop-blur-xl cursor-pointer focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all hover:bg-white/[0.07]">
+                {availablePrizes.map(p => <option key={p.id} value={p.id} className="bg-[#0e1225]">{p.nombre} ({getPrizeRemaining(p)})</option>)}
+                {availablePrizes.length === 0 && <option value="" className="bg-[#0e1225]">Sin premios</option>}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
             </div>
           </div>
         )}
 
-        {/* SLOT MACHINE */}
-        <div className="w-full max-w-2xl mx-auto mb-8">
-          <div className="relative rounded-3xl overflow-hidden border-2 border-purple-500/30 bg-gradient-to-b from-white/[0.03] to-white/[0.01] backdrop-blur-xl shadow-[0_0_60px_rgba(168,85,247,0.15)]">
+        {/* ===== SLOT MACHINE ===== */}
+        <div className="w-full max-w-3xl mx-auto mb-10">
+          <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.08] backdrop-blur-2xl shadow-[0_0_80px_rgba(168,85,247,0.12),inset_0_1px_0_rgba(255,255,255,0.05)]">
 
-            {/* Top indicator triangle */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-30">
-              <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[14px] border-l-transparent border-r-transparent border-t-purple-500 drop-shadow-[0_2px_8px_rgba(168,85,247,0.6)]" />
+            {/* Inner glow top & bottom */}
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent" />
+            <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-400/20 to-transparent" />
+
+            {/* Logo pointer top */}
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-[#060911] border-2 border-purple-500/60 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.4)]">
+                <Image src="/logo-disfero.png" alt="" width={28} height={28} className="rounded-full" />
+              </div>
+              <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-purple-500/60 -mt-0.5" />
             </div>
 
-            {/* Bottom indicator triangle */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-30">
-              <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[14px] border-l-transparent border-r-transparent border-b-purple-500 drop-shadow-[0_-2px_8px_rgba(168,85,247,0.6)]" />
+            {/* Logo pointer bottom */}
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-30 flex flex-col-reverse items-center">
+              <div className="w-8 h-8 rounded-full bg-[#060911] border-2 border-purple-500/40 flex items-center justify-center shadow-[0_0_16px_rgba(168,85,247,0.3)]">
+                <Sparkles className="h-4 w-4 text-purple-400" />
+              </div>
+              <div className="w-0 h-0 border-l-[7px] border-r-[7px] border-b-[9px] border-l-transparent border-r-transparent border-b-purple-500/40 -mb-0.5" />
             </div>
 
-            {/* Center winner zone highlight */}
+            {/* Center winner zone */}
             <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ width: ITEM_W }}>
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-purple-500/10 to-purple-500/20 border-x-2 border-purple-500/50" />
-              <div className="absolute inset-y-0 left-0 w-0.5 bg-purple-400 shadow-[0_0_16px_rgba(168,85,247,0.8)]" />
-              <div className="absolute inset-y-0 right-0 w-0.5 bg-purple-400 shadow-[0_0_16px_rgba(168,85,247,0.8)]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-purple-500/[0.15] via-purple-500/[0.08] to-purple-500/[0.15]" />
+              <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-transparent via-purple-400 to-transparent shadow-[0_0_20px_rgba(168,85,247,0.8)]" />
+              <div className="absolute inset-y-0 right-0 w-[2px] bg-gradient-to-b from-transparent via-purple-400 to-transparent shadow-[0_0_20px_rgba(168,85,247,0.8)]" />
             </div>
 
-            {/* Left fade */}
-            <div className="absolute inset-y-0 left-0 w-24 sm:w-32 bg-gradient-to-r from-[#080b14] to-transparent z-20 pointer-events-none" />
-            {/* Right fade */}
-            <div className="absolute inset-y-0 right-0 w-24 sm:w-32 bg-gradient-to-l from-[#080b14] to-transparent z-20 pointer-events-none" />
+            {/* Side fades */}
+            <div className="absolute inset-y-0 left-0 w-28 sm:w-40 bg-gradient-to-r from-[#060911] via-[#060911]/80 to-transparent z-20 pointer-events-none" />
+            <div className="absolute inset-y-0 right-0 w-28 sm:w-40 bg-gradient-to-l from-[#060911] via-[#060911]/80 to-transparent z-20 pointer-events-none" />
 
             {/* Track */}
-            <div ref={trackRef} className="relative overflow-hidden" style={{ height: 100 }}>
+            <div ref={trackRef} className="relative overflow-hidden py-4" style={{ height: 120 }}>
               <div ref={stripRef} className="flex h-full items-center" style={{ willChange: 'transform' }} />
 
-              {/* Idle state */}
-              {phase === 'idle' && !winner && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#080b14]/80 backdrop-blur-sm z-10">
+              {/* Idle overlay */}
+              {phase === 'idle' && !pickedWinner && (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#060911]/70 backdrop-blur-sm z-10">
                   <div className="text-center">
-                    <Dices className="h-8 w-8 text-purple-400 mx-auto mb-2 animate-pulse" />
-                    <p className="text-white/50 text-sm">Presiona <span className="text-purple-400 font-semibold">GIRAR</span> para sortear</p>
+                    <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                      <Dices className="h-8 w-8 text-purple-400 animate-pulse" />
+                    </div>
+                    <p className="text-white/40 text-sm">Presiona <span className="text-purple-400 font-bold">GIRAR</span> para sortear</p>
                   </div>
                 </div>
               )}
 
               {/* Winner reveal */}
-              {phase === 'winner' && winner && (
+              {phase === 'winner' && pickedWinner && (
                 <div className="absolute inset-0 flex items-center justify-center z-10 animate-slot-reveal">
                   <div className="text-center animate-bounce-in">
-                    <Crown className="h-10 w-10 text-yellow-400 mx-auto mb-1 drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]" />
-                    <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-300">
-                      {winner.nombre}
+                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.4)]">
+                      <Crown className="h-8 w-8 text-white drop-shadow-lg" />
+                    </div>
+                    <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-100 to-yellow-200 tracking-tight">
+                      {pickedWinner.nombre}
                     </p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <div className="h-px w-8 bg-gradient-to-r from-transparent to-purple-400/50" />
+                      <p className="text-purple-300/60 text-[11px] uppercase tracking-[0.3em] font-medium">Ganador</p>
+                      <div className="h-px w-8 bg-gradient-to-l from-transparent to-purple-400/50" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -311,93 +334,101 @@ export default function RuletaPage() {
         </div>
 
         {/* Action buttons */}
-        <div className="w-full max-w-md flex gap-3">
+        <div className="w-full max-w-lg flex gap-3">
           {phase !== 'winner' ? (
             <button onClick={spin} disabled={!canSpin}
-              className="flex-1 py-5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-purple-600 hover:from-purple-500 hover:via-fuchsia-500 hover:to-purple-500 disabled:opacity-25 disabled:cursor-not-allowed text-white font-black text-xl sm:text-2xl rounded-2xl transition-all shadow-[0_4px_40px_rgba(168,85,247,0.4)] hover:shadow-[0_8px_60px_rgba(168,85,247,0.6)] active:scale-[0.97] flex items-center justify-center gap-3 uppercase tracking-wider relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              className="flex-1 py-5 sm:py-6 bg-gradient-to-r from-purple-600 via-fuchsia-500 to-purple-600 hover:from-purple-500 hover:via-fuchsia-400 hover:to-purple-500 disabled:opacity-20 disabled:cursor-not-allowed text-white font-black text-xl sm:text-2xl rounded-2xl transition-all shadow-[0_4px_40px_rgba(168,85,247,0.35)] hover:shadow-[0_8px_60px_rgba(168,85,247,0.5)] active:scale-[0.97] flex items-center justify-center gap-3 uppercase tracking-wider relative overflow-hidden group border border-purple-400/20">
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/[0.08] to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
               <Dices className={`h-7 w-7 ${phase !== 'idle' ? 'animate-spin' : ''}`} />
               {phase === 'idle' ? 'GIRAR' : 'Sorteando...'}
             </button>
           ) : (
             <>
               <button onClick={confirmWinner}
-                className="flex-1 py-5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold text-lg rounded-2xl transition-all shadow-[0_4px_32px_rgba(16,185,129,0.4)] active:scale-[0.97] flex items-center justify-center gap-2">
-                <Trophy className="h-6 w-6" /> Registrar
+                className="flex-1 py-5 sm:py-6 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold text-lg rounded-2xl transition-all shadow-[0_4px_32px_rgba(16,185,129,0.35)] active:scale-[0.97] flex items-center justify-center gap-2 border border-emerald-400/20">
+                <Trophy className="h-6 w-6" /> Registrar Ganador
               </button>
-              <button onClick={() => { setWinner(null); setPhase('idle'); setShowConfetti(false); }}
-                className="px-6 py-5 bg-white/10 hover:bg-white/15 text-white/60 font-medium rounded-2xl transition-all">
+              <button onClick={() => { setPickedWinner(null); setPhase('idle'); setShowConfetti(false); }}
+                className="px-6 py-5 bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.1] text-white/50 font-medium rounded-2xl transition-all backdrop-blur-md">
                 Descartar
               </button>
             </>
           )}
         </div>
 
-        {poolSize === 0 && (
-          <p className="text-amber-400/70 text-sm mt-6 text-center">
-            {eligibilityMode === 'asistentes' ? 'No hay participantes con asistencia. Cambia a "Todos" en configuración.' : 'No hay participantes inscritos.'}
+        {poolSize === 0 && prizes.length > 0 && (
+          <p className="text-amber-400/60 text-sm mt-6 text-center max-w-md">
+            {eligibilityMode === 'asistentes' ? 'No hay asistentes elegibles. Cambia a "Todos" en configuración.' : 'No hay inscritos elegibles.'}
           </p>
+        )}
+        {prizes.length === 0 && (
+          <p className="text-white/30 text-sm mt-6 text-center">Configura premios en el panel de <button onClick={() => setShowPanel(true)} className="text-purple-400 underline underline-offset-2">configuración</button></p>
         )}
       </div>
 
-      {/* ===== SETTINGS PANEL (slide from right) ===== */}
+      {/* Settings panel */}
       {showPanel && (
         <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowPanel(false)}>
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative w-full max-w-md bg-[#0e1225] border-l border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+          <div className="relative w-full max-w-md bg-[#0a0e1a]/95 border-l border-white/[0.06] overflow-y-auto backdrop-blur-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-6 space-y-6">
-              {/* Panel header */}
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold flex items-center gap-2"><Settings className="h-5 w-5 text-purple-400" /> Configuración</h2>
-                <button onClick={() => setShowPanel(false)} className="p-2 rounded-xl bg-white/5 hover:bg-white/10"><X className="h-4 w-4" /></button>
+                <button onClick={() => setShowPanel(false)} className="p-2 rounded-xl bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.1]"><X className="h-4 w-4 text-white/50" /></button>
               </div>
 
               {/* Eligibility */}
               <div>
-                <label className="text-xs text-white/40 uppercase tracking-wider block mb-2">Participantes elegibles</label>
+                <label className="text-[10px] text-white/30 uppercase tracking-[0.15em] block mb-2.5">Participantes elegibles</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['asistentes', 'todos'] as const).map(mode => (
                     <button key={mode} onClick={() => setEligibilityMode(mode)}
-                      className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${eligibilityMode === mode ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 hover:border-white/20'}`}>
-                      {mode === 'asistentes' ? <UserCheck className={`h-4 w-4 ${eligibilityMode === mode ? 'text-purple-400' : 'text-white/30'}`} /> : <UsersRound className={`h-4 w-4 ${eligibilityMode === mode ? 'text-purple-400' : 'text-white/30'}`} />}
+                      className={`flex items-center gap-2.5 p-3 rounded-2xl border backdrop-blur-md transition-all text-left ${eligibilityMode === mode ? 'border-purple-500/50 bg-purple-500/[0.08]' : 'border-white/[0.06] hover:border-white/[0.12] bg-white/[0.02]'}`}>
+                      {mode === 'asistentes' ? <UserCheck className={`h-4 w-4 ${eligibilityMode === mode ? 'text-purple-400' : 'text-white/20'}`} /> : <UsersRound className={`h-4 w-4 ${eligibilityMode === mode ? 'text-purple-400' : 'text-white/20'}`} />}
                       <div>
-                        <p className={`text-sm font-medium ${eligibilityMode === mode ? 'text-purple-300' : 'text-white/60'}`}>{mode === 'asistentes' ? 'Asistentes' : 'Todos'}</p>
-                        <p className="text-[10px] text-white/30">{mode === 'asistentes' ? `${attended}` : `${participants.length}`}</p>
+                        <p className={`text-sm font-semibold ${eligibilityMode === mode ? 'text-purple-300' : 'text-white/50'}`}>{mode === 'asistentes' ? 'Asistentes' : 'Todos'}</p>
+                        <p className="text-[10px] text-white/20">{mode === 'asistentes' ? `${attended} personas` : `${participants.length} inscritos`}</p>
                       </div>
                     </button>
                   ))}
                 </div>
+                <p className="text-[10px] text-white/20 mt-2">La categoría "Staff" se excluye automáticamente</p>
               </div>
 
               {/* Prizes */}
               <div>
-                <label className="text-xs text-white/40 uppercase tracking-wider block mb-2">Premios</label>
+                <label className="text-[10px] text-white/30 uppercase tracking-[0.15em] block mb-2.5">Premios</label>
                 <div className="flex gap-2 mb-3">
                   <input type="text" placeholder="Nombre del premio" value={newPrizeName} onChange={e => setNewPrizeName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAddPrize()}
-                    className="flex-1 px-3 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl text-sm placeholder:text-white/20 focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                    className="flex-1 px-3 py-2.5 bg-white/[0.04] border border-white/[0.08] text-white rounded-xl text-sm placeholder:text-white/15 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent backdrop-blur-md" />
                   <input type="number" min={1} value={newPrizeQty} onChange={e => setNewPrizeQty(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-14 px-2 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl text-sm text-center focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                    className="w-14 px-2 py-2.5 bg-white/[0.04] border border-white/[0.08] text-white rounded-xl text-sm text-center focus:ring-2 focus:ring-purple-500/50 focus:border-transparent backdrop-blur-md" />
                   <button onClick={handleAddPrize} disabled={!newPrizeName.trim()}
-                    className="px-3 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-white rounded-xl transition-colors">
+                    className="px-3.5 py-2.5 bg-purple-600/80 hover:bg-purple-500 disabled:opacity-20 text-white rounded-xl transition-colors border border-purple-400/20">
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
                 {prizes.length === 0 ? (
-                  <p className="text-white/20 text-sm text-center py-4">Sin premios configurados</p>
+                  <div className="text-center py-6 rounded-2xl border border-dashed border-white/[0.06]">
+                    <Gift className="h-6 w-6 text-white/10 mx-auto mb-1" />
+                    <p className="text-white/15 text-xs">Agrega un premio para empezar</p>
+                  </div>
                 ) : (
                   <div className="space-y-1.5">
                     {prizes.map(p => {
                       const awarded = getPrizeAwarded(p.id);
                       const remaining = p.cantidad - awarded;
                       return (
-                        <div key={p.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5">
-                          <Gift className={`h-4 w-4 flex-shrink-0 ${remaining > 0 ? 'text-purple-400' : 'text-white/20'}`} />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${remaining > 0 ? 'text-white' : 'text-white/30 line-through'}`}>{p.nombre}</p>
-                            <p className="text-[10px] text-white/30">{awarded}/{p.cantidad}{remaining > 0 && <span className="text-green-400/70 ml-1">• {remaining} rest.</span>}</p>
+                        <div key={p.id} className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${remaining > 0 ? 'bg-purple-500/15' : 'bg-white/[0.03]'}`}>
+                            <Gift className={`h-4 w-4 ${remaining > 0 ? 'text-purple-400' : 'text-white/15'}`} />
                           </div>
-                          {awarded === 0 && <button onClick={() => handleDeletePrize(p.id)} className="text-red-400/60 hover:text-red-400 p-1"><Trash2 className="h-3.5 w-3.5" /></button>}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium truncate ${remaining > 0 ? 'text-white/90' : 'text-white/25 line-through'}`}>{p.nombre}</p>
+                            <p className="text-[10px] text-white/25">{awarded}/{p.cantidad}{remaining > 0 && <span className="text-emerald-400/60 ml-1">• {remaining} rest.</span>}</p>
+                          </div>
+                          {awarded === 0 && <button onClick={() => handleDeletePrize(p.id)} className="text-red-400/40 hover:text-red-400 p-1 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>}
                         </div>
                       );
                     })}
@@ -408,18 +439,18 @@ export default function RuletaPage() {
               {/* Winners */}
               {winners.length > 0 && (
                 <div>
-                  <label className="text-xs text-white/40 uppercase tracking-wider block mb-2">Ganadores ({winners.length})</label>
+                  <label className="text-[10px] text-white/30 uppercase tracking-[0.15em] block mb-2.5">Ganadores ({winners.length})</label>
                   <div className="space-y-1.5">
                     {winners.map((w, i) => (
-                      <div key={w.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                      <div key={w.id} className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0 shadow-[0_0_12px_rgba(250,204,21,0.2)]">
                           {winners.length - i}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{w.participant_name}</p>
-                          <p className="text-[10px] text-white/30">{w.prize_name} • {format(new Date(w.won_at), 'HH:mm', { locale: es })}</p>
+                          <p className="text-sm font-medium text-white/90 truncate">{w.participant_name}</p>
+                          <p className="text-[10px] text-white/25">{w.prize_name} • {format(new Date(w.won_at), 'HH:mm', { locale: es })}</p>
                         </div>
-                        <button onClick={() => handleDeleteWinner(w.id, w.participant_name)} className="text-red-400/60 hover:text-red-400 p-1" title="Eliminar">
+                        <button onClick={() => handleDeleteWinner(w.id, w.participant_name)} className="text-red-400/40 hover:text-red-400 p-1 transition-colors" title="Eliminar">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -432,27 +463,46 @@ export default function RuletaPage() {
         </div>
       )}
 
-      {/* Confetti */}
       {showConfetti && <Confetti />}
 
       <style jsx global>{`
+        .slot-item {
+          min-width: ${ITEM_W}px;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.15rem;
+          font-weight: 600;
+          white-space: nowrap;
+          padding: 0 16px;
+          flex-shrink: 0;
+          color: rgba(255,255,255,0.45);
+          text-shadow: 0 0 10px rgba(168,85,247,0.15);
+        }
+        .slot-item:last-child {
+          color: #fff;
+          font-weight: 800;
+          font-size: 1.3rem;
+          text-shadow: 0 0 20px rgba(168,85,247,0.4);
+        }
         @keyframes confetti-fall {
           0% { transform: translateY(-10vh) rotate(0deg) scale(1); opacity: 1; }
-          80% { opacity: 1; }
-          100% { transform: translateY(105vh) rotate(1080deg) scale(0.5); opacity: 0; }
+          75% { opacity: 1; }
+          100% { transform: translateY(105vh) rotate(1080deg) scale(0.4); opacity: 0; }
         }
         @keyframes bounce-in {
-          0% { transform: scale(0.3); opacity: 0; }
-          50% { transform: scale(1.1); }
-          70% { transform: scale(0.95); }
+          0% { transform: scale(0.2); opacity: 0; }
+          50% { transform: scale(1.12); }
+          70% { transform: scale(0.94); }
           100% { transform: scale(1); opacity: 1; }
         }
         @keyframes slot-reveal {
-          0% { background: transparent; }
-          100% { background: rgba(8,11,20,0.85); backdrop-filter: blur(8px); }
+          0% { background: transparent; backdrop-filter: blur(0); }
+          100% { background: rgba(6,9,17,0.88); backdrop-filter: blur(12px); }
         }
-        .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        .animate-slot-reveal { animation: slot-reveal 0.5s ease-out forwards; }
+        .animate-bounce-in { animation: bounce-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .animate-slot-reveal { animation: slot-reveal 0.6s ease-out forwards; }
       `}</style>
     </div>
   );
@@ -460,13 +510,13 @@ export default function RuletaPage() {
 
 function Confetti() {
   const pieces = useRef(
-    Array.from({ length: 80 }, (_, i) => ({
+    Array.from({ length: 100 }, (_, i) => ({
       left: Math.random() * 100,
-      delay: Math.random() * 2.5,
-      dur: 2.5 + Math.random() * 2,
-      color: ['#a855f7', '#eab308', '#3b82f6', '#ef4444', '#22c55e', '#f97316', '#ec4899', '#06b6d4'][i % 8],
-      size: 4 + Math.random() * 6,
-      shape: Math.random() > 0.5,
+      delay: Math.random() * 3,
+      dur: 2.5 + Math.random() * 2.5,
+      color: ['#a855f7', '#eab308', '#3b82f6', '#ef4444', '#22c55e', '#f97316', '#ec4899', '#06b6d4', '#fbbf24', '#8b5cf6'][i % 10],
+      size: 3 + Math.random() * 7,
+      rect: Math.random() > 0.5,
     }))
   ).current;
 
@@ -475,8 +525,8 @@ function Confetti() {
       {pieces.map((p, i) => (
         <div key={i} className="absolute" style={{
           left: `${p.left}%`, top: '-5%',
-          width: p.size, height: p.shape ? p.size * 1.5 : p.size,
-          borderRadius: p.shape ? '2px' : '50%',
+          width: p.size, height: p.rect ? p.size * 2 : p.size,
+          borderRadius: p.rect ? '2px' : '50%',
           backgroundColor: p.color,
           animation: `confetti-fall ${p.dur}s ${p.delay}s ease-out forwards`,
           opacity: 0,
