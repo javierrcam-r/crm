@@ -253,6 +253,11 @@ export default function RuletaPage() {
       {/* Center content */}
       <div className="relative z-10 flex flex-col items-center justify-center px-4" style={{ minHeight: 'calc(100vh - 80px)' }}>
 
+        {/* Gabriel Samra signature */}
+        <div className="mb-6">
+          <Image src="/samra-letras.png" alt="Gabriel Samra" width={280} height={80} className="opacity-20 mx-auto" style={{ filter: 'brightness(2.5)' }} />
+        </div>
+
         {/* Prize + Category selectors */}
         <div className="mb-8 flex flex-wrap items-end justify-center gap-3">
           {availablePrizes.length > 0 && (
@@ -335,6 +340,27 @@ export default function RuletaPage() {
             </div>
           </div>
         </div>
+
+        {/* Spinning logo animation while slot runs */}
+        {phase === 'spinning' && (
+          <div className="mb-4 flex items-center justify-center">
+            <div className="relative">
+              <div className="logo-orbit">
+                {[0, 1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="logo-orbit-item" style={{ '--i': i, '--total': 6 } as React.CSSProperties}>
+                    <Image src="/logo-disfero.png" alt="" width={28} height={28} className="rounded-md opacity-60" />
+                  </div>
+                ))}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-400/30 flex items-center justify-center"
+                  style={{ boxShadow: '0 0 30px rgba(168,85,247,0.3)' }}>
+                  <Dices className="h-5 w-5 text-purple-300 animate-spin" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Winner section — name centered, actions to the right */}
         {phase === 'winner' && pickedWinner && (
@@ -559,6 +585,28 @@ export default function RuletaPage() {
         @keyframes shimmer {
           0% { transform: translateX(-200%); }
           100% { transform: translateX(200%); }
+        }
+        .logo-orbit {
+          width: 120px;
+          height: 120px;
+          position: relative;
+          animation: orbit-spin 3s linear infinite;
+        }
+        @keyframes orbit-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .logo-orbit-item {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: rotate(calc(var(--i) * 360deg / var(--total))) translateY(-50px) rotate(calc(var(--i) * -360deg / var(--total)));
+          margin: -14px;
+          animation: orbit-counter 3s linear infinite;
+        }
+        @keyframes orbit-counter {
+          from { transform: rotate(calc(var(--i) * 360deg / var(--total))) translateY(-50px) rotate(calc(-1 * var(--i) * 360deg / var(--total))); }
+          to { transform: rotate(calc(var(--i) * 360deg / var(--total) + 360deg)) translateY(-50px) rotate(calc(-1 * (var(--i) * 360deg / var(--total) + 360deg))); }
         }
       `}</style>
     </div>
