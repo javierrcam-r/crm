@@ -2,11 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowLeft, Plus, Trash2, Trophy, Gift, Users, Dices, X,
-  Settings, UserCheck, UsersRound, Crown, ChevronDown,
+  Settings, UserCheck, UsersRound, Crown, ChevronDown, Tag, LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -34,8 +33,9 @@ function shuffled(pool: string[], count: number): string[] {
 
 export default function RuletaPage() {
   const params = useParams();
-  const { userProfile } = useAuth();
+  const { userProfile, logout } = useAuth();
   const eventId = params.id as string;
+  const [showLogout, setShowLogout] = useState(false);
 
   const [event, setEvent] = useState<Event | null>(null);
   const [participants, setParticipants] = useState<EventParticipant[]>([]);
@@ -52,6 +52,7 @@ export default function RuletaPage() {
   const [showConfetti, setShowConfetti] = useState(false);
 
   const [eligibilityMode, setEligibilityMode] = useState<'asistentes' | 'todos'>('asistentes');
+  const [selectedCategory, setSelectedCategory] = useState<string>('__all__');
   const [showPanel, setShowPanel] = useState(false);
 
   const stripRef = useRef<HTMLDivElement>(null);
@@ -75,11 +76,20 @@ export default function RuletaPage() {
     finally { setLoading(false); }
   };
 
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    participants.forEach(p => {
+      if (p.categoria && p.categoria.toLowerCase() !== 'staff') cats.add(p.categoria);
+    });
+    return Array.from(cats).sort();
+  }, [participants]);
+
   const eligible = useMemo(() => participants.filter(p => {
     if (p.categoria && p.categoria.toLowerCase() === 'staff') return false;
     if (eligibilityMode === 'asistentes' && !p.asistencia) return false;
+    if (selectedCategory !== '__all__' && p.categoria !== selectedCategory) return false;
     return !winners.some(w => w.participant_id === p.id);
-  }), [participants, eligibilityMode, winners]);
+  }), [participants, eligibilityMode, selectedCategory, winners]);
 
   const getPrizeAwarded = (pid: string) => winners.filter(w => w.prize_id === pid).length;
   const getPrizeRemaining = (p: EventPrize) => p.cantidad - getPrizeAwarded(p.id);
@@ -119,15 +129,17 @@ export default function RuletaPage() {
     if (!track || !strip) return;
 
     strip.innerHTML = '';
-    names.forEach(n => {
+    names.forEach((n, i) => {
       const el = document.createElement('div');
       el.className = 'roulette-name';
+      if (i === names.length - 1) el.classList.add('roulette-name-winner');
       el.textContent = n;
       strip.appendChild(el);
     });
 
     const trackW = track.offsetWidth;
-    const totalDist = (names.length - 1) * ITEM_W - (trackW / 2 - ITEM_W / 2);
+    const winnerIdx = names.length - 1;
+    const totalDist = winnerIdx * ITEM_W - (trackW / 2 - ITEM_W / 2);
 
     strip.style.transition = 'none';
     strip.style.transform = 'translateX(0)';
@@ -142,7 +154,7 @@ export default function RuletaPage() {
       setPhase('winner'); setPickedWinner(picked);
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 6000);
-    }, SPIN_MS + 300);
+    }, SPIN_MS + 400);
   }, [eligible, selectedPrizeId, prizes, winners]);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
@@ -168,104 +180,154 @@ export default function RuletaPage() {
   const canSpin = phase === 'idle' && eligible.length > 0 && availablePrizes.length > 0;
   const attended = participants.filter(p => p.asistencia).length;
 
+  const currentPrizeName = prizes.find(p => p.id === selectedPrizeId)?.nombre || '';
+
   return (
-    <div className="min-h-screen bg-[#060911] text-white relative overflow-hidden select-none">
-      {/* Background */}
+    <div className="min-h-screen text-white relative overflow-hidden select-none bg-black">
+      {/* Background image */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] left-[20%] w-[600px] h-[600px] bg-purple-700/[0.06] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-fuchsia-700/[0.04] rounded-full blur-[130px]" />
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40" style={{ backgroundImage: 'url(/samra_inv_persona.png)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(6,9,17,0.6) 0%, rgba(10,14,30,0.85) 50%, rgba(6,9,17,0.95) 100%)' }} />
       </div>
+      {/* Ambient orbs */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[10%] w-[800px] h-[800px] bg-purple-600/[0.08] rounded-full blur-[200px] neon-pulse" />
+        <div className="absolute bottom-[-10%] right-[5%] w-[700px] h-[700px] bg-fuchsia-500/[0.06] rounded-full blur-[180px]" />
+        <div className="absolute top-[30%] right-[30%] w-[400px] h-[400px] bg-cyan-500/[0.04] rounded-full blur-[150px]" />
+      </div>
+      {/* Scan lines overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[1] opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)', backgroundSize: '100% 4px' }} />
 
       {/* Header bar */}
-      <header className="relative z-10 flex items-center justify-between px-5 sm:px-8 py-4">
+      <header className="relative z-10 mx-3 sm:mx-6 mt-3 rounded-2xl border border-white/[0.08] px-4 sm:px-6 py-3 flex items-center justify-between backdrop-blur-2xl"
+        style={{ background: 'rgba(10,14,30,0.5)', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
         <div className="flex items-center gap-3">
-          <Link href={`/eventos/${eventId}`}>
-            <div className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"><ArrowLeft className="h-4 w-4 text-white/50" /></div>
-          </Link>
-          <Image src="/logo-disfero.png" alt="Disfero" width={32} height={32} className="rounded-lg" />
+          <button onClick={() => setShowLogout(v => !v)}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] transition-colors">
+            <ArrowLeft className="h-4 w-4 text-white/50" />
+          </button>
+          <Image src="/logo-disfero.png" alt="Disfero" width={36} height={36} className="rounded-lg" />
           <div>
-            <p className="text-sm font-semibold">{event.nombre}</p>
-            <p className="text-[10px] text-white/30">{format(new Date(event.fecha_inicio), "d MMM yyyy", { locale: es })}</p>
+            <p className="text-sm font-bold tracking-wide">{event.nombre}</p>
+            <p className="text-[10px] text-white/30">{format(new Date(event.fecha_inicio), "d 'de' MMMM yyyy", { locale: es })}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-4 text-xs text-white/40 mr-2">
-            <span><span className="text-purple-400 font-bold">{eligible.length}</span> elegibles</span>
-            <span><span className="text-amber-400 font-bold">{availablePrizes.reduce((s, p) => s + getPrizeRemaining(p), 0)}</span> premios</span>
-            <span><span className="text-emerald-400 font-bold">{winners.length}</span> ganadores</span>
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1.5">
+            {[
+              { label: 'elegibles', value: eligible.length, color: '#c084fc', glow: 'rgba(192,132,252,0.15)' },
+              { label: 'premios', value: availablePrizes.reduce((s, p) => s + getPrizeRemaining(p), 0), color: '#fbbf24', glow: 'rgba(251,191,36,0.15)' },
+              { label: 'ganadores', value: winners.length, color: '#34d399', glow: 'rgba(52,211,153,0.15)' },
+            ].map(s => (
+              <div key={s.label} className="px-3 py-1.5 rounded-lg border border-white/[0.06] text-[11px] text-white/40"
+                style={{ background: s.glow }}>
+                <span style={{ color: s.color }} className="font-bold">{s.value}</span> {s.label}
+              </div>
+            ))}
           </div>
           <button onClick={() => setShowPanel(true)}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 transition-colors">
+            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] text-white/50 transition-colors">
             <Settings className="h-5 w-5" />
           </button>
         </div>
       </header>
 
+      {/* Logout menu */}
+      {showLogout && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowLogout(false)}>
+          <div className="absolute top-[60px] left-3 sm:left-6 ml-1 rounded-xl border border-white/[0.1] backdrop-blur-2xl overflow-hidden min-w-[220px]"
+            style={{ background: 'rgba(15,19,35,0.95)', boxShadow: '0 12px 40px rgba(0,0,0,0.6)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-white/[0.06]">
+              <p className="text-xs font-semibold text-white/70">{userProfile?.nombre_completo || 'Usuario'}</p>
+              <p className="text-[10px] text-white/30">{userProfile?.email}</p>
+            </div>
+            <button onClick={logout}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+              <LogOut className="h-4 w-4" /> Cerrar sesión
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Center content */}
       <div className="relative z-10 flex flex-col items-center justify-center px-4" style={{ minHeight: 'calc(100vh - 80px)' }}>
 
-        {/* Prize selector */}
-        {availablePrizes.length > 0 && (
-          <div className="mb-10 text-center">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-white/20 mb-2">Sorteando</p>
-            <div className="relative inline-block">
-              <select value={selectedPrizeId} onChange={e => setSelectedPrizeId(e.target.value)} disabled={phase === 'spinning'}
-                className="appearance-none bg-transparent border border-white/10 rounded-full px-6 pr-10 py-2 text-lg font-bold text-white cursor-pointer hover:border-white/20 focus:outline-none focus:border-purple-500/50 transition-colors">
-                {availablePrizes.map(p => <option key={p.id} value={p.id} className="bg-[#0e1225]">{p.nombre} ({getPrizeRemaining(p)})</option>)}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
+        {/* Prize + Category selectors */}
+        <div className="mb-8 flex flex-wrap items-end justify-center gap-3">
+          {availablePrizes.length > 0 && (
+            <div className="px-5 py-3 rounded-2xl border border-purple-500/20 backdrop-blur-2xl"
+              style={{ background: 'rgba(168,85,247,0.06)', boxShadow: '0 4px 24px rgba(168,85,247,0.08)' }}>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-purple-300/40 mb-1.5">Sorteando</p>
+              <div className="relative">
+                <select value={selectedPrizeId} onChange={e => setSelectedPrizeId(e.target.value)} disabled={phase === 'spinning'}
+                  className="appearance-none bg-transparent pr-7 text-lg font-black text-white cursor-pointer focus:outline-none w-full">
+                  {availablePrizes.map(p => <option key={p.id} value={p.id} className="bg-[#0e1225]">{p.nombre} ({getPrizeRemaining(p)})</option>)}
+                </select>
+                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-400/50 pointer-events-none" />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {categories.length > 1 && (
+            <div className="px-5 py-3 rounded-2xl border border-cyan-500/15 backdrop-blur-2xl"
+              style={{ background: 'rgba(6,182,212,0.04)', boxShadow: '0 4px 24px rgba(6,182,212,0.06)' }}>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-300/40 mb-1.5">Categoría</p>
+              <div className="relative">
+                <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} disabled={phase === 'spinning'}
+                  className="appearance-none bg-transparent pr-7 text-sm font-bold text-white cursor-pointer focus:outline-none w-full">
+                  <option value="__all__" className="bg-[#0e1225]">Todas</option>
+                  {categories.map(c => <option key={c} value={c} className="bg-[#0e1225]">{c}</option>)}
+                </select>
+                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400/50 pointer-events-none" />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ===== SLOT MACHINE ===== */}
-        <div className="w-full max-w-3xl mb-10">
+        <div className="w-full max-w-4xl mb-6">
           <div className="relative">
 
-            {/* Top triangle pointer */}
-            <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-30">
-              <svg width="24" height="16" viewBox="0 0 24 16"><path d="M12 16L0 0h24z" fill="#a855f7" opacity="0.8"/></svg>
+            {/* Top pointer */}
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-30">
+              <div className="w-0 h-0" style={{ borderLeft: '14px solid transparent', borderRight: '14px solid transparent', borderTop: '14px solid #c084fc', filter: 'drop-shadow(0 0 8px rgba(192,132,252,0.6))' }} />
             </div>
-
-            {/* Bottom triangle pointer */}
-            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30">
-              <svg width="24" height="16" viewBox="0 0 24 16"><path d="M12 0L24 16H0z" fill="#a855f7" opacity="0.8"/></svg>
+            {/* Bottom pointer */}
+            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-30">
+              <div className="w-0 h-0" style={{ borderLeft: '14px solid transparent', borderRight: '14px solid transparent', borderBottom: '14px solid #c084fc', filter: 'drop-shadow(0 0 8px rgba(192,132,252,0.6))' }} />
             </div>
 
             {/* Main container */}
-            <div className="relative rounded-2xl overflow-hidden border border-purple-500/20"
-              style={{ background: '#0d1117', boxShadow: '0 0 60px rgba(168,85,247,0.1), inset 0 1px 0 rgba(255,255,255,0.03)' }}>
+            <div className="relative rounded-2xl overflow-hidden border border-purple-500/25 backdrop-blur-2xl"
+              style={{ background: 'rgba(10,14,30,0.5)', boxShadow: `0 0 80px rgba(168,85,247,0.1), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(168,85,247,0.05)` }}>
+
+              {/* Animated top/bottom neon lines */}
+              <div className="absolute top-0 left-0 right-0 h-[1px] z-20" style={{ background: 'linear-gradient(90deg, transparent, #c084fc, transparent)' }} />
+              <div className="absolute bottom-0 left-0 right-0 h-[1px] z-20" style={{ background: 'linear-gradient(90deg, transparent, #c084fc, transparent)' }} />
 
               {/* Center highlight zone */}
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ width: ITEM_W }}>
-                <div className="absolute inset-0 bg-purple-500/[0.08]" />
-                <div className="absolute inset-y-0 left-0 w-[2px]" style={{ background: 'linear-gradient(to bottom, transparent, #a855f7, transparent)', boxShadow: '0 0 16px rgba(168,85,247,0.6)' }} />
-                <div className="absolute inset-y-0 right-0 w-[2px]" style={{ background: 'linear-gradient(to bottom, transparent, #a855f7, transparent)', boxShadow: '0 0 16px rgba(168,85,247,0.6)' }} />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(192,132,252,0.08), rgba(168,85,247,0.12), rgba(192,132,252,0.08))' }} />
+                <div className="absolute inset-y-0 left-0 w-[2px]" style={{ background: 'linear-gradient(to bottom, transparent 10%, #c084fc 50%, transparent 90%)', boxShadow: '0 0 24px rgba(192,132,252,0.6), 0 0 4px rgba(192,132,252,0.8)' }} />
+                <div className="absolute inset-y-0 right-0 w-[2px]" style={{ background: 'linear-gradient(to bottom, transparent 10%, #c084fc 50%, transparent 90%)', boxShadow: '0 0 24px rgba(192,132,252,0.6), 0 0 4px rgba(192,132,252,0.8)' }} />
               </div>
 
               {/* Side fades */}
-              <div className="absolute inset-y-0 left-0 w-28 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, #0d1117, transparent)' }} />
-              <div className="absolute inset-y-0 right-0 w-28 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, #0d1117, transparent)' }} />
+              <div className="absolute inset-y-0 left-0 w-36 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, rgba(8,12,22,0.98), transparent)' }} />
+              <div className="absolute inset-y-0 right-0 w-36 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, rgba(8,12,22,0.98), transparent)' }} />
 
               {/* Track */}
-              <div ref={trackRef} className="relative overflow-hidden" style={{ height: 96 }}>
+              <div ref={trackRef} className="relative overflow-hidden" style={{ height: 110 }}>
                 <div ref={stripRef} className="flex h-full items-center" />
 
                 {/* Idle */}
                 {phase === 'idle' && !pickedWinner && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: '#0d1117' }}>
-                    <p className="text-white/25 text-sm tracking-wide">Presiona <span className="text-purple-400 font-semibold">GIRAR</span> para sortear</p>
-                  </div>
-                )}
-
-                {/* Winner reveal */}
-                {phase === 'winner' && pickedWinner && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center roulette-reveal">
-                    <div className="text-center roulette-bounce">
-                      <Crown className="h-8 w-8 text-yellow-400 mx-auto mb-1" style={{ filter: 'drop-shadow(0 0 16px rgba(250,204,21,0.5))' }} />
-                      <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-white to-yellow-300">
-                        {pickedWinner.nombre}
-                      </p>
+                  <div className="absolute inset-0 z-10 flex items-center justify-center"
+                    style={{ background: 'rgba(8,12,22,0.88)' }}>
+                    <div className="flex items-center gap-3">
+                      <Dices className="h-5 w-5 text-purple-500/40" />
+                      <p className="text-white/30 text-sm tracking-wide font-medium">Presiona <span className="text-purple-400 font-bold">GIRAR</span> para sortear</p>
                     </div>
                   </div>
                 )}
@@ -274,32 +336,53 @@ export default function RuletaPage() {
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="w-full max-w-md flex gap-3">
-          {phase !== 'winner' ? (
+        {/* Winner section — name centered, actions to the right */}
+        {phase === 'winner' && pickedWinner && (
+          <div className="w-full max-w-4xl mb-6 roulette-bounce">
+            <div className="flex items-center gap-4 rounded-2xl border border-yellow-400/20 backdrop-blur-2xl px-6 sm:px-8 py-5"
+              style={{ background: 'rgba(250,204,21,0.04)', boxShadow: '0 0 60px rgba(250,204,21,0.08), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
+              <Crown className="h-10 w-10 text-yellow-400 flex-shrink-0 hidden sm:block" style={{ filter: 'drop-shadow(0 0 16px rgba(250,204,21,0.5))' }} />
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-yellow-400/40 mb-1">Ganador</p>
+                <p className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-white to-yellow-300 truncate">
+                  {pickedWinner.nombre}
+                </p>
+                {pickedWinner.categoria && (
+                  <p className="text-xs text-white/25 mt-0.5">{pickedWinner.categoria} — {currentPrizeName}</p>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+                <button onClick={confirmWinner}
+                  className="px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] border border-emerald-400/30"
+                  style={{ background: 'linear-gradient(135deg, rgba(5,150,105,0.85), rgba(16,185,129,0.85))', boxShadow: '0 4px 24px rgba(16,185,129,0.3)' }}>
+                  <Trophy className="h-4 w-4" /> Registrar
+                </button>
+                <button onClick={() => { setPickedWinner(null); setPhase('idle'); setShowConfetti(false); }}
+                  className="px-5 py-3 rounded-xl border border-white/[0.08] text-white/40 text-sm font-medium transition-all hover:bg-white/[0.06]"
+                  style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  Descartar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Spin button */}
+        {phase !== 'winner' && (
+          <div className="w-full max-w-sm">
             <button onClick={spin} disabled={!canSpin}
-              className="flex-1 py-5 rounded-2xl font-black text-xl uppercase tracking-wider flex items-center justify-center gap-3 transition-all active:scale-[0.97] disabled:opacity-20 disabled:cursor-not-allowed"
+              className="w-full py-5 rounded-2xl font-black text-xl uppercase tracking-wider flex items-center justify-center gap-3 transition-all active:scale-[0.97] disabled:opacity-20 disabled:cursor-not-allowed border border-purple-400/25 relative overflow-hidden"
               style={{
-                background: canSpin ? 'linear-gradient(135deg, #9333ea, #c026d3, #9333ea)' : '#1a1a2e',
-                boxShadow: canSpin ? '0 4px 40px rgba(168,85,247,0.35), inset 0 1px 0 rgba(255,255,255,0.1)' : 'none',
+                background: canSpin ? 'linear-gradient(135deg, rgba(147,51,234,0.85), rgba(192,38,211,0.85))' : 'rgba(255,255,255,0.03)',
+                backdropFilter: 'blur(16px)',
+                boxShadow: canSpin ? '0 4px 50px rgba(168,85,247,0.35), inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
               }}>
-              <Dices className={`h-6 w-6 ${phase !== 'idle' ? 'animate-spin' : ''}`} />
-              {phase === 'idle' ? 'GIRAR' : 'Sorteando...'}
+              {canSpin && <div className="absolute inset-0 shimmer-sweep" />}
+              <Dices className={`h-6 w-6 relative z-10 ${phase !== 'idle' ? 'animate-spin' : ''}`} />
+              <span className="relative z-10">{phase === 'idle' ? 'GIRAR' : 'Sorteando...'}</span>
             </button>
-          ) : (
-            <>
-              <button onClick={confirmWinner}
-                className="flex-1 py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
-                style={{ background: 'linear-gradient(135deg, #059669, #10b981)', boxShadow: '0 4px 30px rgba(16,185,129,0.3)' }}>
-                <Trophy className="h-5 w-5" /> Registrar Ganador
-              </button>
-              <button onClick={() => { setPickedWinner(null); setPhase('idle'); setShowConfetti(false); }}
-                className="px-6 py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white/50 font-medium transition-all">
-                Descartar
-              </button>
-            </>
-          )}
-        </div>
+          </div>
+        )}
 
         {prizes.length === 0 && (
           <p className="text-white/20 text-sm mt-8">
@@ -311,8 +394,9 @@ export default function RuletaPage() {
       {/* ===== SETTINGS PANEL ===== */}
       {showPanel && (
         <div className="fixed inset-0 z-50" onClick={() => setShowPanel(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-[#0b0f1e] border-l border-white/5 overflow-y-auto"
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+          <div className="absolute right-0 top-0 bottom-0 w-full max-w-md border-l border-white/[0.08] overflow-y-auto backdrop-blur-2xl"
+            style={{ background: 'rgba(10,14,28,0.85)' }}
             onClick={e => e.stopPropagation()}>
             <div className="p-5 space-y-5">
               <div className="flex items-center justify-between">
@@ -337,6 +421,26 @@ export default function RuletaPage() {
                 </div>
                 <p className="text-[10px] text-white/15 mt-1.5">Staff se excluye automáticamente</p>
               </div>
+
+              {/* Category filter */}
+              {categories.length > 1 && (
+                <div>
+                  <p className="text-[10px] text-white/25 uppercase tracking-wider mb-2">Filtrar por categoría</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => setSelectedCategory('__all__')}
+                      className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${selectedCategory === '__all__' ? 'border-purple-500/40 bg-purple-500/15 text-white' : 'border-white/5 bg-white/[0.02] text-white/40 hover:bg-white/[0.04]'}`}>
+                      Todas
+                    </button>
+                    {categories.map(c => (
+                      <button key={c} onClick={() => setSelectedCategory(c)}
+                        className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${selectedCategory === c ? 'border-purple-500/40 bg-purple-500/15 text-white' : 'border-white/5 bg-white/[0.02] text-white/40 hover:bg-white/[0.04]'}`}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-white/15 mt-1.5">{eligible.length} elegibles con filtro actual</p>
+                </div>
+              )}
 
               {/* Prizes */}
               <div>
@@ -402,34 +506,35 @@ export default function RuletaPage() {
 
       <style jsx global>{`
         .roulette-name {
+          width: ${ITEM_W}px;
           min-width: ${ITEM_W}px;
+          max-width: ${ITEM_W}px;
           height: 100%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.1rem;
+          font-size: 1.15rem;
           font-weight: 600;
+          letter-spacing: 0.02em;
           white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
           padding: 0 12px;
           flex-shrink: 0;
-          color: rgba(255,255,255,0.35);
+          color: rgba(255,255,255,0.3);
+          box-sizing: border-box;
+          text-shadow: 0 0 8px rgba(255,255,255,0.05);
         }
-        .roulette-name:last-child {
+        .roulette-name-winner {
           color: #fff;
-          font-weight: 800;
-          font-size: 1.25rem;
+          font-weight: 900;
+          font-size: 1.3rem;
+          text-shadow: 0 0 20px rgba(192,132,252,0.4);
         }
         @keyframes confetti-fall {
           0% { transform: translateY(-10vh) rotate(0); opacity: 1; }
           75% { opacity: 1; }
           100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
-        }
-        .roulette-reveal {
-          animation: reveal-bg 0.5s ease-out forwards;
-        }
-        @keyframes reveal-bg {
-          from { background: transparent; }
-          to { background: rgba(13,17,23,0.9); backdrop-filter: blur(8px); }
         }
         .roulette-bounce {
           animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;
@@ -439,6 +544,21 @@ export default function RuletaPage() {
           50% { transform: scale(1.08); }
           70% { transform: scale(0.96); }
           100% { transform: scale(1); opacity: 1; }
+        }
+        .neon-pulse {
+          animation: neon-breathe 4s ease-in-out infinite;
+        }
+        @keyframes neon-breathe {
+          0%, 100% { opacity: 0.08; }
+          50% { opacity: 0.14; }
+        }
+        .shimmer-sweep {
+          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%);
+          animation: shimmer 2.5s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-200%); }
+          100% { transform: translateX(200%); }
         }
       `}</style>
     </div>
