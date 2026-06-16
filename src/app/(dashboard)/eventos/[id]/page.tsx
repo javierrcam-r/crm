@@ -40,6 +40,13 @@ const statusColors: Record<EventStatus, string> = {
   finalizado: 'bg-green-100 text-green-700', cancelado: 'bg-red-100 text-red-700',
 };
 
+const statusLabels: Record<EventStatus, string> = {
+  planeado: 'Planeado', en_ejecucion: 'En Ejecución',
+  finalizado: 'Finalizado', cancelado: 'Cancelado',
+};
+
+const allStatuses: EventStatus[] = ['planeado', 'en_ejecucion', 'finalizado', 'cancelado'];
+
 export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -83,6 +90,7 @@ export default function EventDetailPage() {
   const [showParticipantFilters, setShowParticipantFilters] = useState(false);
 
   const [redirecting, setRedirecting] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -390,7 +398,34 @@ export default function EventDetailPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{event.nombre}</h1>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[event.estado]}`}>{event.estado === 'en_ejecucion' ? 'En Ejecución' : event.estado.charAt(0).toUpperCase() + event.estado.slice(1)}</span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                  className={`text-xs px-2.5 py-1 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 ${statusColors[event.estado]}`}
+                >
+                  {statusLabels[event.estado]}
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {showStatusMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowStatusMenu(false)} />
+                    <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
+                      {allStatuses.map(s => (
+                        <button
+                          key={s}
+                          disabled={s === event.estado}
+                          onClick={() => { handleStatusChange(s); setShowStatusMenu(false); }}
+                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${s === event.estado ? 'opacity-50 cursor-default bg-gray-50' : 'hover:bg-gray-50 cursor-pointer'}`}
+                        >
+                          <span className={`inline-block w-2 h-2 rounded-full ${statusColors[s].split(' ')[0]}`} />
+                          {statusLabels[s]}
+                          {s === event.estado && <span className="text-[10px] text-gray-400 ml-auto">(actual)</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <span className="text-xs text-gray-500">{format(new Date(event.fecha_inicio), "d MMM yyyy", { locale: es })}{event.fecha_fin ? ` → ${format(new Date(event.fecha_fin), "d MMM yyyy", { locale: es })}` : ''}</span>
               <span className="text-xs text-gray-500">• Responsable: <strong>{getUserName(event.responsable_id)}</strong></span>
             </div>
@@ -398,9 +433,6 @@ export default function EventDetailPage() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button size="sm" variant="secondary" onClick={openEditEvent}><Edit className="h-4 w-4 mr-1" />Editar</Button>
-          {event.estado === 'planeado' && <Button size="sm" onClick={() => handleStatusChange('en_ejecucion')}>▶ Iniciar</Button>}
-          {event.estado === 'en_ejecucion' && <Button size="sm" onClick={() => handleStatusChange('finalizado')}>✅ Finalizar</Button>}
-          {event.estado !== 'cancelado' && event.estado !== 'finalizado' && <Button size="sm" variant="danger" onClick={() => handleStatusChange('cancelado')}>Cancelar</Button>}
           <Link href={`/eventos/${eventId}/ruleta`}><Button size="sm" variant="secondary"><Dices className="h-4 w-4 mr-1" />Ruleta</Button></Link>
         </div>
       </div>
