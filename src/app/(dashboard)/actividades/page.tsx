@@ -130,6 +130,7 @@ export default function ActividadesPage() {
   const [filterPersona, setFilterPersona] = useState<string>('');
   const [tableNotExists, setTableNotExists] = useState(false);
   const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
+  const isSupervisorOrAdmin = userProfile?.rol === 'admin' || userProfile?.rol?.includes('supervisor');
   const [showRealizados, setShowRealizados] = useState(isSupervisorN1); // Solo Supervisor N1 tiene abierto por defecto
   const [isEditing, setIsEditing] = useState(false);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
@@ -236,7 +237,7 @@ export default function ActividadesPage() {
   // Group by status for Kanban
   // Solo Supervisor N1 ve la columna "Realizado", otros roles no la ven
   const kanbanColumns: { status: ActivityStatus; activities: Activity[] }[] =
-    isSupervisorN1
+    isSupervisorOrAdmin
       ? [
           { status: 'planificacion', activities: filteredActivities.filter(a => a.estado === 'planificacion') },
           { status: 'haciendo', activities: filteredActivities.filter(a => a.estado === 'haciendo') },
@@ -296,9 +297,8 @@ export default function ActividadesPage() {
   }
   
   async function handleStatusChange(activityId: string, newStatus: ActivityStatus) {
-    // Solo Supervisor N1 puede marcar como "Realizado"
-    if (newStatus === 'realizado' && !isSupervisorN1) {
-      toast.error('Solo Supervisores Nivel 1 pueden marcar actividades como Realizado');
+    if (newStatus === 'realizado' && !isSupervisorOrAdmin) {
+      toast.error('Solo Supervisores pueden marcar actividades como Realizado');
       return;
     }
 
@@ -590,7 +590,7 @@ export default function ActividadesPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Objetivos Estratégicos</h1>
           <p className="text-gray-500 dark:text-gray-300 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
-            {isSupervisorN1
+            {isSupervisorOrAdmin
               ? 'Gestiona y supervisa reuniones, capacitaciones y seguimientos del equipo'
               : 'Gestiona reuniones, capacitaciones y seguimientos con tu equipo'}
           </p>
@@ -604,7 +604,7 @@ export default function ActividadesPage() {
       </div>
       
       {/* Stats */}
-      <div className={`grid gap-4 ${isSupervisorN1 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
+      <div className={`grid gap-4 ${isSupervisorOrAdmin ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
         {kanbanColumns.filter(col => col.status !== 'realizado').map(col => (
           <Card key={col.status} className={`${estadoColors[col.status].bg} border ${estadoColors[col.status].border}`}>
             <div className="p-4">
@@ -615,8 +615,7 @@ export default function ActividadesPage() {
             </div>
           </Card>
         ))}
-        {/* Realizado - Colapsable - Solo para Supervisor N1 */}
-        {isSupervisorN1 && (
+        {isSupervisorOrAdmin && (
           <div 
             className={`${estadoColors.realizado.bg} border ${estadoColors.realizado.border} cursor-pointer hover:shadow-md transition-shadow rounded-xl`}
             onClick={() => setShowRealizados(!showRealizados)}
@@ -800,7 +799,7 @@ export default function ActividadesPage() {
                               <AlertCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                             </button>
                           )}
-                          {column.status !== 'realizado' && isSupervisorN1 && (
+                          {column.status !== 'realizado' && isSupervisorOrAdmin && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleStatusChange(activity.id, 'realizado'); }}
                               className="p-1 hover:bg-gray-100 dark:hover:bg-dark-500 rounded"
@@ -1500,25 +1499,25 @@ export default function ActividadesPage() {
                   <button
                     key={status}
                     onClick={() => handleStatusChange(selectedActivity.id, status)}
-                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))}
+                    disabled={selectedActivity.estado === status || (status === 'realizado' && !isSupervisorOrAdmin && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                       selectedActivity.estado === status
                         ? `${estadoColors[status].bg} ${estadoColors[status].text} border-2 ${estadoColors[status].border} ring-2 ring-offset-1 ring-current/20`
-                        : (status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))
+                        : (status === 'realizado' && !isSupervisorOrAdmin && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo))
                         ? 'bg-gray-200 dark:bg-dark-600 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         : 'bg-white dark:bg-dark-700 text-gray-600 dark:text-gray-200 border border-gray-200 dark:border-dark-500 hover:bg-gray-100 dark:hover:bg-dark-600 hover:border-gray-300'
                     }`}
-                    title={status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) ? 'Solo Supervisor N1 puede marcar como Realizado' : ''}
+                    title={status === 'realizado' && !isSupervisorOrAdmin && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) ? 'Solo Supervisores pueden marcar como Realizado' : ''}
                   >
                     {estadoLabels[status]}
-                    {status === 'realizado' && !isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && ' 🔒'}
+                    {status === 'realizado' && !isSupervisorOrAdmin && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && ' 🔒'}
                   </button>
                 ))}
               </div>
-              {!isSupervisorN1 && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && (
+              {!isSupervisorOrAdmin && ['reunion', 'capacitacion', 'seguimiento'].includes(selectedActivity.tipo) && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  Solo Supervisores Nivel 1 pueden marcar objetivos estratégicos como Realizado
+                  Solo Supervisores pueden marcar objetivos estratégicos como Realizado
                 </p>
               )}
             </div>
