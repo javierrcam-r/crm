@@ -19,6 +19,7 @@ import VoiceSearch from '@/components/ui/VoiceSearch';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
+import { isEventVendorRole } from '@/lib/auth/roles';
 
 const statusConfig: Record<EventStatus, { label: string; color: string; bg: string }> = {
   planeado: { label: 'Planeado', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-100 dark:bg-blue-900/40' },
@@ -49,7 +50,7 @@ export default function EventosPage() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'resumen'>('list');
 
   const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
-  const isVendor = userProfile?.rol === 'vendedor' || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant';
+  const isVendor = isEventVendorRole(userProfile?.rol) || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant';
   const isRuleta = userProfile?.rol === 'ruleta';
   const canView = isSupervisor || isVendor || isRuleta;
 

@@ -14,6 +14,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
+import { SALES_VENDOR_ROLES } from '@/lib/auth/roles';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { UserProfile } from '@/types/database';
 import Link from 'next/link';
@@ -39,7 +40,7 @@ export default function VendedoresListPage() {
       const { data, error } = await supabase
         .from('users_profile')
         .select('*')
-        .eq('rol', 'vendedor')
+        .in('rol', SALES_VENDOR_ROLES)
         .order('nombre_completo');
 
       if (error) throw error;

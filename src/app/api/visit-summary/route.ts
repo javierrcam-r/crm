@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     if (!customerId || !userId) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
 
     const { data: profile } = await db.from('users_profile').select('rol').eq('id', userId).single();
-    if (!profile || !['admin', 'supervisor', 'supervisor_nivel1', 'supervisor_vendedor', 'vendedor'].includes(profile.rol)) {
+    if (!profile || !['admin', 'supervisor', 'supervisor_nivel1', 'supervisor_vendedor', 'vendedor', 'vendedor_tecnico'].includes(profile.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 

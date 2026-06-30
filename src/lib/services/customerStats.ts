@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { SALES_VENDOR_ROLES } from '@/lib/auth/roles';
 import type { Customer } from '@/types/database';
 
 export interface VendorCustomerStats {
@@ -76,7 +77,7 @@ async function fetchVendors(): Promise<{ id: string; user_id: string; nombre_com
   const { data, error } = await supabase
     .from('users_profile')
     .select('id, user_id, nombre_completo, rol')
-    .in('rol', ['vendedor', 'supervisor_vendedor'])
+    .in('rol', SALES_VENDOR_ROLES)
     .eq('activo', true)
     .order('nombre_completo');
 

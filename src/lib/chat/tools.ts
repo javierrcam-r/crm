@@ -547,7 +547,7 @@ export const getAllSellersReport = tool(
     const e = `${dateTo}T23:59:59-05:00`;
 
     const { data: users } = await db.from('users_profile').select('id, user_id, nombre_completo, rol').eq('activo', true);
-    const sellers = (users || []).filter(u => ['vendedor', 'supervisor_vendedor'].includes(u.rol));
+    const sellers = (users || []).filter(u => ['vendedor', 'supervisor_vendedor', 'vendedor_tecnico'].includes(u.rol));
     const uMap: Record<string, string> = {};
     (users || []).forEach(u => { uMap[u.id] = u.nombre_completo; uMap[u.user_id] = u.nombre_completo; });
 

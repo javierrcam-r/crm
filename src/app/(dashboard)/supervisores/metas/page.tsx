@@ -35,6 +35,7 @@ import { format, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSalesVendorRole } from '@/lib/auth/roles';
 
 export default function MetasPage() {
   const router = useRouter();
@@ -88,8 +89,7 @@ export default function MetasPage() {
 
       setBrands(brandsData);
       setAllBrands(allBrandsData);
-      // Solo vendedores y supervisor_vendedor
-      const vendedores = usersData.filter(u => u.rol === 'vendedor' || u.rol === 'supervisor_vendedor');
+      const vendedores = usersData.filter(u => isSalesVendorRole(u.rol));
       setUsers(vendedores);
       setGoals(goalsData);
 
@@ -375,7 +375,7 @@ export default function MetasPage() {
                                 {user.nombre_completo}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' : 'Vendedor'}
+                                {user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' : user.rol === 'vendedor_tecnico' ? 'Vend.+Téc.' : 'Vendedor'}
                               </p>
                             </div>
                           </div>

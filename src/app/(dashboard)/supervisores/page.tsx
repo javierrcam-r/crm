@@ -17,6 +17,7 @@ import { getActivities } from '@/lib/services/activities';
 import { format, startOfWeek, endOfWeek, isBefore, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { UserProfile, Activity } from '@/types/database';
+import { SALES_VENDOR_ROLES } from '@/lib/auth/roles';
 
 interface VendedorStats {
   id: string;
@@ -164,7 +165,7 @@ export default function SupervisoresPage() {
       const { data: users, error: usersError } = await supabase
         .from('users_profile')
         .select('*')
-        .eq('rol', 'vendedor')
+        .in('rol', SALES_VENDOR_ROLES)
         .eq('activo', true)
         .order('nombre_completo');
 
