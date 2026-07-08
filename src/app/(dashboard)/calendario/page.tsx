@@ -2052,8 +2052,8 @@ export default function CalendarioPage() {
                       return (
                       <Link key={`det-cal-evt-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.detail}>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(displayDate), 'HH:mm')}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-amber-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
+                          <span className="text-xs font-bold">🎯 {format(new Date(displayDate), 'HH:mm')}</span>
+                          <span className={CALENDAR_EVENT_BADGE}>Evento</span>
                         </div>
                         <p className="font-medium">{event.nombre}</p>
                       </Link>
@@ -2224,8 +2224,8 @@ export default function CalendarioPage() {
                       return (
                       <Link key={`det-cal-evt-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.detail}>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(displayDate), 'HH:mm')}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-amber-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
+                          <span className="text-xs font-bold">🎯 {format(new Date(displayDate), 'HH:mm')}</span>
+                          <span className={CALENDAR_EVENT_BADGE}>Evento</span>
                         </div>
                         <p className="font-medium">{event.nombre}</p>
                       </Link>
