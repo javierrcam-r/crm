@@ -23,15 +23,17 @@ import {
   Palmtree,
   Sparkles,
   DollarSign,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import Badge from '@/components/ui/Badge';
 import toast from 'react-hot-toast';
 import { getSidebarConfig, isMenuVisible, type SidebarConfigItem } from '@/lib/services/sidebarConfig';
 import NotificationBell from './NotificationBell';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 const vendedorNavigation = [
   { key: 'dashboard', name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -82,6 +84,7 @@ function NavLink({
   active,
   index,
   onClose,
+  collapsed,
 }: {
   href: string;
   icon: any;
@@ -89,13 +92,16 @@ function NavLink({
   active: boolean;
   index: number;
   onClose: () => void;
+  collapsed?: boolean;
 }) {
   return (
     <Link
       href={href}
       onClick={onClose}
+      title={collapsed ? name : undefined}
       className={cn(
-        'flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all duration-200 text-[13px]',
+        'flex items-center rounded-xl transition-all duration-200 text-[13px]',
+        collapsed ? 'justify-center px-2 py-2' : 'gap-2.5 px-2.5 py-2',
         'animate-slide-in opacity-0',
         active
           ? cn(glassActive, 'text-indigo-700 dark:text-indigo-300 font-medium')
@@ -105,7 +111,7 @@ function NavLink({
     >
       <div
         className={cn(
-          'flex items-center justify-center w-7 h-7 rounded-lg transition-colors duration-200',
+          'flex items-center justify-center w-7 h-7 rounded-lg transition-colors duration-200 flex-shrink-0',
           active
             ? 'bg-indigo-200/40 dark:bg-indigo-400/20 text-indigo-600 dark:text-indigo-400'
             : 'bg-white/20 dark:bg-white/[0.05] text-gray-500 dark:text-gray-400'
@@ -113,7 +119,7 @@ function NavLink({
       >
         <Icon className="h-4 w-4" />
       </div>
-      <span>{name}</span>
+      {!collapsed && <span className="truncate">{name}</span>}
     </Link>
   );
 }
@@ -130,10 +136,21 @@ function getInitials(name: string): string {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarConfig, setSidebarConfig] = useState<SidebarConfigItem[]>([]);
   const { isUserAdmin, userProfile, logout } = useAuth();
+  const { collapsed, toggleCollapsed } = useSidebar();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  const showCollapsed = collapsed && isDesktop;
 
   useEffect(() => {
     getSidebarConfig().then(setSidebarConfig).catch(() => {});
@@ -173,18 +190,37 @@ export default function Sidebar() {
     [userProfile?.nombre_completo]
   );
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex-shrink-0 px-4 py-3.5 border-b border-white/10 dark:border-white/[0.04]">
-        <div className="flex items-center gap-3">
+      <div className={cn(
+        'flex-shrink-0 border-b border-white/10 dark:border-white/[0.04]',
+        isCollapsed ? 'px-2 py-3' : 'px-4 py-3.5',
+      )}>
+        <div className={cn('flex items-center', isCollapsed ? 'flex-col gap-2' : 'gap-3')}>
           <Image src="/logo-disfero.png" alt="Disfero" width={36} height={36} className="w-9 h-9 object-contain flex-shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight truncate leading-tight">
-              CRM <span className="text-indigo-600 dark:text-indigo-400">Disfero</span>
-            </h1>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">Sistema de Gestión</p>
-          </div>
+          {!isCollapsed && (
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight truncate leading-tight">
+                CRM <span className="text-indigo-600 dark:text-indigo-400">Disfero</span>
+              </h1>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">Sistema de Gestión</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className={cn(
+              'hidden md:flex items-center justify-center rounded-lg transition-all duration-200',
+              isCollapsed ? 'w-8 h-8' : 'w-7 h-7',
+              glassHover,
+              'text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400',
+            )}
+            aria-label={isCollapsed ? 'Expandir menú' : 'Retraer menú'}
+            title={isCollapsed ? 'Expandir menú' : 'Retraer menú'}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
         </div>
       </div>
 
@@ -192,40 +228,46 @@ export default function Sidebar() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
         {/* Quick Actions */}
         {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'vendedor_tecnico') && (
-          <div className="px-3 pt-4 pb-3 border-b border-white/10 dark:border-white/[0.04]">
-            <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
-              Acciones Rápidas
-            </p>
+          <div className={cn('pt-4 pb-3 border-b border-white/10 dark:border-white/[0.04]', isCollapsed ? 'px-2' : 'px-3')}>
+            {!isCollapsed && (
+              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
+                Acciones Rápidas
+              </p>
+            )}
             <div className="space-y-1">
               {quickActions.map((action) => (
                 <Link
                   key={action.name}
                   href={action.href}
                   onClick={closeMobile}
+                  title={isCollapsed ? action.name : undefined}
                   className={cn(
-                    'flex items-center gap-2.5 px-2.5 py-2 text-[13px] text-gray-600 dark:text-gray-300 rounded-xl transition-all duration-200 group',
+                    'flex items-center text-[13px] text-gray-600 dark:text-gray-300 rounded-xl transition-all duration-200 group',
+                    isCollapsed ? 'justify-center px-2 py-2' : 'gap-2.5 px-2.5 py-2',
                     'border border-transparent', glassHover
                   )}
                 >
                   <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/20 dark:bg-white/[0.05] group-hover:bg-indigo-200/30 dark:group-hover:bg-indigo-400/15 transition-colors">
                     <Plus className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
                   </div>
-                  {action.name}
+                  {!isCollapsed && action.name}
                 </Link>
               ))}
             </div>
           </div>
         )}
 
-        <nav className="px-3 py-3 space-y-0.5">
+        <nav className={cn('py-3 space-y-0.5', isCollapsed ? 'px-2' : 'px-3')}>
           {/* Vendedor */}
           {(userProfile?.rol === 'vendedor' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'vendedor_tecnico') && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
-                Menú Principal
-              </p>
+              {!isCollapsed && (
+                <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
+                  Menú Principal
+                </p>
+              )}
               {filterByConfig(vendedorNavigation).map((item, index) => (
-                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} />
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} collapsed={isCollapsed} />
               ))}
               <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
             </>
@@ -234,11 +276,13 @@ export default function Sidebar() {
           {/* Supervisor */}
           {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor') && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
-                Supervisión
-              </p>
+              {!isCollapsed && (
+                <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
+                  Supervisión
+                </p>
+              )}
               {filterByConfig(supervisorNavigation).map((item, index) => (
-                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} />
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} collapsed={isCollapsed} />
               ))}
               <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
             </>
@@ -246,22 +290,24 @@ export default function Sidebar() {
 
           {/* Marketing/Técnico Calendar */}
           {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico') && isMenuVisible(sidebarConfig, 'calendario', userProfile?.rol || '') && (
-            <NavLink href="/calendario" icon={Calendar} name="Calendario" active={isActive('/calendario')} index={0} onClose={closeMobile} />
+            <NavLink href="/calendario" icon={Calendar} name="Calendario" active={isActive('/calendario')} index={0} onClose={closeMobile} collapsed={isCollapsed} />
           )}
 
           {/* Marketing/Técnico/EventAssistant/Ruleta Events */}
           {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant' || userProfile?.rol === 'ruleta') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
-            <NavLink href="/eventos" icon={Calendar} name="Eventos" active={isActive('/eventos')} index={1} onClose={closeMobile} />
+            <NavLink href="/eventos" icon={Calendar} name="Eventos" active={isActive('/eventos')} index={1} onClose={closeMobile} collapsed={isCollapsed} />
           )}
 
           {/* Gestión */}
           {userProfile && userProfile.rol !== 'event_assistant' && userProfile.rol !== 'ruleta' && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
-                {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
-              </p>
+              {!isCollapsed && (
+                <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
+                  {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
+                </p>
+              )}
               {filterByConfig(actividadesEstrategicas).map((item, index) => (
-                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} />
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={index} onClose={closeMobile} collapsed={isCollapsed} />
               ))}
             </>
           )}
@@ -270,36 +316,46 @@ export default function Sidebar() {
           {isUserAdmin && (
             <>
               <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
-              <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
-                Administración
-              </p>
+              {!isCollapsed && (
+                <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
+                  Administración
+                </p>
+              )}
               {adminNavigation.map((item, index) => (
-                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={supervisorNavigation.length + index} onClose={closeMobile} />
+                <NavLink key={item.name} href={item.href} icon={item.icon} name={item.name} active={isActive(item.href)} index={supervisorNavigation.length + index} onClose={closeMobile} collapsed={isCollapsed} />
               ))}
             </>
           )}
 
           {/* Configuración */}
           <div className="my-3 border-t border-white/10 dark:border-white/[0.04]" />
-          <NavLink href="/configuracion" icon={Settings} name="Configuración" active={isActive('/configuracion')} index={0} onClose={closeMobile} />
+          <NavLink href="/configuracion" icon={Settings} name="Configuración" active={isActive('/configuracion')} index={0} onClose={closeMobile} collapsed={isCollapsed} />
         </nav>
       </div>
 
       {/* Footer */}
-      <div className="flex-shrink-0 px-3 py-3 border-t border-white/10 dark:border-white/[0.04]">
+      <div className={cn('flex-shrink-0 py-3 border-t border-white/10 dark:border-white/[0.04]', isCollapsed ? 'px-2' : 'px-3')}>
         {userProfile && (
-          <div className="flex items-center gap-2.5 mb-2.5 pb-2.5 border-b border-white/10 dark:border-white/[0.04]">
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mb-0.5">Usuario:</p>
-              <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{userProfile.nombre_completo}</p>
-            </div>
+          <div className={cn(
+            'flex items-center mb-2.5 pb-2.5 border-b border-white/10 dark:border-white/[0.04]',
+            isCollapsed ? 'justify-center' : 'gap-2.5',
+          )}>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mb-0.5">Usuario:</p>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{userProfile.nombre_completo}</p>
+              </div>
+            )}
             {initials && (
-              <div className={cn(
-                'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-[11px] font-bold',
-                'bg-indigo-100/40 dark:bg-indigo-400/15 text-indigo-600 dark:text-indigo-400',
-                'border border-indigo-200/40 dark:border-indigo-400/20',
-                'shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]'
-              )}>
+              <div
+                className={cn(
+                  'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-[11px] font-bold',
+                  'bg-indigo-100/40 dark:bg-indigo-400/15 text-indigo-600 dark:text-indigo-400',
+                  'border border-indigo-200/40 dark:border-indigo-400/20',
+                  'shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]',
+                )}
+                title={isCollapsed ? userProfile.nombre_completo : undefined}
+              >
                 {initials}
               </div>
             )}
@@ -308,8 +364,10 @@ export default function Sidebar() {
         
         <button
           onClick={handleLogout}
+          title={isCollapsed ? 'Cerrar Sesión' : undefined}
           className={cn(
-            'w-full flex items-center gap-2.5 px-2.5 py-2 text-[13px] text-gray-500 dark:text-gray-400 rounded-xl transition-all duration-200 group',
+            'w-full flex items-center text-[13px] text-gray-500 dark:text-gray-400 rounded-xl transition-all duration-200 group',
+            isCollapsed ? 'justify-center px-2 py-2' : 'gap-2.5 px-2.5 py-2',
             'border border-transparent',
             'hover:bg-red-100/20 dark:hover:bg-red-400/[0.08] hover:border-red-200/30 dark:hover:border-red-400/[0.12] hover:text-red-600 dark:hover:text-red-400',
             'hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),0_2px_6px_rgba(239,68,68,0.06)] dark:hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.06),0_2px_6px_rgba(239,68,68,0.12)]'
@@ -318,10 +376,12 @@ export default function Sidebar() {
           <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/20 dark:bg-white/[0.05] group-hover:bg-red-200/30 dark:group-hover:bg-red-400/15 transition-colors">
             <LogOut className="h-4 w-4" />
           </div>
-          <span>Cerrar Sesión</span>
+          {!isCollapsed && <span>Cerrar Sesión</span>}
         </button>
 
-        <p className="text-[9px] text-gray-300 dark:text-gray-600 text-center mt-2">CRM Disfero v1.0</p>
+        {!isCollapsed && (
+          <p className="text-[9px] text-gray-300 dark:text-gray-600 text-center mt-2">CRM Disfero v1.0</p>
+        )}
       </div>
     </div>
   );
@@ -354,16 +414,17 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full w-[240px] sm:w-64',
+          'fixed left-0 top-0 h-full',
+          showCollapsed ? 'md:w-[72px]' : 'w-[240px] sm:w-64',
           'bg-gray-100/60 dark:bg-dark-900/70 backdrop-blur-2xl',
           'border-r border-white/20 dark:border-white/[0.05]',
-          'z-40 transition-transform duration-300',
+          'z-40 transition-[width,transform] duration-300',
           'md:translate-x-0',
           'shadow-[1px_0_20px_rgba(0,0,0,0.03)] dark:shadow-[1px_0_20px_rgba(0,0,0,0.3)]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
-        <SidebarContent />
+        <SidebarContent isCollapsed={showCollapsed} />
       </aside>
     </>
   );
