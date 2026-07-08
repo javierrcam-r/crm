@@ -538,6 +538,71 @@ export async function getVendorEvents(vendorId: string) {
 }
 
 // =====================================================
+// EVENT EDITORS (edición completa, cualquier rol)
+// =====================================================
+export async function getEventEditors(eventId: string): Promise<string[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_editors')
+    .select('user_profile_id')
+    .eq('event_id', eventId);
+  if (error) throw error;
+  return (data || []).map((d: { user_profile_id: string }) => d.user_profile_id);
+}
+
+export async function setEventEditors(
+  eventId: string,
+  userIds: string[],
+  assignedBy?: string,
+) {
+  const supabase = getSupabaseClient();
+  await supabase.from('event_editors').delete().eq('event_id', eventId);
+  if (userIds.length > 0) {
+    const rows = userIds.map(user_profile_id => ({
+      event_id: eventId,
+      user_profile_id,
+      assigned_by: assignedBy || null,
+    }));
+    const { error } = await supabase.from('event_editors').insert(rows);
+    if (error) throw error;
+  }
+}
+
+export async function isUserEventEditor(
+  eventId: string,
+  userProfileId: string,
+): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_editors')
+    .select('id')
+    .eq('event_id', eventId)
+    .eq('user_profile_id', userProfileId)
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
+}
+
+export async function getEditorEvents(userProfileId: string): Promise<Event[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('event_editors')
+    .select('event_id')
+    .eq('user_profile_id', userProfileId);
+  if (error) throw error;
+  const eventIds = (data || []).map((d: { event_id: string }) => d.event_id);
+  if (eventIds.length === 0) return [];
+  const { data: events, error: evErr } = await supabase
+    .from('events')
+    .select('*')
+    .in('id', eventIds)
+    .neq('estado', 'cancelado')
+    .order('fecha_inicio', { ascending: false });
+  if (evErr) throw evErr;
+  return events as Event[];
+}
+
+// =====================================================
 // VENUE LAYOUTS
 // =====================================================
 export type VenueElementType =

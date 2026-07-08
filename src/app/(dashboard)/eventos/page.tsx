@@ -13,13 +13,13 @@ import Badge from '@/components/ui/Badge';
 import EventCalendar from '@/components/events/EventCalendar';
 import EventsDashboard from '@/components/events/EventsDashboard';
 import { useAuth } from '@/contexts/AuthContext';
-import { getEvents, getVendorEvents, getAllEventExpenses, getAllEventParticipants, type Event, type EventStatus, type EventType, type EventExpense, type EventParticipant } from '@/lib/services/events';
+import { getEvents, getVendorEvents, getEditorEvents, getAllEventExpenses, getAllEventParticipants, type Event, type EventStatus, type EventType, type EventExpense, type EventParticipant } from '@/lib/services/events';
 import { fuzzySearch } from '@/lib/search';
 import VoiceSearch from '@/components/ui/VoiceSearch';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
-import { isEventVendorRole } from '@/lib/auth/roles';
+import { isEventVendorRole, isEventSupervisorRole } from '@/lib/auth/roles';
 
 const statusConfig: Record<EventStatus, { label: string; color: string; bg: string }> = {
   planeado: { label: 'Planeado', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-100 dark:bg-blue-900/40' },
@@ -48,17 +48,31 @@ export default function EventosPage() {
   const [filterStatus, setFilterStatus] = useState<EventStatus | ''>('');
   const [filterType, setFilterType] = useState<EventType | ''>('');
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'resumen'>('list');
+  const [editorEventIds, setEditorEventIds] = useState<Set<string>>(new Set());
 
-  const isSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
+  const isSupervisor = isEventSupervisorRole(userProfile?.rol);
   const isVendor = isEventVendorRole(userProfile?.rol) || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant';
   const isRuleta = userProfile?.rol === 'ruleta';
-  const canView = isSupervisor || isVendor || isRuleta;
+  const canView = isSupervisor || isVendor || isRuleta || editorEventIds.size > 0;
 
   useEffect(() => {
-    if (canView && userProfile) loadEvents();
-  }, [canView, userProfile]);
+    if (!userProfile) return;
+    if (isSupervisor || isVendor || isRuleta) {
+      loadEvents();
+      return;
+    }
+    getEditorEvents(userProfile.id)
+      .then(editorEvents => {
+        setEditorEventIds(new Set(editorEvents.map(e => e.id)));
+        setEvents(editorEvents);
+      })
+      .catch(e => console.error('Error loading editor events:', e))
+      .finally(() => setLoading(false));
+  }, [userProfile]);
 
   const loadEvents = async () => {
+    if (!userProfile) return;
+    setLoading(true);
     try {
       if (isSupervisor) {
         const [data, expenses, participants] = await Promise.all([
@@ -77,9 +91,17 @@ export default function EventosPage() {
           return;
         }
         setEvents(data);
-      } else if (isVendor && userProfile) {
-        const data = await getVendorEvents(userProfile.id);
-        setEvents(data);
+      } else {
+        const [vendorEvents, editorEvents] = await Promise.all([
+          isVendor ? getVendorEvents(userProfile.id) : Promise.resolve([] as Event[]),
+          getEditorEvents(userProfile.id),
+        ]);
+        setEditorEventIds(new Set(editorEvents.map(e => e.id)));
+        const byId = new Map<string, Event>();
+        for (const e of [...vendorEvents, ...editorEvents]) byId.set(e.id, e);
+        setEvents(Array.from(byId.values()).sort(
+          (a, b) => new Date(b.fecha_inicio).getTime() - new Date(a.fecha_inicio).getTime(),
+        ));
       }
     } catch (e) {
       console.error('Error loading events:', e);
@@ -96,7 +118,8 @@ export default function EventosPage() {
   });
 
   const handleEventClick = (event: Event) => {
-    router.push(isSupervisor ? `/eventos/${event.id}` : `/eventos/${event.id}/vendedor`);
+    const useFullView = isSupervisor || editorEventIds.has(event.id);
+    router.push(useFullView ? `/eventos/${event.id}` : `/eventos/${event.id}/vendedor`);
   };
 
   const stats = {
@@ -107,13 +130,21 @@ export default function EventosPage() {
     presupuestoTotal: events.reduce((s, e) => s + Number(e.presupuesto_total), 0),
   };
 
+  if (!userProfile || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+      </div>
+    );
+  }
+
   if (!canView) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md text-center p-8">
           <BarChart3 className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Acceso Denegado</h2>
-          <p className="text-gray-600 dark:text-gray-300">Solo supervisores pueden acceder a este módulo.</p>
+          <p className="text-gray-600 dark:text-gray-300">No tienes eventos asignados ni permisos para acceder a este módulo.</p>
         </Card>
       </div>
     );

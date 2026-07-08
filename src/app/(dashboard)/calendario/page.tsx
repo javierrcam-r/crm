@@ -50,7 +50,7 @@ import {
   getActivityComments,
   getStrategicObjectivesForSelection
 } from '@/lib/services/activities';
-import { getAllEventActivitiesForCalendar, getVendorEvents, type EventActivity } from '@/lib/services/events';
+import { getAllEventActivitiesForCalendar, getVendorEvents, getEditorEvents, type EventActivity } from '@/lib/services/events';
 import { getBlockedDays, isDateBlocked } from '@/lib/services/blockedDays';
 import { getUsersOnVacationOnDate } from '@/lib/services/vacations';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
@@ -197,8 +197,14 @@ export default function CalendarioPage() {
 
       let assignedEventIds: string[] | undefined;
       if (!isSup && !showTecnicoActivities && currentId) {
-        const vendorEvents = await getVendorEvents(currentId).catch(() => []);
-        assignedEventIds = vendorEvents.map((e: any) => e.id);
+        const [vendorEvents, editorEvents] = await Promise.all([
+          getVendorEvents(currentId).catch(() => []),
+          getEditorEvents(currentId).catch(() => []),
+        ]);
+        assignedEventIds = [...new Set([
+          ...vendorEvents.map((e: { id: string }) => e.id),
+          ...editorEvents.map((e: { id: string }) => e.id),
+        ])];
       }
 
       const dateFromShort = dateFrom.slice(0, 10);

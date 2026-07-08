@@ -25,9 +25,11 @@ import {
   getEventActivities, createEventActivity, updateEventActivity, deleteEventActivity,
   getEventParticipants, createParticipant, updateParticipant, deleteParticipant,
   getActiveUsers, computeEventKPIs, getEventVendors, setEventVendors,
+  getEventEditors, setEventEditors, isUserEventEditor,
   type Event, type EventExpense, type EventActivity, type EventParticipant,
   type EventStatus, type ExpenseStatus, type EventActivityStatus, type EventActivityType,
 } from '@/lib/services/events';
+import { canFullyEditEvent, isEventSupervisorRole } from '@/lib/auth/roles';
 import { format, differenceInDays, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -61,7 +63,9 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('general');
   const [eventVendorIds, setEventVendorIds] = useState<string[]>([]);
+  const [eventEditorIds, setEventEditorIds] = useState<string[]>([]);
   const [savingVendors, setSavingVendors] = useState(false);
+  const [savingEditors, setSavingEditors] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState(false);
   const [editEventForm, setEditEventForm] = useState<any>({});
   const [savingEvent, setSavingEvent] = useState(false);
@@ -94,8 +98,19 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     if (!userProfile) return;
-    const isSup = userProfile.rol === 'admin' || userProfile.rol === 'supervisor' || userProfile.rol === 'supervisor_nivel1' || userProfile.rol === 'supervisor_vendedor';
-    if (!isSup) {
+
+    const resolveAccess = async () => {
+      if (isEventSupervisorRole(userProfile.rol)) {
+        loadAll();
+        return;
+      }
+
+      const isEditor = await isUserEventEditor(eventId, userProfile.id);
+      if (isEditor) {
+        loadAll();
+        return;
+      }
+
       setRedirecting(true);
       if (userProfile.rol === 'event_assistant') {
         router.replace(`/eventos/${eventId}/asistencia`);
@@ -104,26 +119,29 @@ export default function EventDetailPage() {
       } else {
         router.replace(`/eventos/${eventId}/vendedor`);
       }
-      return;
-    }
-    loadAll();
+    };
+
+    resolveAccess();
   }, [eventId, userProfile]);
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [ev, exp, act, part, usr, vids] = await Promise.all([
+      const [ev, exp, act, part, usr, vids, eids] = await Promise.all([
         getEvent(eventId), getEventExpenses(eventId), getEventActivities(eventId),
-        getEventParticipants(eventId), getActiveUsers(), getEventVendors(eventId)
+        getEventParticipants(eventId), getActiveUsers(), getEventVendors(eventId),
+        getEventEditors(eventId),
       ]);
-      setEvent(ev); setExpenses(exp); setActivities(act); setParticipants(part); setUsers(usr); setEventVendorIds(vids);
+      setEvent(ev); setExpenses(exp); setActivities(act); setParticipants(part);
+      setUsers(usr); setEventVendorIds(vids); setEventEditorIds(eids);
     } catch (e) { console.error(e); toast.error('Error cargando evento'); }
     finally { setLoading(false); }
   };
 
   const getUserName = (id: string) => users.find(u => u.id === id)?.nombre_completo || 'Sin asignar';
-  const isSupervisorOrAdmin = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
-  const canEditParticipant = (p: EventParticipant) => isSupervisorOrAdmin || p.registered_by === userProfile?.id;
+  const isSupervisorOrAdmin = isEventSupervisorRole(userProfile?.rol);
+  const hasFullEditAccess = canFullyEditEvent(userProfile, eventEditorIds);
+  const canEditParticipant = (p: EventParticipant) => hasFullEditAccess || p.registered_by === userProfile?.id;
   const getCatColor = (catName: string | null) => {
     if (!catName || !event) return null;
     const cat = (event.categorias_participantes || []).find((c: any) => c.nombre === catName);
@@ -554,6 +572,62 @@ export default function EventDetailPage() {
               <p className="text-xs text-indigo-600 mt-3 font-medium">{eventVendorIds.length} vendedor(es) asignado(s)</p>
             )}
           </Card>
+
+          {/* Editor Assignment — solo supervisores gestionan colaboradores */}
+          {isSupervisorOrAdmin && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Edit className="h-5 w-5 text-violet-600" />
+                Colaboradores con Edición Completa
+              </h3>
+              {savingEditors && <span className="text-xs text-violet-600 animate-pulse">Guardando...</span>}
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              Asigna una o más personas (cualquier rol) para que puedan editar por completo este evento: datos, presupuesto, actividades, participantes y venue.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {users.map(u => {
+                const isAssigned = eventEditorIds.includes(u.id);
+                return (
+                  <button
+                    key={u.id}
+                    onClick={async () => {
+                      const prev = eventEditorIds;
+                      const newIds = isAssigned
+                        ? prev.filter(id => id !== u.id)
+                        : [...prev, u.id];
+                      setEventEditorIds(newIds);
+                      setSavingEditors(true);
+                      try {
+                        await setEventEditors(eventId, newIds, userProfile?.id);
+                      } catch {
+                        toast.error('Error guardando colaboradores');
+                        setEventEditorIds(prev);
+                      } finally {
+                        setSavingEditors(false);
+                      }
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      isAssigned
+                        ? 'bg-violet-100 text-violet-700 border-violet-300 font-semibold'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                    }`}
+                  >
+                    {isAssigned && <CheckCircle className="h-3 w-3 inline mr-1" />}
+                    {u.nombre_completo}
+                    <span className="ml-1 text-[10px] opacity-60">({u.rol})</span>
+                  </button>
+                );
+              })}
+            </div>
+            {eventEditorIds.length > 0 && (
+              <p className="text-xs text-violet-600 mt-3 font-medium">
+                {eventEditorIds.length} colaborador(es) con edición completa
+              </p>
+            )}
+          </Card>
+          )}
         </div>
         )}
 
