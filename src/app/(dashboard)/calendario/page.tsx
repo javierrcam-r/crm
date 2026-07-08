@@ -50,7 +50,7 @@ import {
   getActivityComments,
   getStrategicObjectivesForSelection
 } from '@/lib/services/activities';
-import { getAllEventActivitiesForCalendar, getVendorEvents, getEditorEvents, type EventActivity } from '@/lib/services/events';
+import { getAllEventActivitiesForCalendar, getVendorEvents, getEditorEvents, getEventsForCalendar, getEventCalendarDate, type Event, type EventActivity } from '@/lib/services/events';
 import { getBlockedDays, isDateBlocked } from '@/lib/services/blockedDays';
 import { getUsersOnVacationOnDate } from '@/lib/services/vacations';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
@@ -100,6 +100,15 @@ const estadoLabels: Record<string, string> = {
 type ViewType = 'month' | 'week' | 'list';
 type CalendarFilterType = 'todos' | 'visitas' | 'diarias' | 'estrategicas' | 'eventos';
 
+const CALENDAR_EVENT_CLASS = {
+  cell: 'calendar-event block cursor-pointer border-l-2 bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60',
+  panel: 'block p-3 rounded-lg border-l-4 active:opacity-80 bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60',
+  week: 'block p-2 rounded-lg text-sm border-l-4 transition-colors bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60',
+  list: 'flex items-center justify-between p-3 sm:p-4 rounded-lg border-l-4 transition-colors bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 border-rose-500',
+  detail: 'block p-3 rounded-lg border-l-4 bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60',
+};
+const CALENDAR_EVENT_BADGE = 'text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200';
+
 type EventActivityWithEvent = EventActivity & { events: { id: string; nombre: string; estado: string } | null };
 
 export default function CalendarioPage() {
@@ -107,6 +116,7 @@ export default function CalendarioPage() {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [eventActivities, setEventActivities] = useState<EventActivityWithEvent[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<Event[]>([]);
   const [pendingVisits, setPendingVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -210,11 +220,15 @@ export default function CalendarioPage() {
       const dateFromShort = dateFrom.slice(0, 10);
       const dateToShort = dateTo.slice(0, 10);
 
-      const [visitsData, pendingData, activitiesData, eventActivitiesData, blockedDaysData] = await Promise.all([
+      const [visitsData, pendingData, activitiesData, eventActivitiesData, calendarEventsData, blockedDaysData] = await Promise.all([
         getVisits({ date_from: dateFrom, date_to: dateTo }),
         getPendingVisits(),
         getActivities().catch(() => [] as Activity[]),
         getAllEventActivitiesForCalendar(eventActUserId, assignedEventIds).catch(() => [] as EventActivityWithEvent[]),
+        getEventsForCalendar(dateFrom, dateTo, {
+          userProfileId: currentId,
+          isSupervisor: isSup,
+        }).catch(() => [] as Event[]),
         getBlockedDays(dateFromShort, dateToShort).catch(() => []),
       ]);
       setBlockedDaysSet(new Set(blockedDaysData.map((d) => d.fecha)));
@@ -338,6 +352,7 @@ export default function CalendarioPage() {
       
       setActivities(finalActivities);
       setEventActivities(finalEventActivities);
+      setCalendarEvents(calendarEventsData);
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
@@ -623,10 +638,18 @@ export default function CalendarioPage() {
     return visitUser?.rol === 'tecnico';
   };
 
+  const getCalendarEventsForDay = (date: Date) => {
+    if (calendarFilter !== 'todos' && calendarFilter !== 'eventos') return [];
+    return calendarEvents.filter((event) =>
+      isSameDay(new Date(getEventCalendarDate(event)), date),
+    );
+  };
+
   const getEventActivitiesForDay = (date: Date) => {
     if (calendarFilter !== 'todos' && calendarFilter !== 'eventos') return [];
+    const dayEventIds = new Set(getCalendarEventsForDay(date).map(e => e.id));
     return eventActivities.filter((ea) =>
-      isSameDay(new Date(ea.fecha_inicio), date)
+      isSameDay(new Date(ea.fecha_inicio), date) && !dayEventIds.has(ea.event_id),
     );
   };
 
@@ -922,11 +945,12 @@ export default function CalendarioPage() {
               const strategicActivities = getFilteredStrategicForDay(day);
               const dailyActivities = getFilteredDailyForDay(day);
               const dayEventActs = getEventActivitiesForDay(day);
+              const dayCalendarEvents = getCalendarEventsForDay(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isSelected = selectedDate && isSameDay(day, selectedDate);
               const today = isToday(day);
               const isBlocked = isDayBlocked(day);
-              const totalItems = strategicActivities.length + dailyActivities.length + dayVisits.length + dayEventActs.length;
+              const totalItems = strategicActivities.length + dailyActivities.length + dayVisits.length + dayCalendarEvents.length + dayEventActs.length;
 
               return (
                 <div
@@ -956,12 +980,27 @@ export default function CalendarioPage() {
                     )}
                     <div className="flex gap-0.5">
                       {strategicActivities.length > 0 && <Star className="h-3 w-3 text-purple-500 fill-purple-500" />}
-                      {dayEventActs.length > 0 && <Target className="h-3 w-3 text-rose-500" />}
+                      {(dayCalendarEvents.length > 0 || dayEventActs.length > 0) && <Target className="h-3 w-3 text-rose-500" />}
                     </div>
                   </div>
                   <div className="space-y-1">
+                    {/* Eventos (fecha fin) */}
+                    {dayCalendarEvents.slice(0, 1).map((event) => {
+                      const displayDate = getEventCalendarDate(event);
+                      return (
+                      <Link
+                        key={`cal-evt-${event.id}`}
+                        href={`/eventos/${event.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className={CALENDAR_EVENT_CLASS.cell}
+                      >
+                        <span className="font-medium">{format(new Date(displayDate), 'HH:mm')}</span>
+                        <span className="ml-1 truncate">🎯{event.nombre}</span>
+                      </Link>
+                      );
+                    })}
                     {/* Actividades de Eventos */}
-                    {dayEventActs.slice(0, 1).map((ea) => {
+                    {dayEventActs.slice(0, dayCalendarEvents.length > 0 ? 0 : 1).map((ea) => {
                       const isTecEvt = isEventActivityFromTecnico(ea);
                       return (
                       <Link
@@ -976,7 +1015,7 @@ export default function CalendarioPage() {
                       );
                     })}
                     {/* Objetivos Estratégicos */}
-                    {strategicActivities.slice(0, dayEventActs.length > 0 ? 1 : 2).map((activity) => {
+                    {strategicActivities.slice(0, (dayCalendarEvents.length + dayEventActs.length) > 0 ? 1 : 2).map((activity) => {
                       const style = getActivityStyle(activity, true);
                       return (
                         <div
@@ -990,7 +1029,7 @@ export default function CalendarioPage() {
                       );
                     })}
                     {/* Actividades Diarias */}
-                    {dailyActivities.slice(0, (strategicActivities.length + dayEventActs.length) > 0 ? 0 : 2).map((activity) => {
+                    {dailyActivities.slice(0, (strategicActivities.length + dayCalendarEvents.length + dayEventActs.length) > 0 ? 0 : 2).map((activity) => {
                       const style = getActivityStyle(activity, false);
                       return (
                         <div
@@ -1004,7 +1043,7 @@ export default function CalendarioPage() {
                       );
                     })}
                     {/* Visitas */}
-                    {dayVisits.slice(0, (strategicActivities.length + dailyActivities.length + dayEventActs.length) > 0 ? 0 : 2).map((visit) => {
+                    {dayVisits.slice(0, (strategicActivities.length + dailyActivities.length + dayCalendarEvents.length + dayEventActs.length) > 0 ? 0 : 2).map((visit) => {
                       const isTecV = isVisitFromTecnico(visit);
                       return (
                       <Link
@@ -1054,11 +1093,12 @@ export default function CalendarioPage() {
               const dailyActivities = getFilteredDailyForDay(day);
               const dayAllAct = getFilteredActivitiesForDay(day);
               const dayEventActs = getEventActivitiesForDay(day);
+              const dayCalendarEvents = getCalendarEventsForDay(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isSelected = selectedDayMobile && isSameDay(day, selectedDayMobile);
               const today = isToday(day);
               const isBlocked = isDayBlocked(day);
-              const totalItems = strategicActivities.length + dailyActivities.length + dayVisits.length + dayEventActs.length;
+              const totalItems = strategicActivities.length + dailyActivities.length + dayVisits.length + dayCalendarEvents.length + dayEventActs.length;
               
               const hasTecnicoActivities = dayAllAct.some(a => isActivityFromTecnico(a));
               const hasNonTecnicoStrategic = strategicActivities.some(a => !isActivityFromTecnico(a));
@@ -1091,6 +1131,7 @@ export default function CalendarioPage() {
                       </span>
                     )}
                     <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
+                      {dayCalendarEvents.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
                       {dayEventActs.some(ea => isEventActivityFromTecnico(ea)) && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
                       {dayEventActs.some(ea => !isEventActivityFromTecnico(ea)) && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
                       {hasTecnicoActivities && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
@@ -1116,7 +1157,8 @@ export default function CalendarioPage() {
                       const ds = getFilteredStrategicForDay(selectedDayMobile);
                       const dd = getFilteredDailyForDay(selectedDayMobile);
                       const de = getEventActivitiesForDay(selectedDayMobile);
-                      const total = ds.length + dd.length + dv.length + de.length;
+                      const dce = getCalendarEventsForDay(selectedDayMobile);
+                      const total = ds.length + dd.length + dv.length + dce.length + de.length;
                       return `${total} elemento${total !== 1 ? 's' : ''}`;
                     })()}
                   </p>
@@ -1141,7 +1183,8 @@ export default function CalendarioPage() {
                   const dayStrategic = getFilteredStrategicForDay(selectedDayMobile);
                   const dayDaily = getFilteredDailyForDay(selectedDayMobile);
                   const dayEventActs = getEventActivitiesForDay(selectedDayMobile);
-                  const hasItems = (dayStrategic.length + dayDaily.length + dayVisits.length + dayEventActs.length) > 0;
+                  const dayCalendarEvents = getCalendarEventsForDay(selectedDayMobile);
+                  const hasItems = (dayStrategic.length + dayDaily.length + dayVisits.length + dayCalendarEvents.length + dayEventActs.length) > 0;
 
                   if (!hasItems) {
                     return (
@@ -1154,6 +1197,18 @@ export default function CalendarioPage() {
 
                   return (
                     <div className="space-y-2">
+                      {dayCalendarEvents.map((event) => {
+                        const displayDate = getEventCalendarDate(event);
+                        return (
+                        <Link key={`mcal-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.panel}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold">🎯 {format(new Date(displayDate), 'HH:mm')}</span>
+                            <span className={CALENDAR_EVENT_BADGE}>Evento</span>
+                          </div>
+                          <p className="font-medium">{event.nombre}</p>
+                        </Link>
+                        );
+                      })}
                       {dayEventActs.map((ea) => {
                         const isTecEvt = isEventActivityFromTecnico(ea);
                         return (
@@ -1222,6 +1277,7 @@ export default function CalendarioPage() {
             {weekDays.map((day, index) => {
               const dayVisits = getFilteredVisitsForDay(day);
               const dayEventActs = getEventActivitiesForDay(day);
+              const dayCalendarEvents = getCalendarEventsForDay(day);
               const today = isToday(day);
 
               return (
@@ -1230,13 +1286,25 @@ export default function CalendarioPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
                       {format(day, 'EEEE', { locale: es })}
                       {getFilteredStrategicForDay(day).length > 0 && <Star className="h-3 w-3 text-purple-500 fill-purple-500" />}
-                      {dayEventActs.length > 0 && <Target className="h-3 w-3 text-rose-500" />}
+                      {(dayCalendarEvents.length > 0 || dayEventActs.length > 0) && <Target className="h-3 w-3 text-rose-500" />}
                     </p>
                     <p className={cn('text-xl font-bold mt-1', today ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white')}>
                       {format(day, 'd')}
                     </p>
                   </div>
                   <div className="p-2 space-y-2">
+                    {dayCalendarEvents.map((event) => {
+                      const displayDate = getEventCalendarDate(event);
+                      return (
+                      <Link key={`wcal-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.week}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className="font-semibold flex items-center gap-1">🎯 {format(new Date(displayDate), 'HH:mm')}</p>
+                          <span className={CALENDAR_EVENT_BADGE}>Evento</span>
+                        </div>
+                        <p className="truncate font-medium">{event.nombre}</p>
+                      </Link>
+                      );
+                    })}
                     {dayEventActs.map((ea) => {
                       const isTecEvt = isEventActivityFromTecnico(ea);
                       return (
@@ -1307,9 +1375,10 @@ export default function CalendarioPage() {
                 const dayStrategic = getFilteredStrategicForDay(day);
                 const dayDaily = getFilteredDailyForDay(day);
                 const dayEventActs = getEventActivitiesForDay(day);
+                const dayCalendarEvents = getCalendarEventsForDay(day);
                 const today = isToday(day);
                 const isSelected = selectedDayMobile && isSameDay(day, selectedDayMobile);
-                const totalItems = dayStrategic.length + dayDaily.length + dayVisits.length + dayEventActs.length;
+                const totalItems = dayStrategic.length + dayDaily.length + dayVisits.length + dayCalendarEvents.length + dayEventActs.length;
 
                 return (
                   <div
@@ -1335,7 +1404,7 @@ export default function CalendarioPage() {
                         </span>
                       )}
                       <div className="flex gap-0.5 mt-1 flex-wrap justify-center">
-                        {dayEventActs.length > 0 && <span className="w-2 h-2 rounded-full bg-rose-500"></span>}
+                        {(dayCalendarEvents.length > 0 || dayEventActs.length > 0) && <span className="w-2 h-2 rounded-full bg-rose-500"></span>}
                         {dayStrategic.length > 0 && <span className="w-2 h-2 rounded-full bg-purple-500"></span>}
                         {dayDaily.length > 0 && <span className="w-2 h-2 rounded-full bg-blue-500"></span>}
                         {dayVisits.length > 0 && <span className="w-2 h-2 rounded-full bg-gray-400"></span>}
@@ -1358,7 +1427,8 @@ export default function CalendarioPage() {
                         const ds = getFilteredStrategicForDay(selectedDayMobile);
                         const dd = getFilteredDailyForDay(selectedDayMobile);
                         const de = getEventActivitiesForDay(selectedDayMobile);
-                        const total = ds.length + dd.length + dv.length + de.length;
+                        const dce = getCalendarEventsForDay(selectedDayMobile);
+                        const total = ds.length + dd.length + dv.length + dce.length + de.length;
                         return `${total} elemento${total !== 1 ? 's' : ''}`;
                       })()}
                     </p>
@@ -1377,7 +1447,8 @@ export default function CalendarioPage() {
                     const dayStrategic = getFilteredStrategicForDay(selectedDayMobile);
                     const dayDaily = getFilteredDailyForDay(selectedDayMobile);
                     const dayEventActs = getEventActivitiesForDay(selectedDayMobile);
-                    const hasItems = (dayStrategic.length + dayDaily.length + dayVisits.length + dayEventActs.length) > 0;
+                    const dayCalendarEvents = getCalendarEventsForDay(selectedDayMobile);
+                    const hasItems = (dayStrategic.length + dayDaily.length + dayVisits.length + dayCalendarEvents.length + dayEventActs.length) > 0;
 
                     if (!hasItems) {
                       return (
@@ -1390,6 +1461,18 @@ export default function CalendarioPage() {
 
                     return (
                       <div className="space-y-2">
+                        {dayCalendarEvents.map((event) => {
+                          const displayDate = getEventCalendarDate(event);
+                          return (
+                          <Link key={`wcal-m-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.panel}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-bold">🎯 {format(new Date(displayDate), 'HH:mm')}</span>
+                              <span className={CALENDAR_EVENT_BADGE}>Evento</span>
+                            </div>
+                            <p className="font-medium">{event.nombre}</p>
+                          </Link>
+                          );
+                        })}
                         {dayEventActs.map((ea) => {
                           const isTecEvt = isEventActivityFromTecnico(ea);
                           return (
@@ -1454,8 +1537,9 @@ export default function CalendarioPage() {
               : calendarFilter === 'estrategicas' ? activities.filter(a => isActivityStrategic(a))
               : calendarFilter === 'visitas' ? [] : calendarFilter === 'eventos' ? [] : activities;
             const filteredVisitsList = (calendarFilter === 'todos' || calendarFilter === 'visitas') ? visits : [];
+            const filteredCalendarEventsList = (calendarFilter === 'todos' || calendarFilter === 'eventos') ? calendarEvents : [];
             const filteredEventActsList = (calendarFilter === 'todos' || calendarFilter === 'eventos') ? eventActivities : [];
-            const hasAnything = filteredActivities.length > 0 || filteredVisitsList.length > 0 || filteredEventActsList.length > 0;
+            const hasAnything = filteredActivities.length > 0 || filteredVisitsList.length > 0 || filteredCalendarEventsList.length > 0 || filteredEventActsList.length > 0;
 
             if (!hasAnything) {
               return (
@@ -1473,6 +1557,50 @@ export default function CalendarioPage() {
 
             return (
               <div className="space-y-2 sm:space-y-3">
+                {/* Eventos (fecha fin) */}
+                {filteredCalendarEventsList.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2 mb-2">
+                      <Target className="h-4 w-4" />
+                      Eventos ({filteredCalendarEventsList.length})
+                    </h3>
+                    {[...filteredCalendarEventsList]
+                      .sort((a, b) => new Date(getEventCalendarDate(a)).getTime() - new Date(getEventCalendarDate(b)).getTime())
+                      .map((event) => {
+                      const displayDate = getEventCalendarDate(event);
+                      return (
+                      <Link
+                        key={`list-cal-evt-${event.id}`}
+                        href={`/eventos/${event.id}`}
+                        className={CALENDAR_EVENT_CLASS.list}
+                      >
+                        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                          <div className="text-center min-w-[40px] sm:min-w-[60px]">
+                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                              {format(new Date(displayDate), 'EEE', { locale: es })}
+                            </p>
+                            <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                              {format(new Date(displayDate), 'd')}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                              {format(new Date(displayDate), 'MMM', { locale: es })}
+                            </p>
+                          </div>
+                          <div className="border-l border-gray-200 dark:border-dark-500 pl-2 sm:pl-4 flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-300">
+                              {format(new Date(displayDate), 'HH:mm')}
+                            </p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1 truncate">
+                              <Target className="h-3 w-3 flex-shrink-0 text-rose-500" />
+                              {event.nombre}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                      );
+                    })}
+                  </>
+                )}
                 {/* Actividades de Eventos */}
                 {filteredEventActsList.length > 0 && (
                   <>
@@ -1911,6 +2039,29 @@ export default function CalendarioPage() {
                   </div>
                 </div>
               )}
+              {/* Eventos (fecha fin) */}
+              {getCalendarEventsForDay(selectedDate).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2 flex items-center gap-1">
+                    <Target className="h-4 w-4" />
+                    Eventos ({getCalendarEventsForDay(selectedDate).length})
+                  </h4>
+                  <div className="space-y-2">
+                    {getCalendarEventsForDay(selectedDate).map((event) => {
+                      const displayDate = getEventCalendarDate(event);
+                      return (
+                      <Link key={`det-cal-evt-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.detail}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(displayDate), 'HH:mm')}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-amber-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
+                        </div>
+                        <p className="font-medium">{event.nombre}</p>
+                      </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {/* Actividades de Eventos */}
               {getEventActivitiesForDay(selectedDate).length > 0 && (
                 <div>
@@ -1935,7 +2086,7 @@ export default function CalendarioPage() {
                   </div>
                 </div>
               )}
-              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && getEventActivitiesForDay(selectedDate).length === 0 && (
+              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && getCalendarEventsForDay(selectedDate).length === 0 && getEventActivitiesForDay(selectedDate).length === 0 && (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-4">
                   No hay actividades para este día
                 </p>
@@ -2060,6 +2211,29 @@ export default function CalendarioPage() {
                   </div>
                 </div>
               )}
+              {/* Eventos (fecha fin) */}
+              {getCalendarEventsForDay(selectedDate).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2 flex items-center gap-1">
+                    <Target className="h-4 w-4" />
+                    Eventos ({getCalendarEventsForDay(selectedDate).length})
+                  </h4>
+                  <div className="space-y-2">
+                    {getCalendarEventsForDay(selectedDate).map((event) => {
+                      const displayDate = getEventCalendarDate(event);
+                      return (
+                      <Link key={`det-cal-evt-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.detail}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold">{isTecEvt ? '👷' : '🎯'} {format(new Date(displayDate), 'HH:mm')}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-amber-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
+                        </div>
+                        <p className="font-medium">{event.nombre}</p>
+                      </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {/* Actividades de Eventos */}
               {getEventActivitiesForDay(selectedDate).length > 0 && (
                 <div className="mb-4">
@@ -2084,7 +2258,7 @@ export default function CalendarioPage() {
                   </div>
                 </div>
               )}
-              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && getEventActivitiesForDay(selectedDate).length === 0 && (
+              {getActivitiesForDay(selectedDate).length === 0 && getVisitsForDay(selectedDate).length === 0 && getCalendarEventsForDay(selectedDate).length === 0 && getEventActivitiesForDay(selectedDate).length === 0 && (
                 <p className="text-center text-gray-500 py-4">
                   No hay actividades ni visitas para este día
                 </p>

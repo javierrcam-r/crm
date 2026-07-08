@@ -139,6 +139,57 @@ export async function getEvent(id: string) {
   return data as Event;
 }
 
+/** Fecha en la que el evento debe aparecer en el calendario (fin del evento, o inicio si no hay fin). */
+export function getEventCalendarDate(event: Pick<Event, 'fecha_inicio' | 'fecha_fin'>): string {
+  return event.fecha_fin || event.fecha_inicio;
+}
+
+export async function getEventsForCalendar(
+  dateFrom: string,
+  dateTo: string,
+  options?: { userProfileId?: string; isSupervisor?: boolean },
+): Promise<Event[]> {
+  const supabase = getSupabaseClient();
+  const fromMs = new Date(dateFrom).getTime();
+  const toMs = new Date(dateTo).getTime();
+
+  const inRange = (event: Event) => {
+    const ms = new Date(getEventCalendarDate(event)).getTime();
+    return ms >= fromMs && ms <= toMs;
+  };
+
+  if (options?.isSupervisor) {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .neq('estado', 'cancelado')
+      .order('fecha_inicio');
+    if (error) throw error;
+    return (data as Event[]).filter(inRange);
+  }
+
+  const userProfileId = options?.userProfileId;
+  if (!userProfileId) return [];
+
+  const [vendorEvents, editorEvents, responsableRes] = await Promise.all([
+    getVendorEvents(userProfileId).catch(() => [] as Event[]),
+    getEditorEvents(userProfileId).catch(() => [] as Event[]),
+    supabase
+      .from('events')
+      .select('*')
+      .eq('responsable_id', userProfileId)
+      .neq('estado', 'cancelado'),
+  ]);
+
+  if (responsableRes.error) throw responsableRes.error;
+
+  const byId = new Map<string, Event>();
+  for (const e of [...vendorEvents, ...editorEvents, ...((responsableRes.data || []) as Event[])]) {
+    byId.set(e.id, e);
+  }
+  return Array.from(byId.values()).filter(inRange);
+}
+
 export async function createEvent(event: Partial<Event>) {
   const supabase = getSupabaseClient();
   const profile = getCurrentUserProfile();
