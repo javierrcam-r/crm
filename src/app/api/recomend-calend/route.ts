@@ -156,6 +156,7 @@ interface InstructionPreferences {
   dayLocationPreferences: Map<number, string[]>;
   blockedHours: Map<number, Set<number>>;
   blockedWeekDays: Set<number>;
+  weekLocationTerms: string[];
   generalKeywords: string[];
   notes: string[];
 }
@@ -346,6 +347,7 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
   const blockedWeekDays = new Set<number>();
   const notes: string[] = [];
   const consumedSegments: string[] = [];
+  let weekLocationTerms: string[] = [];
   const stopWords = new Set([
     'domingo', 'lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado',
     'el', 'la', 'los', 'las', 'un', 'una', 'me', 'voy', 'ir', 'ire', 'estar', 'estare', 'ruta',
@@ -383,8 +385,11 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
     }
   }
 
-  // Instrucción para toda la semana: "esta semana me voy a Loja", "toda la semana en Cuenca".
-  const hasWeekScope = /\bsemana\b/.test(normalized);
+  // Instrucción para toda la semana. Se activa si:
+  //  - se menciona explícitamente "semana" ("esta semana me voy a Loja"), o
+  //  - no hay ninguna instrucción específica por día (ej. escribir solo "Loja" o
+  //    "me voy a Loja" aplica esa ubicación a toda la semana).
+  const hasWeekScope = /\bsemana\b/.test(normalized) || dayLocationPreferences.size === 0;
   const hasWeekBlock = blockMarkers.some(marker => normalized.includes(marker));
   if (hasWeekScope && !hasWeekBlock) {
     const weekStopWords = new Set([
@@ -401,6 +406,7 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
       .filter(w => w.length > 2 && !weekStopWords.has(w) && !alreadyUsed.has(w));
 
     if (weekTerms.length > 0) {
+      weekLocationTerms = weekTerms;
       // Reserva todos los días hábiles (Lun-Vie) para esa ubicación, salvo los que ya
       // tienen una instrucción específica por día.
       for (let dow = 1; dow <= 5; dow++) {
@@ -416,7 +422,7 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
   });
   const generalKeywords = remaining.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
 
-  return { dayLocationPreferences, blockedHours, blockedWeekDays, generalKeywords, notes };
+  return { dayLocationPreferences, blockedHours, blockedWeekDays, weekLocationTerms, generalKeywords, notes };
 }
 
 function matchesInstructionLocation(pattern: CustomerPattern, terms: string[]): boolean {
@@ -1351,6 +1357,36 @@ export async function POST(req: NextRequest) {
         const zona = p.customerZona ? normalizeStr(p.customerZona) : '';
         return zona.includes(filterZona) || filterZona.includes(zona);
       });
+    }
+
+    // Instrucción OBLIGATORIA de toda la semana (ej. "esta semana me voy a Loja"):
+    // se excluye del conjunto de candidatos a cualquier cliente que no sea de esa
+    // ubicación, garantizando que solo aparezcan clientes de ese lugar.
+    if (instructionPreferences.weekLocationTerms.length > 0) {
+      const matched = patterns.filter(p => matchesInstructionLocation(p, instructionPreferences.weekLocationTerms));
+      const termsLabel = instructionPreferences.weekLocationTerms.join(' ');
+      if (matched.length > 0) {
+        const removed = patterns.length - matched.length;
+        patterns = matched;
+        const matchedCities = Array.from(
+          new Set(patterns.map(p => (p.customerCiudad?.trim() || '(sin ciudad)')))
+        );
+        instructionPreferences.notes.push(
+          `Instrucción obligatoria: solo clientes de "${termsLabel}". Coinciden ${patterns.length} (se excluyeron ${removed}).`
+        );
+        instructionPreferences.notes.push(`Ciudades incluidas: ${matchedCities.join(', ')}`);
+      } else {
+        // No se reconoció esa ubicación en ningún cliente: se ignora para no dejar la
+        // semana vacía (probablemente la ciudad está escrita distinto o vacía).
+        instructionPreferences.weekLocationTerms = [];
+        for (let dow = 1; dow <= 5; dow++) {
+          const terms = instructionPreferences.dayLocationPreferences.get(dow);
+          if (terms && terms.join(' ') === termsLabel) instructionPreferences.dayLocationPreferences.delete(dow);
+        }
+        instructionPreferences.notes.push(
+          `⚠️ No se encontraron clientes cuya ciudad/zona coincida con "${termsLabel}". Revisa cómo está escrita la ciudad en tus clientes. Se generó sin ese filtro.`
+        );
+      }
     }
 
     const normalizedWeekVisits = ((weekVisits || []) as VisitRecordRaw[]).map(normalizeVisit);
