@@ -269,37 +269,41 @@ function smoothedHourProbabilities(hourCounts: number[]): number[] {
   return probs;
 }
 
-function truncateText(value: string, max = 90): string {
-  const clean = value.replace(/\s+/g, ' ').trim();
-  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+// Categorías de objetivo que usa la app (se guardan como tags: [VENTA], [COBRO], ...).
+type ObjectiveKey = 'VENTA' | 'COBRO' | 'SEGUIMIENTO' | 'PROSPECCION';
+const OBJECTIVE_LABELS: Record<ObjectiveKey, string> = {
+  VENTA: 'Venta',
+  COBRO: 'Cobro',
+  SEGUIMIENTO: 'Seguimiento',
+  PROSPECCION: 'Prospección',
+};
+
+// Deduce la categoría a partir de texto libre (próxima acción / resultado previo).
+function detectObjectiveFromText(text: string | null): ObjectiveKey | null {
+  if (!text) return null;
+  const t = normalizeStr(text);
+  if (/\bcobr|pago|factur|deud|cartera|saldo/.test(t)) return 'COBRO';
+  if (/\bprospec|captar|nuevo cliente|presentaci|portafolio/.test(t)) return 'PROSPECCION';
+  if (/\bvent|pedido|cotiz|propuest|cierre|negoci|reposici/.test(t)) return 'VENTA';
+  if (/\bseguim/.test(t)) return 'SEGUIMIENTO';
+  return null;
 }
 
-// Objetivo recomendado para la visita, inferido del historial y la etapa del embudo.
-// Prioriza la "próxima acción" registrada en la última visita completada.
-function buildRecommendedObjective(pattern: CustomerPattern, business: BusinessStats | null): string {
-  if (pattern.lastNextAction && pattern.lastNextAction.trim().length > 2) {
-    return truncateText(`Dar seguimiento: ${pattern.lastNextAction}`);
-  }
+// Objetivo recomendado para la visita (una de las 4 categorías), inferido del historial
+// y la etapa del embudo. Prioriza la señal explícita de la última visita.
+function buildRecommendedObjective(pattern: CustomerPattern, business: BusinessStats | null): ObjectiveKey {
+  const fromText = detectObjectiveFromText(pattern.lastNextAction) || detectObjectiveFromText(pattern.lastResultado);
+  if (fromText) return fromText;
 
   const etapa = (pattern.customerEtapaEmbudo || '').toLowerCase();
+  const esProspecto = pattern.customerTipo === 'prospecto';
   const buysRegularly = !!business && (business.numVentas >= 3 || business.monthsWithSales >= 3);
-  const veryOverdue = pattern.dueProbability >= 0.85 || (pattern.overdueDays > 0 && pattern.avgDaysBetweenVisits > 0 && pattern.overdueDays >= pattern.avgDaysBetweenVisits);
 
-  if (etapa === 'negociacion') return 'Cerrar negociación y concretar el pedido';
-  if (etapa === 'interesado') return 'Presentar propuesta y resolver objeciones';
-  if (etapa === 'nuevo' || etapa === 'contactado') return 'Primer acercamiento y presentación de portafolio';
-  if (etapa === 'perdido') return 'Reactivar cliente y detectar nueva necesidad';
-
-  if (buysRegularly) return 'Levantar pedido de reposición y revisar stock';
-  if (veryOverdue) return `Retomar contacto tras ${pattern.daysSinceLastVisit} días sin visita`;
-
-  if (pattern.lastResultado && pattern.lastResultado.trim().length > 2) {
-    return truncateText(`Continuar: ${pattern.lastResultado}`);
-  }
-  if (pattern.customerEtapaEmbudo === 'ganado' || pattern.customerTipo === 'cliente') {
-    return 'Mantener relación y tomar nuevo pedido';
-  }
-  return 'Visita de seguimiento comercial';
+  if (esProspecto || etapa === 'nuevo' || etapa === 'contactado') return 'PROSPECCION';
+  if (etapa === 'interesado' || etapa === 'negociacion') return 'VENTA';
+  if (pattern.customerCalidadPago === 'mala') return 'COBRO';
+  if (buysRegularly || etapa === 'ganado') return 'VENTA';
+  return 'SEGUIMIENTO';
 }
 
 function extractInstructionSegments(normalized: string) {
@@ -376,6 +380,33 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
         dayLocationPreferences.set(segment.dow, cleanedTerms);
         notes.push(`${dayNames[segment.dow]} priorizar ${cleanedTerms.join(' ')}`);
       }
+    }
+  }
+
+  // Instrucción para toda la semana: "esta semana me voy a Loja", "toda la semana en Cuenca".
+  const hasWeekScope = /\bsemana\b/.test(normalized);
+  const hasWeekBlock = blockMarkers.some(marker => normalized.includes(marker));
+  if (hasWeekScope && !hasWeekBlock) {
+    const weekStopWords = new Set([
+      ...Array.from(stopWords),
+      'semana', 'esta', 'este', 'toda', 'todo', 'todos', 'todas', 'proxima', 'siguiente', 'entera',
+    ]);
+    const alreadyUsed = new Set<string>();
+    for (const terms of dayLocationPreferences.values()) terms.forEach(t => alreadyUsed.add(t));
+
+    const weekTerms = normalized
+      .replace(/\b(?:a\s+las|alas)\s+\d{1,2}(?::\d{2})?\b/g, ' ')
+      .split(/\s+/)
+      .map(w => w.trim())
+      .filter(w => w.length > 2 && !weekStopWords.has(w) && !alreadyUsed.has(w));
+
+    if (weekTerms.length > 0) {
+      // Reserva todos los días hábiles (Lun-Vie) para esa ubicación, salvo los que ya
+      // tienen una instrucción específica por día.
+      for (let dow = 1; dow <= 5; dow++) {
+        if (!dayLocationPreferences.has(dow)) dayLocationPreferences.set(dow, weekTerms);
+      }
+      notes.push(`Toda la semana priorizar ${weekTerms.join(' ')}`);
     }
   }
 
@@ -982,7 +1013,8 @@ function generateRecommendations(
       (slotCountForBreakdown >= softTargetPerDay ? (slotCountForBreakdown - softTargetPerDay + 1) * 28 : 0)
     );
     const instructionScore = instructionMatch ? 120 : 0;
-    const objetivo = buildRecommendedObjective(pattern, business.stats);
+    const objectiveKey = buildRecommendedObjective(pattern, business.stats);
+    const objetivo = `[${objectiveKey}]`;
     const scoreBreakdown = {
       urgency: Number(urgencyScore.toFixed(2)),
       history: Number(historyScore.toFixed(2)),
@@ -1146,7 +1178,7 @@ function generateRecommendations(
     if (hour === null) continue;
     const time = `${hour.toString().padStart(2, '0')}:00`;
     reasons.push(`⏰ Horario más pertinente según su historial (${time}); no se repite la hora con otra visita del mismo día`);
-    reasons.push(`🎯 Objetivo sugerido: ${objetivo}`);
+    reasons.push(`🎯 Objetivo sugerido: ${OBJECTIVE_LABELS[objectiveKey]}`);
 
     recommendations.push({
       customerId: pattern.customerId,

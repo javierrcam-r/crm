@@ -23,6 +23,13 @@ import { es } from 'date-fns/locale';
 import { createVisit } from '@/lib/services/visits';
 import toast from 'react-hot-toast';
 
+const OBJETIVO_OPTIONS = [
+  { key: 'VENTA', label: 'Venta', icon: '💰', activeCls: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600' },
+  { key: 'COBRO', label: 'Cobro', icon: '🧾', activeCls: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600' },
+  { key: 'SEGUIMIENTO', label: 'Seguimiento', icon: '🔄', activeCls: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-600' },
+  { key: 'PROSPECCION', label: 'Prospección', icon: '🔍', activeCls: 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-600' },
+] as const;
+
 interface Recommendation {
   recommendationId?: string;
   customerId: string;
@@ -691,7 +698,17 @@ function RecommendationCard({
   onReject: () => void;
   onObjetivoChange: (value: string) => void;
 }) {
-  const [editingObjetivo, setEditingObjetivo] = useState(false);
+  const objetivoStr = rec.objetivo || '';
+  const editable = rec.status === 'pending' || rec.status === 'error';
+
+  const toggleObjetivo = (key: string) => {
+    const tag = `[${key}]`;
+    const isSelected = objetivoStr.includes(tag);
+    const next = isSelected
+      ? objetivoStr.replace(tag, '').replace(/\s+/g, ' ').trim()
+      : (objetivoStr ? `${objetivoStr} ${tag}` : tag);
+    onObjetivoChange(next);
+  };
   const statusStyles: Record<CellStatus, string> = {
     pending: 'bg-white dark:bg-dark-800 border-gray-200 dark:border-dark-500',
     accepted: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
@@ -736,38 +753,45 @@ function RecommendationCard({
         )}
       </div>
 
-      {/* Objetivo recomendado (editable) */}
+      {/* Objetivo recomendado (categorías editables) */}
       <div className="mb-2">
-        <div className="flex items-center gap-1 mb-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-1 mb-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400">
           <Target className="h-3 w-3" />
-          Objetivo
+          Objetivo de la visita
         </div>
-        {rec.status === 'pending' || rec.status === 'error' ? (
-          editingObjetivo ? (
-            <textarea
-              autoFocus
-              value={rec.objetivo || ''}
-              onChange={(e) => onObjetivoChange(e.target.value)}
-              onBlur={() => setEditingObjetivo(false)}
-              rows={2}
-              className="w-full px-2 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-dark-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-              placeholder="Objetivo de la visita"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditingObjetivo(true)}
-              className="w-full text-left px-2 py-1.5 text-xs rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-start justify-between gap-1.5"
-              title="Editar objetivo"
-            >
-              <span className="leading-snug">{rec.objetivo || 'Definir objetivo'}</span>
-              <span className="text-[10px] text-emerald-500 dark:text-emerald-400 flex-shrink-0 mt-0.5 underline">editar</span>
-            </button>
-          )
+        {editable ? (
+          <div className="flex flex-wrap gap-1.5">
+            {OBJETIVO_OPTIONS.map(opt => {
+              const selected = objetivoStr.includes(`[${opt.key}]`);
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => toggleObjetivo(opt.key)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium border transition-all ${
+                    selected
+                      ? `${opt.activeCls} shadow-sm`
+                      : 'bg-gray-50 dark:bg-dark-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-dark-500 hover:bg-gray-100 dark:hover:bg-dark-600'
+                  }`}
+                >
+                  <span>{opt.icon}</span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         ) : (
-          <p className="px-2 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-dark-800 text-gray-600 dark:text-gray-300 leading-snug">
-            {rec.objetivo || '—'}
-          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {OBJETIVO_OPTIONS.filter(opt => objetivoStr.includes(`[${opt.key}]`)).map(opt => (
+              <span
+                key={opt.key}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium border ${opt.activeCls}`}
+              >
+                <span>{opt.icon}</span>
+                {opt.label}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
