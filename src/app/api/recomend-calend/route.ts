@@ -157,6 +157,7 @@ interface InstructionPreferences {
   blockedHours: Map<number, Set<number>>;
   blockedWeekDays: Set<number>;
   weekLocationTerms: string[];
+  restrictToDays: Set<number>;
   generalKeywords: string[];
   notes: string[];
 }
@@ -340,14 +341,31 @@ function extractInstructionSegments(normalized: string) {
   });
 }
 
+// Convierte referencias relativas ("hoy", "mañana", "pasado mañana") al nombre del día
+// de semana correspondiente, para reutilizar el mismo parseo que los días explícitos.
+function resolveRelativeDays(normalized: string): string {
+  const now = new Date();
+  const nameForOffset = (offset: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + offset);
+    return dayAliases[d.getDay()][0];
+  };
+  return normalized
+    .replace(/\bpasado\s+manana\b/g, ` ${nameForOffset(2)} `)
+    // "manana" = día siguiente, evitando "la/por la/de la mañana" (franja horaria).
+    .replace(/(?<!\bla\s)\bmanana\b/g, ` ${nameForOffset(1)} `)
+    .replace(/\bhoy\b/g, ` ${nameForOffset(0)} `);
+}
+
 function parseInstructionPreferences(instructions: string): InstructionPreferences {
-  const normalized = normalizeStr(instructions || '');
+  const normalized = resolveRelativeDays(normalizeStr(instructions || ''));
   const dayLocationPreferences = new Map<number, string[]>();
   const blockedHours = new Map<number, Set<number>>();
   const blockedWeekDays = new Set<number>();
   const notes: string[] = [];
   const consumedSegments: string[] = [];
   let weekLocationTerms: string[] = [];
+  const restrictToDays = new Set<number>();
   const stopWords = new Set([
     'domingo', 'lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado',
     'el', 'la', 'los', 'las', 'un', 'una', 'me', 'voy', 'ir', 'ire', 'estar', 'estare', 'ruta',
@@ -380,6 +398,8 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
 
       if (cleanedTerms.length > 0) {
         dayLocationPreferences.set(segment.dow, cleanedTerms);
+        // Un día explícito con ubicación limita la generación a ESE día.
+        restrictToDays.add(segment.dow);
         notes.push(`${dayNames[segment.dow]} priorizar ${cleanedTerms.join(' ')}`);
       }
     }
@@ -422,7 +442,12 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
   });
   const generalKeywords = remaining.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
 
-  return { dayLocationPreferences, blockedHours, blockedWeekDays, weekLocationTerms, generalKeywords, notes };
+  if (restrictToDays.size > 0) {
+    const dias = Array.from(restrictToDays).sort().map(d => dayNames[d]).join(', ');
+    notes.push(`Solo se generan recomendaciones para: ${dias}`);
+  }
+
+  return { dayLocationPreferences, blockedHours, blockedWeekDays, weekLocationTerms, restrictToDays, generalKeywords, notes };
 }
 
 function matchesInstructionLocation(pattern: CustomerPattern, terms: string[]): boolean {
@@ -810,6 +835,11 @@ function generateRecommendations(
     weekDays.push(d);
   }
 
+  // No se recomiendan días ya pasados (ej. si hoy es jueves, lunes-miércoles quedan fuera).
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = today.toISOString().slice(0, 10);
+
   const slotsPerDay = new Map<string, number>();
   const dayLocationCounts = new Map<string, { cities: Map<string, number>; zones: Map<string, number> }>();
   const primaryCityByDay = new Map<string, string>();
@@ -856,8 +886,10 @@ function generateRecommendations(
   const workingDayCount = weekDays.filter(day => {
     const dow = day.getDay();
     const dateKey = day.toISOString().slice(0, 10);
+    if (dateKey < todayKey) return false;
+    if (instructionPreferences.restrictToDays.size > 0 && !instructionPreferences.restrictToDays.has(dow)) return false;
     return dow !== 0 && dow !== 6 && !blockedDates.has(dateKey) && !instructionPreferences.blockedWeekDays.has(dow);
-  }).length || 5;
+  }).length || 1;
   const softTargetPerDay = Math.max(1, Math.min(MAX_PER_DAY, Math.ceil(sortedPatterns.length / workingDayCount)));
 
   for (const pattern of sortedPatterns) {
@@ -870,9 +902,13 @@ function generateRecommendations(
     for (const day of weekDays) {
       const dow = day.getDay();
       if (dow === 0 || dow === 6) continue;
+      // Si la instrucción fija días específicos (ej. "mañana me voy a Loja"),
+      // solo se generan recomendaciones para esos días.
+      if (instructionPreferences.restrictToDays.size > 0 && !instructionPreferences.restrictToDays.has(dow)) continue;
       if (instructionPreferences.blockedWeekDays.has(dow)) continue;
 
       const dateKey = day.toISOString().slice(0, 10);
+      if (dateKey < todayKey) continue;
       if (blockedDates.has(dateKey)) continue;
       const slotCount = slotsPerDay.get(dateKey) || 0;
       if (slotCount >= MAX_PER_DAY) continue;
