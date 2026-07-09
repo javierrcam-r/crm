@@ -97,6 +97,7 @@ export default function RecomendCalendModal({
   const [showPatterns, setShowPatterns] = useState(false);
   const [instructionInput, setInstructionInput] = useState('');
   const [instructionTags, setInstructionTags] = useState<string[]>([]);
+  const [instructionNotes, setInstructionNotes] = useState<string[]>([]);
   const [maxPerDay, setMaxPerDay] = useState(8);
   const instructionExamples = [
     'El martes me voy a Azogues',
@@ -124,8 +125,18 @@ export default function RecomendCalendModal({
 
   const generateRecommendations = useCallback(async () => {
     setLoading(true);
+    // Incluye el texto que quedó escrito en la caja aunque no se haya agregado como tag,
+    // para que la instrucción siempre se aplique.
+    const pending = instructionInput.trim().replace(/\s+/g, ' ');
+    const allTags = pending
+      ? Array.from(new Set([...instructionTags, pending]))
+      : instructionTags;
+    if (pending) {
+      setInstructionTags(allTags);
+      setInstructionInput('');
+    }
     try {
-      const instructions = instructionTags.join('\n');
+      const instructions = allTags.join('\n');
       const res = await fetch('/api/recomend-calend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -152,6 +163,7 @@ export default function RecomendCalendModal({
 
       setRecommendations(cells);
       setPatterns(data.patterns || []);
+      setInstructionNotes(data.instructionNotes || []);
       setStats({
         totalClientsAnalyzed: data.totalClientsAnalyzed || 0,
         totalRecommendations: data.totalRecommendations || 0,
@@ -171,7 +183,7 @@ export default function RecomendCalendModal({
     } finally {
       setLoading(false);
     }
-  }, [userId, weekStart, instructionTags, maxPerDay]);
+  }, [userId, weekStart, instructionTags, instructionInput, maxPerDay]);
 
   const updateCellStatus = (index: number, status: CellStatus, error?: string) => {
     setRecommendations(prev =>
@@ -269,6 +281,7 @@ export default function RecomendCalendModal({
     setRecommendations([]);
     setPatterns([]);
     setStats(null);
+    setInstructionNotes([]);
     setGenerated(false);
     setShowPatterns(false);
     onClose();
@@ -279,6 +292,7 @@ export default function RecomendCalendModal({
     setRecommendations([]);
     setPatterns([]);
     setStats(null);
+    setInstructionNotes([]);
   };
 
   const getRecommendationsForDay = (dateStr: string) =>
@@ -511,6 +525,21 @@ export default function RecomendCalendModal({
                       {tag}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {/* Interpretación de instrucciones (para verificar que se aplicaron) */}
+              {instructionNotes.length > 0 && (
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 mb-1 flex items-center gap-1">
+                    <Filter className="h-3 w-3" />
+                    Instrucciones aplicadas
+                  </p>
+                  <ul className="space-y-0.5">
+                    {instructionNotes.map((note, i) => (
+                      <li key={i} className="text-[11px] text-emerald-700 dark:text-emerald-300">• {note}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 

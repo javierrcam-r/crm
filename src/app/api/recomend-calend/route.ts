@@ -421,17 +421,15 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
 
 function matchesInstructionLocation(pattern: CustomerPattern, terms: string[]): boolean {
   if (terms.length === 0) return false;
-  // Instrucciones de tipo "el lunes me voy a Loja" son geográficas: se comparan
-  // exclusivamente contra los campos de ubicación del cliente (ciudad, zona,
-  // dirección) para respetar la instrucción con precisión y evitar falsos positivos
-  // por coincidencias en el nombre o etiquetas.
-  const searchable = normalizeStr([
-    pattern.customerCiudad || '',
-    pattern.customerZona || '',
-    pattern.customerAddress || '',
-  ].join(' '));
+  // Instrucciones de tipo "esta semana me voy a Loja" son geográficas: se comparan
+  // exclusivamente contra CIUDAD y ZONA del cliente. Se excluye la dirección a propósito,
+  // porque muchas direcciones de otras ciudades contienen nombres de calles como
+  // "Av. Loja", lo que generaría falsos positivos.
+  const ciudad = normalizeStr(pattern.customerCiudad || '');
+  const zona = normalizeStr(pattern.customerZona || '');
+  const searchable = `${ciudad} ${zona}`.trim();
 
-  if (!searchable.trim()) return false;
+  if (!searchable) return false;
 
   return terms.some(term => {
     const t = normalizeStr(term);
