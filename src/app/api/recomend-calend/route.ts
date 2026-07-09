@@ -26,6 +26,9 @@ interface VisitRecordRaw {
   customer_id: string;
   scheduled_at: string;
   status: string;
+  objetivo?: string | null;
+  resultado?: string | null;
+  next_action?: string | null;
   customer: CustomerFields[] | CustomerFields | null;
 }
 
@@ -34,12 +37,18 @@ interface VisitRecord {
   customer_id: string;
   scheduled_at: string;
   status: string;
+  objetivo: string | null;
+  resultado: string | null;
+  next_action: string | null;
   customer: CustomerFields | null;
 }
 
 function normalizeVisit(raw: VisitRecordRaw): VisitRecord {
   return {
     ...raw,
+    objetivo: raw.objetivo ?? null,
+    resultado: raw.resultado ?? null,
+    next_action: raw.next_action ?? null,
     customer: Array.isArray(raw.customer) ? raw.customer[0] || null : raw.customer,
   };
 }
@@ -57,11 +66,15 @@ interface CustomerPattern {
   customerCalidadPago: string | null;
   customerCodigoVentas: number | null;
   avgDaysBetweenVisits: number;
+  intervalStdDev: number;
+  dueProbability: number;
   preferredDayOfWeek: number;
   dayOfWeekConfidence: number;
+  dayOfWeekProb: number[];
   weekPositionPattern: 'inicio' | 'mitad' | 'fin' | null;
   weekPositionConfidence: number;
   preferredHour: number;
+  hourProb: number[];
   lastVisitDate: string;
   lastVisitDateFormatted: string;
   daysSinceLastVisit: number;
@@ -71,6 +84,9 @@ interface CustomerPattern {
   completionRate: number;
   overdueDays: number;
   dayOfWeekDistribution: number[];
+  lastObjetivo: string | null;
+  lastResultado: string | null;
+  lastNextAction: string | null;
 }
 
 interface Recommendation {
@@ -84,6 +100,7 @@ interface Recommendation {
   dayOfWeek: number;
   dayName: string;
   time: string;
+  objetivo: string;
   reason: string;
   reasons: string[];
   scoreTotal: number;
@@ -170,24 +187,27 @@ function clampBusinessHour(hour: number): number {
   return Math.min(BUSINESS_END_HOUR, Math.max(BUSINESS_START_HOUR, Math.round(hour)));
 }
 
-function chooseRecommendationHour(
+// Elige la hora libre con mayor probabilidad histórica (horario "más pertinente"),
+// con una leve penalización por alejarse de la hora modal del cliente.
+function chooseBestHour(
+  hourProb: number[],
   preferredHour: number,
   blockedHours?: Set<number>,
   usedHours?: Set<number>
 ): number | null {
-  const preferred = clampBusinessHour(preferredHour);
   const isUnavailable = (hour: number) => blockedHours?.has(hour) || usedHours?.has(hour);
-  if (!isUnavailable(preferred)) return preferred;
-
-  for (let offset = 1; offset <= BUSINESS_END_HOUR - BUSINESS_START_HOUR; offset++) {
-    const earlier = preferred - offset;
-    if (earlier >= BUSINESS_START_HOUR && !isUnavailable(earlier)) return earlier;
-
-    const later = preferred + offset;
-    if (later <= BUSINESS_END_HOUR && !isUnavailable(later)) return later;
+  const pref = clampBusinessHour(preferredHour);
+  let best: number | null = null;
+  let bestScore = -Infinity;
+  for (let hour = BUSINESS_START_HOUR; hour <= BUSINESS_END_HOUR; hour++) {
+    if (isUnavailable(hour)) continue;
+    const score = (hourProb?.[hour] || 0) * 100 - Math.abs(hour - pref) * 0.5;
+    if (score > bestScore) {
+      bestScore = score;
+      best = hour;
+    }
   }
-
-  return null;
+  return best;
 }
 
 function getPreferredBusinessHour(hourCounts: number[]): number {
@@ -203,6 +223,83 @@ function getPreferredBusinessHour(hourCounts: number[]): number {
   }
 
   return bestHour;
+}
+
+// Media y desviación estándar ponderadas (pesos exponenciales por recencia).
+function weightedStats(values: number[], weights: number[]): { mean: number; std: number } {
+  if (values.length === 0) return { mean: 0, std: 0 };
+  const wSum = weights.reduce((a, b) => a + b, 0) || 1;
+  const mean = values.reduce((acc, v, i) => acc + v * weights[i], 0) / wSum;
+  const variance = values.reduce((acc, v, i) => acc + weights[i] * Math.pow(v - mean, 2), 0) / wSum;
+  return { mean, std: Math.sqrt(Math.max(0, variance)) };
+}
+
+// Probabilidad de que el cliente esté "vencido" (listo para visita) dada la cadencia
+// histórica. Curva logística centrada en el intervalo medio; el ancho escala con la
+// variabilidad, de modo que clientes muy regulares generan urgencia más marcada.
+function computeDueProbability(daysSince: number, meanInterval: number, stdInterval: number): number {
+  if (meanInterval <= 0) return 0.5;
+  const spread = Math.max(2.5, stdInterval > 0 ? stdInterval : meanInterval * 0.35);
+  const z = (daysSince - meanInterval) / spread;
+  return 1 / (1 + Math.exp(-z));
+}
+
+// Distribución de probabilidad por día de semana con suavizado de Laplace,
+// para dar crédito parcial a días secundarios (no solo al día modal).
+function smoothedDayProbabilities(dayCounts: number[]): number[] {
+  const alpha = 0.5;
+  const workingDays = [1, 2, 3, 4, 5, 6];
+  const total = workingDays.reduce((acc, d) => acc + (dayCounts[d] || 0), 0);
+  const denom = total + alpha * workingDays.length;
+  const probs = new Array(7).fill(0);
+  for (const d of workingDays) {
+    probs[d] = ((dayCounts[d] || 0) + alpha) / denom;
+  }
+  return probs;
+}
+
+function smoothedHourProbabilities(hourCounts: number[]): number[] {
+  const alpha = 0.3;
+  const hours: number[] = [];
+  for (let h = BUSINESS_START_HOUR; h <= BUSINESS_END_HOUR; h++) hours.push(h);
+  const total = hours.reduce((acc, h) => acc + (hourCounts[h] || 0), 0);
+  const denom = total + alpha * hours.length;
+  const probs = new Array(24).fill(0);
+  for (const h of hours) probs[h] = ((hourCounts[h] || 0) + alpha) / denom;
+  return probs;
+}
+
+function truncateText(value: string, max = 90): string {
+  const clean = value.replace(/\s+/g, ' ').trim();
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+}
+
+// Objetivo recomendado para la visita, inferido del historial y la etapa del embudo.
+// Prioriza la "próxima acción" registrada en la última visita completada.
+function buildRecommendedObjective(pattern: CustomerPattern, business: BusinessStats | null): string {
+  if (pattern.lastNextAction && pattern.lastNextAction.trim().length > 2) {
+    return truncateText(`Dar seguimiento: ${pattern.lastNextAction}`);
+  }
+
+  const etapa = (pattern.customerEtapaEmbudo || '').toLowerCase();
+  const buysRegularly = !!business && (business.numVentas >= 3 || business.monthsWithSales >= 3);
+  const veryOverdue = pattern.dueProbability >= 0.85 || (pattern.overdueDays > 0 && pattern.avgDaysBetweenVisits > 0 && pattern.overdueDays >= pattern.avgDaysBetweenVisits);
+
+  if (etapa === 'negociacion') return 'Cerrar negociación y concretar el pedido';
+  if (etapa === 'interesado') return 'Presentar propuesta y resolver objeciones';
+  if (etapa === 'nuevo' || etapa === 'contactado') return 'Primer acercamiento y presentación de portafolio';
+  if (etapa === 'perdido') return 'Reactivar cliente y detectar nueva necesidad';
+
+  if (buysRegularly) return 'Levantar pedido de reposición y revisar stock';
+  if (veryOverdue) return `Retomar contacto tras ${pattern.daysSinceLastVisit} días sin visita`;
+
+  if (pattern.lastResultado && pattern.lastResultado.trim().length > 2) {
+    return truncateText(`Continuar: ${pattern.lastResultado}`);
+  }
+  if (pattern.customerEtapaEmbudo === 'ganado' || pattern.customerTipo === 'cliente') {
+    return 'Mantener relación y tomar nuevo pedido';
+  }
+  return 'Visita de seguimiento comercial';
 }
 
 function extractInstructionSegments(normalized: string) {
@@ -293,16 +390,24 @@ function parseInstructionPreferences(instructions: string): InstructionPreferenc
 
 function matchesInstructionLocation(pattern: CustomerPattern, terms: string[]): boolean {
   if (terms.length === 0) return false;
+  // Instrucciones de tipo "el lunes me voy a Loja" son geográficas: se comparan
+  // exclusivamente contra los campos de ubicación del cliente (ciudad, zona,
+  // dirección) para respetar la instrucción con precisión y evitar falsos positivos
+  // por coincidencias en el nombre o etiquetas.
   const searchable = normalizeStr([
-    pattern.customerName,
-    pattern.customerAddress || '',
-    pattern.customerZona || '',
     pattern.customerCiudad || '',
-    pattern.customerCategoriaCompra || '',
-    pattern.customerEtiquetas.join(' '),
+    pattern.customerZona || '',
+    pattern.customerAddress || '',
   ].join(' '));
 
-  return terms.some(term => searchable.includes(term));
+  if (!searchable.trim()) return false;
+
+  return terms.some(term => {
+    const t = normalizeStr(term);
+    if (t.length < 3) return false;
+    const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`).test(searchable);
+  });
 }
 
 function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | null {
@@ -321,34 +426,45 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
   const scheduledVisits = sortedVisits.filter(v => v.status === 'programada');
   const visitsForPattern = completedVisits.length >= 2 ? completedVisits : sortedVisits;
 
+  // Pesos exponenciales por recencia: las visitas recientes pesan más que las antiguas.
+  const RECENCY_DECAY = 0.85;
+  const n = visitsForPattern.length;
+  const visitWeights = visitsForPattern.map((_, i) => Math.pow(RECENCY_DECAY, (n - 1) - i));
+
   const intervals: number[] = [];
+  const intervalWeights: number[] = [];
   for (let i = 1; i < visitsForPattern.length; i++) {
     const prev = new Date(visitsForPattern[i - 1].scheduled_at);
     const curr = new Date(visitsForPattern[i].scheduled_at);
     const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
     if (diffDays > 0 && diffDays < 120) {
       intervals.push(diffDays);
+      intervalWeights.push(Math.pow(RECENCY_DECAY, (visitsForPattern.length - 1) - i));
     }
   }
 
-  const avgInterval = intervals.length > 0
-    ? intervals.reduce((a, b) => a + b, 0) / intervals.length
-    : 14;
+  const intervalStats = weightedStats(intervals, intervalWeights);
+  const avgInterval = intervals.length > 0 ? intervalStats.mean : 14;
+  const intervalStdDev = intervals.length > 1 ? intervalStats.std : 0;
 
   const dayOfWeekCounts = new Array(7).fill(0);
   const hourCounts = new Array(24).fill(0);
-  for (const v of visitsForPattern) {
+  visitsForPattern.forEach((v, i) => {
     const d = new Date(v.scheduled_at);
-    dayOfWeekCounts[d.getDay()] += 1;
+    const w = visitWeights[i];
+    dayOfWeekCounts[d.getDay()] += w;
     const hour = d.getHours();
     if (isBusinessHour(hour)) {
-      hourCounts[hour] += 1;
+      hourCounts[hour] += w;
     }
-  }
+  });
 
+  const totalDayWeight = dayOfWeekCounts.reduce((a, b) => a + b, 0);
   const maxDayCount = Math.max(...dayOfWeekCounts);
   const preferredDay = dayOfWeekCounts.indexOf(maxDayCount);
-  const dayConfidence = visitsForPattern.length > 1 ? maxDayCount / visitsForPattern.length : 0;
+  const dayConfidence = visitsForPattern.length > 1 && totalDayWeight > 0 ? maxDayCount / totalDayWeight : 0;
+  const dayOfWeekProb = smoothedDayProbabilities(dayOfWeekCounts);
+  const hourProb = smoothedHourProbabilities(hourCounts);
 
   // Week position: inicio (Lun-Mar), mitad (Mié-Jue), fin (Vie-Sáb)
   const inicioCount = dayOfWeekCounts[1] + dayOfWeekCounts[2]; // Lun + Mar
@@ -374,6 +490,14 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
   const now = new Date();
   const daysSinceLast = (now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24);
   const overdueDays = Math.max(0, Math.round(daysSinceLast - avgInterval));
+  const dueProbability = computeDueProbability(daysSinceLast, avgInterval, intervalStdDev);
+
+  // Señales para inferir el objetivo de la próxima visita.
+  const lastCompleted = completedVisits.length > 0 ? completedVisits[completedVisits.length - 1] : null;
+  const mostRecentVisit = sortedVisits[sortedVisits.length - 1];
+  const lastNextAction = lastCompleted?.next_action || null;
+  const lastResultado = lastCompleted?.resultado || null;
+  const lastObjetivo = mostRecentVisit?.objetivo || null;
 
   return {
     customerId: customer.id,
@@ -388,11 +512,15 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
     customerCalidadPago: customer.calidad_pago || null,
     customerCodigoVentas: customer.codigo_cliente_ventas || null,
     avgDaysBetweenVisits: Math.round(avgInterval),
+    intervalStdDev: Math.round(intervalStdDev * 10) / 10,
+    dueProbability,
     preferredDayOfWeek: preferredDay,
     dayOfWeekConfidence: dayConfidence,
+    dayOfWeekProb,
     weekPositionPattern,
     weekPositionConfidence,
     preferredHour,
+    hourProb,
     lastVisitDate: lastVisit.toISOString(),
     lastVisitDateFormatted: formatDateES(lastVisit),
     daysSinceLastVisit: Math.round(daysSinceLast),
@@ -402,6 +530,9 @@ function analyzePatternsForCustomer(visits: VisitRecord[]): CustomerPattern | nu
     completionRate: sortedVisits.length > 0 ? completedVisits.length / sortedVisits.length : 0,
     overdueDays,
     dayOfWeekDistribution: dayOfWeekCounts,
+    lastObjetivo,
+    lastResultado,
+    lastNextAction,
   };
 }
 
@@ -413,7 +544,7 @@ function locationKey(value: string | null): string {
 
 function calculateHistoryScore(pattern: CustomerPattern): number {
   const urgencyRatio = pattern.daysSinceLastVisit / (pattern.avgDaysBetweenVisits || 14);
-  const urgencyScore = Math.min(60, urgencyRatio * 22);
+  const urgencyScore = Math.min(60, urgencyRatio * 18) + pattern.dueProbability * 20;
   const completionScore = Math.min(20, pattern.completedCount * 4) + pattern.completionRate * 10;
   const confidenceScore = Math.min(20, pattern.dayOfWeekConfidence * 12 + pattern.weekPositionConfidence * 8);
   return urgencyScore + completionScore + confidenceScore;
@@ -716,20 +847,33 @@ function generateRecommendations(
       const city = locationKey(pattern.customerCiudad);
       const primaryCity = primaryCityByDay.get(dateKey);
       const usedHours = usedHoursByDay.get(dateKey);
-      if (chooseRecommendationHour(pattern.preferredHour, dayBlockedHours, usedHours) === null) continue;
+      if (chooseBestHour(pattern.hourProb, pattern.preferredHour, dayBlockedHours, usedHours) === null) continue;
+
+      // Instrucción de ubicación por día (ej. "el lunes me voy a Loja").
+      const dayInstructionTerms = instructionPreferences.dayLocationPreferences.get(dow) || [];
+      const dayIsReserved = dayInstructionTerms.length > 0;
+      const matchesDayInstruction = dayIsReserved && matchesInstructionLocation(pattern, dayInstructionTerms);
+
+      // 1) Días con instrucción de ubicación quedan RESERVADOS: solo clientes de ese lugar.
+      if (dayIsReserved && !matchesDayInstruction) continue;
+
+      // 2) Clientes que pertenecen a un lugar instruido quedan FIJADOS a esos días.
       const constrainedInstructionDays = Array.from(instructionPreferences.dayLocationPreferences.entries())
         .filter(([, terms]) => matchesInstructionLocation(pattern, terms))
         .map(([instructionDow]) => instructionDow);
       if (constrainedInstructionDays.length > 0 && !constrainedInstructionDays.includes(dow)) continue;
-      if (primaryCity && city && city !== primaryCity) continue;
+
+      // La instrucción define la ciudad del día; solo aplicamos la regla de "una ciudad
+      // por día" en días NO reservados por instrucción.
+      if (!dayIsReserved && primaryCity && city && city !== primaryCity) continue;
 
       let score = 0;
 
-      if (dow === pattern.preferredDayOfWeek) {
-        score += 30 * pattern.dayOfWeekConfidence;
-      }
+      // Crédito parcial por afinidad al día de semana (no solo el día modal).
+      score += 34 * pattern.dayOfWeekProb[dow];
 
-      score += urgencyRatio * 20;
+      // Urgencia = ratio simple + probabilidad de vencimiento (modelo tipo supervivencia).
+      score += urgencyRatio * 12 + pattern.dueProbability * 24;
       score += Math.min(16, pattern.completedCount * 3);
       score += pattern.completionRate * 8;
 
@@ -766,20 +910,20 @@ function generateRecommendations(
       score += feedback.score;
       const business = getBusinessScore(pattern, businessStats);
       score += business.score;
-      const instructionTerms = instructionPreferences.dayLocationPreferences.get(dow) || [];
-      const instructionMatch = matchesInstructionLocation(pattern, instructionTerms);
-      if (instructionMatch) {
+      if (matchesDayInstruction) {
         score += 120;
-      } else if (instructionTerms.length > 0) {
-        score -= 35;
       }
       if (dayBlockedHours?.has(clampBusinessHour(pattern.preferredHour))) {
         score -= 10;
       }
 
-      score -= slotCount * 10;
-      if (slotCount >= softTargetPerDay) {
-        score -= (slotCount - softTargetPerDay + 1) * 28;
+      // Los clientes fijados por instrucción no reciben penalización de carga:
+      // el objetivo es llenar ese día con ese lugar.
+      if (!matchesDayInstruction) {
+        score -= slotCount * 10;
+        if (slotCount >= softTargetPerDay) {
+          score -= (slotCount - softTargetPerDay + 1) * 28;
+        }
       }
 
       if (bestDay === null || score > bestScore) {
@@ -819,9 +963,9 @@ function generateRecommendations(
     const instructionTerms = instructionPreferences.dayLocationPreferences.get(dow) || [];
     const instructionMatch = matchesInstructionLocation(pattern, instructionTerms);
     const dayBlockedHours = instructionPreferences.blockedHours.get(dow);
-    const urgencyScore = urgencyRatio * 20;
+    const urgencyScore = urgencyRatio * 12 + pattern.dueProbability * 24;
     const historyScore = Math.min(16, pattern.completedCount * 3) + pattern.completionRate * 8;
-    const dayPatternScore = dow === pattern.preferredDayOfWeek ? 30 * pattern.dayOfWeekConfidence : 0;
+    const dayPatternScore = 34 * pattern.dayOfWeekProb[dow];
     const sameRouteScore = sameZoneCount > 0
       ? Math.min(28, 18 + sameZoneCount * 5)
       : sameCityCount > 0
@@ -833,11 +977,12 @@ function generateRecommendations(
       ? Math.min(22, 12 + (territoryPattern?.cityConfidence || 0) * 14)
       : 0;
     const slotCountForBreakdown = slotsPerDay.get(dateKey) || 0;
-    const loadPenalty = -1 * (
+    const loadPenalty = instructionMatch ? 0 : -1 * (
       slotCountForBreakdown * 10 +
       (slotCountForBreakdown >= softTargetPerDay ? (slotCountForBreakdown - softTargetPerDay + 1) * 28 : 0)
     );
-    const instructionScore = instructionMatch ? 120 : instructionTerms.length > 0 ? -35 : 0;
+    const instructionScore = instructionMatch ? 120 : 0;
+    const objetivo = buildRecommendedObjective(pattern, business.stats);
     const scoreBreakdown = {
       urgency: Number(urgencyScore.toFixed(2)),
       history: Number(historyScore.toFixed(2)),
@@ -857,9 +1002,12 @@ function generateRecommendations(
       dayName: dayNames[dow],
       hour: clampBusinessHour(pattern.preferredHour),
       urgencyRatio: Number(urgencyRatio.toFixed(2)),
+      dueProbability: Number(pattern.dueProbability.toFixed(2)),
       avgDaysBetweenVisits: pattern.avgDaysBetweenVisits,
+      intervalStdDev: pattern.intervalStdDev,
       daysSinceLastVisit: pattern.daysSinceLastVisit,
       overdueDays: pattern.overdueDays,
+      recommendedObjective: objetivo,
       visitCount: pattern.visitCount,
       completedCount: pattern.completedCount,
       completionRate: Number(pattern.completionRate.toFixed(2)),
@@ -994,10 +1142,11 @@ function generateRecommendations(
     }
 
     const usedHours = usedHoursByDay.get(dateKey);
-    const hour = chooseRecommendationHour(pattern.preferredHour, dayBlockedHours, usedHours);
+    const hour = chooseBestHour(pattern.hourProb, pattern.preferredHour, dayBlockedHours, usedHours);
     if (hour === null) continue;
     const time = `${hour.toString().padStart(2, '0')}:00`;
-    reasons.push(`⏰ Regla de horario: no se repite la hora ${time} con otra visita del mismo día`);
+    reasons.push(`⏰ Horario más pertinente según su historial (${time}); no se repite la hora con otra visita del mismo día`);
+    reasons.push(`🎯 Objetivo sugerido: ${objetivo}`);
 
     recommendations.push({
       customerId: pattern.customerId,
@@ -1009,6 +1158,7 @@ function generateRecommendations(
       dayOfWeek: dow,
       dayName: dayNames[dow],
       time,
+      objetivo,
       reason,
       reasons,
       scoreTotal: Number(scoreTotal.toFixed(2)),
@@ -1072,7 +1222,7 @@ export async function POST(req: NextRequest) {
     const { data: historicalVisits, error: histError } = await supabase
       .from('visits')
       .select(`
-        id, customer_id, scheduled_at, status,
+        id, customer_id, scheduled_at, status, objetivo, resultado, next_action,
         customer:customers(id, nombre, direccion, zona, ciudad, tipo, etapa_embudo, calidad_pago, categoria_compra, etiquetas, codigo_cliente_ventas)
       `)
       .eq('user_id', userId)

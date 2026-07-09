@@ -676,7 +676,7 @@ export default function ResumenVentasPage() {
               <XAxis dataKey="mes" tick={{ fontSize: 12 }} className="text-gray-500 dark:text-gray-400" />
               <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} className="text-gray-500" />
               <Tooltip
-                formatter={(value: number | undefined) => [formatCurrency(value ?? 0), ivaLabel]}
+                formatter={(value) => [formatCurrency(Number(value ?? 0)), ivaLabel]}
                 contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
               />
               {modoIva === 'con_iva' ? (
@@ -703,7 +703,7 @@ export default function ResumenVentasPage() {
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
                 <Tooltip
-                  formatter={(value: number | undefined) => formatCurrency(value ?? 0)}
+                  formatter={(value) => formatCurrency(Number(value ?? 0))}
                   contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -729,7 +729,7 @@ export default function ResumenVentasPage() {
               <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip
-                formatter={(value: number | undefined) => [(value ?? 0).toLocaleString(), 'Facturas']}
+                formatter={(value) => [Number(value ?? 0).toLocaleString(), 'Facturas']}
                 contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
               />
               <Line type="monotone" dataKey="ventas" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4, fill: '#10b981' }} />
@@ -952,7 +952,7 @@ export default function ResumenVentasPage() {
                         <Cell fill="#ef4444" />
                       </Pie>
                       <Tooltip
-                        formatter={(value: number | undefined) => [(value ?? 0).toLocaleString(), 'Clientes']}
+                        formatter={(value) => [Number(value ?? 0).toLocaleString(), 'Clientes']}
                         contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                       />
                     </PieChart>
@@ -983,7 +983,7 @@ export default function ResumenVentasPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value: number | undefined) => [formatCurrency(value ?? 0), 'Ventas']}
+                          formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Ventas']}
                           contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                         />
                       </PieChart>
@@ -1023,7 +1023,7 @@ export default function ResumenVentasPage() {
                       <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                       <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
                       <Tooltip
-                        formatter={(value: number | undefined) => [formatCurrency(value ?? 0), 'Ventas']}
+                        formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Ventas']}
                         contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                       />
                       <Bar dataKey="total" fill="#6366f1" radius={[6, 6, 0, 0]} name="Total" />

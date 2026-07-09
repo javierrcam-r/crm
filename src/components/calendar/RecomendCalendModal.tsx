@@ -16,6 +16,7 @@ import {
   Info,
   Filter,
   Plus,
+  Target,
 } from 'lucide-react';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -33,6 +34,7 @@ interface Recommendation {
   dayOfWeek: number;
   dayName: string;
   time: string;
+  objetivo?: string;
   reason: string;
   reasons: string[];
   scoreTotal?: number;
@@ -170,6 +172,12 @@ export default function RecomendCalendModal({
     );
   };
 
+  const updateObjetivo = (index: number, objetivo: string) => {
+    setRecommendations(prev =>
+      prev.map((r, i) => (i === index ? { ...r, objetivo } : r))
+    );
+  };
+
   const sendRecommendationFeedback = async (
     rec: RecommendationCell,
     status: 'accepted' | 'rejected' | 'created',
@@ -200,11 +208,14 @@ export default function RecomendCalendModal({
     try {
       await sendRecommendationFeedback(rec, 'accepted');
       const scheduledAt = `${rec.date}T${rec.time}:00`;
+      const objetivoFinal = (rec.objetivo && rec.objetivo.trim())
+        ? rec.objetivo.trim()
+        : `Visita recomendada - ${rec.reason}`;
       const visit = await createVisit({
         customer_id: rec.customerId,
         scheduled_at: new Date(scheduledAt).toISOString(),
         status: 'programada',
-        objetivo: `Visita recomendada - ${rec.reason}`,
+        objetivo: objetivoFinal,
       });
       await sendRecommendationFeedback(rec, 'created', visit.id);
       updateCellStatus(index, 'created');
@@ -565,6 +576,7 @@ export default function RecomendCalendModal({
                                   rec={rec}
                                   onAccept={() => acceptRecommendation(globalIdx)}
                                   onReject={() => rejectRecommendation(globalIdx)}
+                                  onObjetivoChange={(value) => updateObjetivo(globalIdx, value)}
                                 />
                               );
                             })
@@ -672,11 +684,14 @@ function RecommendationCard({
   rec,
   onAccept,
   onReject,
+  onObjetivoChange,
 }: {
   rec: RecommendationCell;
   onAccept: () => void;
   onReject: () => void;
+  onObjetivoChange: (value: string) => void;
 }) {
+  const [editingObjetivo, setEditingObjetivo] = useState(false);
   const statusStyles: Record<CellStatus, string> = {
     pending: 'bg-white dark:bg-dark-800 border-gray-200 dark:border-dark-500',
     accepted: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
@@ -718,6 +733,41 @@ function RecommendationCard({
             <MapPin className="h-3 w-3 flex-shrink-0" />
             <span className="truncate">{rec.customerAddress}</span>
           </span>
+        )}
+      </div>
+
+      {/* Objetivo recomendado (editable) */}
+      <div className="mb-2">
+        <div className="flex items-center gap-1 mb-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+          <Target className="h-3 w-3" />
+          Objetivo
+        </div>
+        {rec.status === 'pending' || rec.status === 'error' ? (
+          editingObjetivo ? (
+            <textarea
+              autoFocus
+              value={rec.objetivo || ''}
+              onChange={(e) => onObjetivoChange(e.target.value)}
+              onBlur={() => setEditingObjetivo(false)}
+              rows={2}
+              className="w-full px-2 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-dark-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+              placeholder="Objetivo de la visita"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingObjetivo(true)}
+              className="w-full text-left px-2 py-1.5 text-xs rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-start justify-between gap-1.5"
+              title="Editar objetivo"
+            >
+              <span className="leading-snug">{rec.objetivo || 'Definir objetivo'}</span>
+              <span className="text-[10px] text-emerald-500 dark:text-emerald-400 flex-shrink-0 mt-0.5 underline">editar</span>
+            </button>
+          )
+        ) : (
+          <p className="px-2 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-dark-800 text-gray-600 dark:text-gray-300 leading-snug">
+            {rec.objetivo || '—'}
+          </p>
         )}
       </div>
 
