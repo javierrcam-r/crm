@@ -32,6 +32,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
+import CreatedByInfo from '@/components/ui/CreatedByInfo';
 import {
   getVisit,
   updateVisit,
@@ -447,6 +448,7 @@ export default function VisitaDetailPage() {
               {overdue && (
                 <Badge variant="red">Vencida</Badge>
               )}
+              <CreatedByInfo creatorName={visit.creator?.nombre_completo} createdAt={visit.created_at} />
             </div>
           </div>
         </div>

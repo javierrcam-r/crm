@@ -49,6 +49,7 @@ export default function CreatedByInfo({ creatorName, createdAt, className = '' }
       <button
         type="button"
         onClick={(e) => {
+          e.preventDefault();
           e.stopPropagation();
           setOpen((v) => !v);
         }}

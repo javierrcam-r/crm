@@ -2,6 +2,27 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Visit, VisitInsert, VisitUpdate, VisitFilters, VisitStatus } from '@/types/database';
 import { getCurrentUserId, isCurrentUserAdmin, isCurrentUserSupervisor } from '@/lib/auth/getCurrentUserId';
 
+/**
+ * Adjunta la información del creador (usuario que registró la visita) a partir de user_id.
+ * Se hace en una consulta aparte porque no existe FK a users_profile.
+ */
+async function attachCreators(visits: Visit[]): Promise<Visit[]> {
+  if (!visits || visits.length === 0) return visits;
+  const supabase = getSupabaseClient();
+  const userIds = Array.from(new Set(visits.map(v => v.user_id).filter(Boolean)));
+  if (userIds.length === 0) return visits;
+
+  const { data: creators } = await supabase
+    .from('users_profile')
+    .select('id, nombre_completo, email')
+    .in('id', userIds);
+
+  return visits.map(visit => ({
+    ...visit,
+    creator: (creators || []).find(c => c.id === visit.user_id) as Visit['creator'],
+  }));
+}
+
 export async function getVisits(filters?: VisitFilters) {
   const supabase = getSupabaseClient();
   const userId = getCurrentUserId();
@@ -53,7 +74,8 @@ export async function getVisit(id: string) {
     .single();
 
   if (error) throw error;
-  return data as Visit;
+  const [withCreator] = await attachCreators([data as Visit]);
+  return withCreator as Visit;
 }
 
 export async function getTodayVisits() {
@@ -83,7 +105,7 @@ export async function getTodayVisits() {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data as Visit[];
+  return attachCreators(data as Visit[]);
 }
 
 export async function getPendingVisits() {
@@ -110,7 +132,7 @@ export async function getPendingVisits() {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data as Visit[];
+  return attachCreators(data as Visit[]);
 }
 
 export async function getUpcomingVisits(days: number = 7) {

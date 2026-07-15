@@ -93,6 +93,7 @@ export interface Visit {
   // Relaciones
   customer?: Customer;
   objetivo_estrategico?: Activity;
+  creator?: UserProfile;
 }
 
 export interface VisitInsert {

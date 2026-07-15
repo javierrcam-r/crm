@@ -36,6 +36,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
+import CreatedByInfo from '@/components/ui/CreatedByInfo';
 import { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
 import { getVisits, getPendingVisits, type Visit } from '@/lib/services/visits';
 import { 
@@ -868,6 +869,7 @@ export default function CalendarioPage() {
                     {format(new Date(visit.scheduled_at), "dd MMM 'a las' HH:mm", { locale: es })}
                   </p>
                 </div>
+                <CreatedByInfo creatorName={visit.creator?.nombre_completo} createdAt={visit.created_at} />
               </Link>
             ))}
           </div>
@@ -1706,15 +1708,18 @@ export default function CalendarioPage() {
                           </div>
                         </div>
                       </div>
-                      <Badge
-                        variant={
-                          activity.estado === 'realizado' ? 'green' :
-                          activity.estado === 'haciendo' ? 'blue' :
-                          activity.estado === 'cancelado' ? 'gray' : 'yellow'
-                        }
-                      >
-                        {activity.estado}
-                      </Badge>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Badge
+                          variant={
+                            activity.estado === 'realizado' ? 'green' :
+                            activity.estado === 'haciendo' ? 'blue' :
+                            activity.estado === 'cancelado' ? 'gray' : 'yellow'
+                          }
+                        >
+                          {activity.estado}
+                        </Badge>
+                        <CreatedByInfo creatorName={activity.creator?.nombre_completo} createdAt={activity.created_at} />
+                      </div>
                     </div>
                   );
                 })}
@@ -1760,15 +1765,18 @@ export default function CalendarioPage() {
                             )}
                           </div>
                         </div>
-                        <Badge
-                          variant={
-                            visit.status === 'completada' ? 'green' :
-                            visit.status === 'programada' ? 'blue' :
-                            visit.status === 'cancelada' ? 'gray' : 'yellow'
-                          }
-                        >
-                          {visitStatusLabels[visit.status]}
-                        </Badge>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Badge
+                            variant={
+                              visit.status === 'completada' ? 'green' :
+                              visit.status === 'programada' ? 'blue' :
+                              visit.status === 'cancelada' ? 'gray' : 'yellow'
+                            }
+                          >
+                            {visitStatusLabels[visit.status]}
+                          </Badge>
+                          <CreatedByInfo creatorName={visit.creator?.nombre_completo} createdAt={visit.created_at} />
+                        </div>
                       </Link>
                       );
                     })}
@@ -1865,6 +1873,7 @@ export default function CalendarioPage() {
                                 <span className="flex items-center gap-1">
                                   <span className="font-medium">Creado por:</span>
                                   <span>{activity.creator.nombre_completo}</span>
+                                  <CreatedByInfo creatorName={activity.creator.nombre_completo} createdAt={activity.created_at} />
                                 </span>
                               )}
                               {activity.participants && activity.participants.length > 0 && (
@@ -1963,6 +1972,7 @@ export default function CalendarioPage() {
                                 <span className="flex items-center gap-1">
                                   <span className="font-medium">Creado por:</span>
                                   <span>{activity.creator.nombre_completo}</span>
+                                  <CreatedByInfo creatorName={activity.creator.nombre_completo} createdAt={activity.created_at} />
                                 </span>
                               )}
                               {activity.participants && activity.participants.length > 0 && (
@@ -2128,6 +2138,7 @@ export default function CalendarioPage() {
                                 <span className="flex items-center gap-1">
                                   <span className="font-medium">Creado por:</span>
                                   <span>{activity.creator.nombre_completo}</span>
+                                  <CreatedByInfo creatorName={activity.creator.nombre_completo} createdAt={activity.created_at} />
                                 </span>
                               )}
                               {activity.participants && activity.participants.length > 0 && (
@@ -2461,6 +2472,11 @@ export default function CalendarioPage() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Creado por</h4>
                 <p className="text-gray-800 font-medium">{selectedActivity.creator.nombre_completo}</p>
+                {selectedActivity.created_at && (
+                  <p className="text-gray-500 text-sm mt-1">
+                    {format(new Date(selectedActivity.created_at), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+                  </p>
+                )}
               </div>
             )}
 
