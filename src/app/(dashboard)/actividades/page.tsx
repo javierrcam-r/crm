@@ -35,6 +35,7 @@ import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import ActivityReminder, { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
+import CreatedByInfo from '@/components/ui/CreatedByInfo';
 import { useAuth } from '@/contexts/AuthContext';
 import { fuzzySearch } from '@/lib/search';
 import VoiceSearch from '@/components/ui/VoiceSearch';
@@ -537,10 +538,11 @@ export default function ActividadesPage() {
       
       {/* Información del creador */}
       {activity.creator && (
-        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-dark-500">
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            <span className="text-gray-700 dark:text-gray-300">{activity.creator.nombre_completo}</span>
+        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-dark-500 flex items-center justify-between gap-2">
+          <div className="text-xs text-gray-500 dark:text-gray-400 min-w-0">
+            <span className="text-gray-700 dark:text-gray-300 truncate">{activity.creator.nombre_completo}</span>
           </div>
+          <CreatedByInfo creatorName={activity.creator.nombre_completo} createdAt={activity.created_at} />
         </div>
       )}
     </div>
@@ -977,6 +979,7 @@ export default function ActividadesPage() {
                         {activity.participants.length}
                       </span>
                     )}
+                    <CreatedByInfo creatorName={activity.creator?.nombre_completo} createdAt={activity.created_at} />
                   </div>
                 </div>
               ))
@@ -1291,6 +1294,9 @@ export default function ActividadesPage() {
               <span className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${estadoColors[selectedActivity.estado].bg} ${estadoColors[selectedActivity.estado].text} ${estadoColors[selectedActivity.estado].border}`}>
                 {estadoLabels[selectedActivity.estado]}
               </span>
+              <div className="ml-auto">
+                <CreatedByInfo creatorName={selectedActivity.creator?.nombre_completo} createdAt={selectedActivity.created_at} />
+              </div>
             </div>
             
             {/* Descripción */}

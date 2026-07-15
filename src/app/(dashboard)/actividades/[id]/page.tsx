@@ -23,6 +23,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import CreatedByInfo from '@/components/ui/CreatedByInfo';
 import {
   getActivity,
   updateActivityStatus,
@@ -182,9 +183,11 @@ export default function ActividadDetailPage() {
               <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap', estadoColors[activity.estado])}>
                 {estadoLabels[activity.estado]}
               </span>
+              <CreatedByInfo creatorName={activity.creator?.nombre_completo} createdAt={activity.created_at} />
             </div>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-              {tipoLabels[activity.tipo]} · Creada {formatDistance(new Date(activity.created_at), new Date(), { addSuffix: true, locale: es })}
+              {tipoLabels[activity.tipo]}
+              {activity.creator?.nombre_completo ? ` · Creada por ${activity.creator.nombre_completo}` : ''} · {formatDistance(new Date(activity.created_at), new Date(), { addSuffix: true, locale: es })}
             </p>
           </div>
         </div>
