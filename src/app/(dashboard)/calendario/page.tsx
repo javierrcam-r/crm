@@ -884,16 +884,18 @@ export default function CalendarioPage() {
         if (seen.has(`v-${v.id}`)) continue;
         seen.add(`v-${v.id}`);
         const start = new Date(v.scheduled_at);
+        const durMin = v.duracion_minutos && v.duracion_minutos >= 15 ? v.duracion_minutos : 60;
         const tec = isVisitFromTecnico(v);
+        const canMove = canMoveVisit(v);
         out.push({
           kind: 'visit', id: v.id,
           title: v.customer?.nombre || 'Visita',
           subtitle: v.location_text || v.customer?.direccion || '',
           icon: tec ? '👷' : '🏠',
           start: start.toISOString(),
-          end: new Date(start.getTime() + oneHour).toISOString(),
+          end: new Date(start.getTime() + durMin * 60000).toISOString(),
           color: tec ? 'amber' : 'gray',
-          movable: canMoveVisit(v), resizable: false, ownerId: v.user_id,
+          movable: canMove, resizable: canMove, ownerId: v.user_id,
         });
       }
       const pushActivity = (a: Activity, strategic: boolean) => {
@@ -933,7 +935,8 @@ export default function CalendarioPage() {
       if (v.user_id !== item.ownerId) continue;
       if (v.status === 'cancelada' || v.status === 'no_atendio') continue;
       const vs = new Date(v.scheduled_at).getTime();
-      if (overlaps(vs, vs + oneHour)) return true;
+      const vdur = v.duracion_minutos && v.duracion_minutos >= 15 ? v.duracion_minutos : 60;
+      if (overlaps(vs, vs + vdur * 60000)) return true;
     }
     for (const a of activities) {
       if (item.kind === 'activity' && a.id === item.id) continue;
@@ -948,8 +951,10 @@ export default function CalendarioPage() {
 
   const undoGridChange = async (item: GridItem, prevStart: string, prevEnd: string) => {
     try {
-      if (item.kind === 'visit') await updateVisit(item.id, { scheduled_at: prevStart });
-      else await updateActivity(item.id, { fecha_inicio: prevStart, fecha_fin: prevEnd });
+      if (item.kind === 'visit') {
+        const durMin = Math.round((new Date(prevEnd).getTime() - new Date(prevStart).getTime()) / 60000);
+        await updateVisit(item.id, { scheduled_at: prevStart, duracion_minutos: Math.max(15, durMin) });
+      } else await updateActivity(item.id, { fecha_inicio: prevStart, fecha_fin: prevEnd });
       await loadData();
       toast.success('Cambio revertido');
     } catch (e: any) {
@@ -966,7 +971,8 @@ export default function CalendarioPage() {
     const prevEnd = item.end;
     try {
       if (item.kind === 'visit') {
-        await updateVisit(item.id, { scheduled_at: newStart.toISOString() });
+        const durMin = Math.max(15, Math.round((newEnd.getTime() - newStart.getTime()) / 60000));
+        await updateVisit(item.id, { scheduled_at: newStart.toISOString(), duracion_minutos: durMin });
       } else {
         await updateActivity(item.id, { fecha_inicio: newStart.toISOString(), fecha_fin: newEnd.toISOString() });
       }
@@ -976,7 +982,7 @@ export default function CalendarioPage() {
       toast((t) => (
         <div className="flex items-center gap-3">
           <span className="text-sm">
-            {item.resizable && item.kind === 'activity' && new Date(item.start).getTime() === newStart.getTime()
+            {new Date(item.start).getTime() === newStart.getTime() && new Date(item.end).getTime() !== newEnd.getTime()
               ? `Duración: ${durMin} min (termina ${format(newEnd, 'HH:mm')})`
               : `Movido a ${label}`}
           </span>

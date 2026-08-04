@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { format, isSameDay, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -128,7 +128,7 @@ export default function TimeGridCalendar({
   items,
   startHour = 5,
   endHour = 23,
-  hourHeight = 56,
+  hourHeight = 64,
   isDayBlocked,
   onItemClick,
   onCommit,
@@ -138,11 +138,13 @@ export default function TimeGridCalendar({
   const gridHeight = (endHour - startHour) * hourHeight;
   const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
   const columnsRef = useRef<HTMLDivElement>(null);
   const gestureRef = useRef<Gesture | null>(null);
   const previewRef = useRef<Preview | null>(null);
   const [preview, setPreviewState] = useState<Preview | null>(null);
   const [committing, setCommitting] = useState(false);
+  const [nowMin, setNowMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
 
   const setPreview = (p: Preview | null) => {
     previewRef.current = p;
@@ -150,13 +152,22 @@ export default function TimeGridCalendar({
   };
 
   const minToTop = (min: number) => ((min - rangeStartMin) / 60) * hourHeight;
-  const durToHeight = (dur: number) => Math.max((dur / 60) * hourHeight, 20);
+  const durToHeight = (dur: number) => Math.max((dur / 60) * hourHeight, 22);
 
-  // Scroll inicial a las 7:00 aprox.
+  // Auto-scroll a la hora actual (o al inicio si está fuera de rango).
   useLayoutEffect(() => {
-    const el = columnsRef.current?.parentElement?.parentElement;
-    if (el) el.scrollTop = ((8 - startHour) / (endHour - startHour)) * gridHeight - 40;
-  }, [startHour, endHour, gridHeight]);
+    const el = scrollRef.current;
+    if (!el) return;
+    const target = nowMin >= rangeStartMin && nowMin <= rangeEndMin ? nowMin - 90 : 8 * 60;
+    el.scrollTop = Math.max(0, ((target - rangeStartMin) / 60) * hourHeight);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startHour, endHour, hourHeight]);
+
+  // Actualiza la línea de "ahora" cada minuto.
+  useEffect(() => {
+    const t = setInterval(() => { const d = new Date(); setNowMin(d.getHours() * 60 + d.getMinutes()); }, 60000);
+    return () => clearInterval(t);
+  }, []);
 
   const endGesture = () => {
     window.removeEventListener('pointermove', onPointerMove);
@@ -245,17 +256,19 @@ export default function TimeGridCalendar({
     window.addEventListener('pointerup', onPointerUp);
   };
 
+  const colMinWidth = days.length > 1 ? 132 : 320;
+
   return (
-    <div className="w-full overflow-auto" style={{ maxHeight: '72vh' }}>
-      <div className="flex min-w-[560px]">
-        {/* Gutter de horas */}
-        <div className="w-12 sm:w-14 flex-shrink-0 select-none">
-          <div className="h-10 border-b border-gray-200 dark:border-dark-500" />
+    <div ref={scrollRef} className="w-full overflow-auto rounded-xl border border-gray-200 dark:border-dark-600" style={{ maxHeight: '74vh' }}>
+      <div className="flex" style={{ minWidth: 56 + days.length * colMinWidth }}>
+        {/* Gutter de horas (fijo al hacer scroll horizontal) */}
+        <div className="w-14 flex-shrink-0 select-none sticky left-0 z-30 bg-white dark:bg-dark-800">
+          <div className="h-11 border-b border-gray-200 dark:border-dark-500 sticky top-0 bg-white dark:bg-dark-800 z-10" />
           <div className="relative" style={{ height: gridHeight }}>
             {hours.map((h, i) => (
               <div
                 key={h}
-                className="absolute right-1 -translate-y-1/2 text-[10px] sm:text-xs text-gray-400 dark:text-gray-500"
+                className="absolute right-1.5 -translate-y-1/2 text-[10px] sm:text-xs font-medium text-gray-400 dark:text-gray-500"
                 style={{ top: i * hourHeight }}
               >
                 {pad(h)}:00
@@ -265,11 +278,13 @@ export default function TimeGridCalendar({
         </div>
 
         {/* Columnas de días */}
-        <div ref={columnsRef} className="grid flex-1" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
+        <div ref={columnsRef} className="grid flex-1" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(${colMinWidth}px, 1fr))` }}>
           {days.map((day, dayIndex) => {
             const today = isToday(day);
+            const weekend = day.getDay() === 0 || day.getDay() === 6;
             const blocked = isDayBlocked ? isDayBlocked(day) : false;
             const isDropTarget = preview?.mode === 'move' && preview.dayIndex === dayIndex;
+            const showNow = today && nowMin >= rangeStartMin && nowMin <= rangeEndMin;
 
             const dayItemsRaw = items
               .filter((it) => isSameDay(new Date(it.start), day))
@@ -278,49 +293,67 @@ export default function TimeGridCalendar({
 
             return (
               <div key={dayIndex} className="border-l border-gray-200 dark:border-dark-500 min-w-0">
-                {/* Cabecera del día */}
-                <div className={`h-10 flex flex-col items-center justify-center border-b border-gray-200 dark:border-dark-500 ${today ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}>
-                  <span className="text-[10px] uppercase text-gray-400 dark:text-gray-500 leading-none">{format(day, 'EEE', { locale: es })}</span>
-                  <span className={`text-sm font-bold leading-tight ${today ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-800 dark:text-gray-200'}`}>{format(day, 'd')}</span>
+                {/* Cabecera del día (fija al hacer scroll vertical) */}
+                <div className={`h-11 flex flex-col items-center justify-center border-b border-gray-200 dark:border-dark-500 sticky top-0 z-20 ${today ? 'bg-indigo-50 dark:bg-indigo-900/40' : 'bg-white dark:bg-dark-800'}`}>
+                  <span className={`text-[10px] uppercase tracking-wide leading-none ${today ? 'text-indigo-500 dark:text-indigo-300' : 'text-gray-400 dark:text-gray-500'}`}>{format(day, 'EEE', { locale: es })}</span>
+                  <span className={`leading-tight ${today ? 'text-indigo-600 dark:text-indigo-200 font-extrabold text-base' : 'text-gray-800 dark:text-gray-200 font-bold text-sm'}`}>{format(day, 'd')}</span>
                 </div>
 
                 {/* Cuerpo con líneas horarias */}
                 <div
-                  className={`relative ${blocked ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''} ${isDropTarget ? 'bg-indigo-50/60 dark:bg-indigo-900/20' : ''}`}
+                  className={`relative ${weekend ? 'bg-gray-50/60 dark:bg-dark-700/40' : ''} ${blocked ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''} ${isDropTarget ? 'ring-2 ring-inset ring-indigo-400/70 bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
                   style={{ height: gridHeight }}
                 >
                   {hours.slice(0, -1).map((h, i) => (
-                    <div key={h} className="absolute left-0 right-0 border-b border-gray-100 dark:border-dark-600" style={{ top: (i + 1) * hourHeight }} />
+                    <div key={h} className="absolute left-0 right-0 border-b border-gray-100 dark:border-dark-600/70" style={{ top: (i + 1) * hourHeight }} />
                   ))}
+
+                  {/* Línea de "ahora" */}
+                  {showNow && (
+                    <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: minToTop(nowMin) }}>
+                      <div className="h-[2px] bg-red-500" />
+                      <div className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-red-500" />
+                    </div>
+                  )}
 
                   {/* Bloques del día */}
                   {positioned.map(({ item, startMin, durMin, col, cols }) => {
                     const isPreviewItem = preview?.itemId === item.id;
                     if (isPreviewItem) return null; // se dibuja como preview
                     const widthPct = 100 / cols;
+                    const h = durToHeight(durMin);
+                    const compact = h < 40;
                     return (
                       <button
                         key={item.id}
                         type="button"
                         onPointerDown={(e) => startGesture(e, 'move', item, dayIndex)}
-                        className={`absolute rounded-md border-l-4 px-1.5 py-0.5 text-left overflow-hidden shadow-sm ${COLOR_CLASSES[item.color]} ${item.movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-                        style={{ top: minToTop(startMin) + 1, height: durToHeight(durMin) - 2, left: `calc(${col * widthPct}% + 2px)`, width: `calc(${widthPct}% - 4px)`, touchAction: 'none' }}
-                        title={item.title}
+                        className={`group absolute rounded-lg border-l-4 px-1.5 py-1 text-left overflow-hidden shadow-sm transition-shadow hover:shadow-md hover:z-10 ${COLOR_CLASSES[item.color]} ${item.movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                        style={{ top: minToTop(startMin) + 1, height: h - 2, left: `calc(${col * widthPct}% + 2px)`, width: `calc(${widthPct}% - 4px)`, touchAction: 'none' }}
+                        title={`${item.title} · ${fmtMin(startMin)}${item.resizable ? `–${fmtMin(startMin + durMin)}` : ''}`}
                       >
-                        <div className="text-[10px] font-semibold leading-tight truncate">
-                          {item.icon ? `${item.icon} ` : ''}{fmtMin(startMin)}
-                        </div>
-                        <div className="text-[11px] font-medium leading-tight truncate">{item.title}</div>
-                        {item.subtitle && durMin >= 45 && (
-                          <div className="text-[9px] opacity-70 leading-tight truncate">{item.subtitle}</div>
+                        {compact ? (
+                          <div className="text-[10px] font-medium leading-tight truncate">
+                            <span className="font-semibold">{fmtMin(startMin)}</span> {item.icon} {item.title}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-[10px] font-semibold leading-tight truncate opacity-90">
+                              {item.icon ? `${item.icon} ` : ''}{fmtMin(startMin)}{item.resizable ? `–${fmtMin(startMin + durMin)}` : ''}
+                            </div>
+                            <div className="text-[11px] font-semibold leading-tight truncate">{item.title}</div>
+                            {item.subtitle && durMin >= 45 && (
+                              <div className="text-[9px] opacity-70 leading-tight truncate">{item.subtitle}</div>
+                            )}
+                          </>
                         )}
                         {item.resizable && (
                           <span
                             onPointerDown={(e) => startGesture(e, 'resize', item, dayIndex)}
-                            className="absolute bottom-0 left-0 right-0 h-3.5 cursor-ns-resize flex items-end justify-center"
+                            className="absolute bottom-0 left-0 right-0 h-3.5 cursor-ns-resize flex items-end justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             style={{ touchAction: 'none' }}
                           >
-                            <span className="mb-0.5 h-1 w-6 rounded-full bg-current opacity-40" />
+                            <span className="mb-0.5 h-1 w-7 rounded-full bg-current opacity-50" />
                           </span>
                         )}
                       </button>
@@ -335,9 +368,12 @@ export default function TimeGridCalendar({
                     const height = durToHeight(preview.durMin);
                     return (
                       <>
-                        <div className="absolute left-0 right-0 border-t-2 border-dashed border-indigo-500 z-20 pointer-events-none" style={{ top }} />
+                        <div className="absolute left-0 right-0 border-t-2 border-dashed border-indigo-500 z-30 pointer-events-none" style={{ top }} />
+                        <div className="absolute right-1 z-30 pointer-events-none rounded bg-indigo-600 px-1 text-[10px] font-bold text-white" style={{ top: top - 8 }}>
+                          {fmtMin(preview.startMin)}
+                        </div>
                         <div
-                          className={`absolute rounded-md border-l-4 px-1.5 py-0.5 z-20 pointer-events-none shadow-lg ring-2 ${preview.valid ? 'ring-indigo-400' : 'ring-red-400'} ${preview.valid ? COLOR_CLASSES[item.color] : 'bg-red-100 dark:bg-red-900/50 border-red-500 text-red-800 dark:text-red-100'}`}
+                          className={`absolute rounded-lg border-l-4 px-1.5 py-1 z-30 pointer-events-none shadow-lg ring-2 ${preview.valid ? 'ring-indigo-400' : 'ring-red-400'} ${preview.valid ? COLOR_CLASSES[item.color] : 'bg-red-100 dark:bg-red-900/50 border-red-500 text-red-800 dark:text-red-100'}`}
                           style={{ top: top + 1, height: height - 2, left: '2px', right: '2px' }}
                         >
                           <div className="text-[10px] font-bold leading-tight">

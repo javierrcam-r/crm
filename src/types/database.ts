@@ -79,6 +79,7 @@ export interface Visit {
   user_id: string;
   customer_id: string;
   scheduled_at: string;
+  duracion_minutos: number;
   status: VisitStatus;
   objetivo: string | null;
   location_text: string | null;
@@ -99,6 +100,7 @@ export interface Visit {
 export interface VisitInsert {
   customer_id: string;
   scheduled_at: string;
+  duracion_minutos?: number;
   status?: VisitStatus;
   objetivo?: string | null;
   location_text?: string | null;
