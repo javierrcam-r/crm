@@ -158,11 +158,18 @@ export async function getEventsForCalendar(
     return ms >= fromMs && ms <= toMs;
   };
 
+  // La fecha que se muestra en el calendario es `fecha_fin` o, si es nula, `fecha_inicio`.
+  // Acotamos la consulta en la BD a ese rango para no descargar todo el histórico.
+  const calendarDateFilter =
+    `and(fecha_fin.gte.${dateFrom},fecha_fin.lte.${dateTo}),` +
+    `and(fecha_fin.is.null,fecha_inicio.gte.${dateFrom},fecha_inicio.lte.${dateTo})`;
+
   if (options?.isSupervisor) {
     const { data, error } = await supabase
       .from('events')
       .select('*')
       .neq('estado', 'cancelado')
+      .or(calendarDateFilter)
       .order('fecha_inicio');
     if (error) throw error;
     return (data as Event[]).filter(inRange);
@@ -178,7 +185,8 @@ export async function getEventsForCalendar(
       .from('events')
       .select('*')
       .eq('responsable_id', userProfileId)
-      .neq('estado', 'cancelado'),
+      .neq('estado', 'cancelado')
+      .or(calendarDateFilter),
   ]);
 
   if (responsableRes.error) throw responsableRes.error;
@@ -291,14 +299,25 @@ export async function getUserEventActivities(userId: string) {
   return data || [];
 }
 
-export async function getAllEventActivitiesForCalendar(userId?: string, assignedEventIds?: string[]) {
+export async function getAllEventActivitiesForCalendar(
+  userId?: string,
+  assignedEventIds?: string[],
+  range?: { dateFrom: string; dateTo: string },
+) {
   const supabase = getSupabaseClient();
 
+  // Acota la consulta al rango visible del calendario (por fecha de inicio o fin de la actividad).
+  const rangeOr = range
+    ? `and(fecha_inicio.gte.${range.dateFrom},fecha_inicio.lte.${range.dateTo}),` +
+        `and(fecha_fin.gte.${range.dateFrom},fecha_fin.lte.${range.dateTo})`
+    : null;
+
   if (!userId) {
-    const { data, error } = await supabase
+    let q = supabase
       .from('event_activities')
-      .select('*, events:event_id(id, nombre, estado)')
-      .order('fecha_inicio');
+      .select('*, events:event_id(id, nombre, estado)');
+    if (rangeOr) q = q.or(rangeOr);
+    const { data, error } = await q.order('fecha_inicio');
     if (error) throw error;
     return (data || []) as (EventActivity & { events: { id: string; nombre: string; estado: string } | null })[];
   }
@@ -306,22 +325,24 @@ export async function getAllEventActivitiesForCalendar(userId?: string, assigned
   const results: (EventActivity & { events: { id: string; nombre: string; estado: string } | null })[] = [];
   const seen = new Set<string>();
 
-  const { data: ownData, error: ownErr } = await supabase
+  let ownQuery = supabase
     .from('event_activities')
     .select('*, events:event_id(id, nombre, estado)')
-    .eq('responsable_id', userId)
-    .order('fecha_inicio');
+    .eq('responsable_id', userId);
+  if (rangeOr) ownQuery = ownQuery.or(rangeOr);
+  const { data: ownData, error: ownErr } = await ownQuery.order('fecha_inicio');
   if (ownErr) throw ownErr;
   for (const item of (ownData || [])) {
     if (!seen.has(item.id)) { seen.add(item.id); results.push(item); }
   }
 
   if (assignedEventIds && assignedEventIds.length > 0) {
-    const { data: assignedData, error: assignedErr } = await supabase
+    let assignedQuery = supabase
       .from('event_activities')
       .select('*, events:event_id(id, nombre, estado)')
-      .in('event_id', assignedEventIds)
-      .order('fecha_inicio');
+      .in('event_id', assignedEventIds);
+    if (rangeOr) assignedQuery = assignedQuery.or(rangeOr);
+    const { data: assignedData, error: assignedErr } = await assignedQuery.order('fecha_inicio');
     if (assignedErr) throw assignedErr;
     for (const item of (assignedData || [])) {
       if (!seen.has(item.id)) { seen.add(item.id); results.push(item); }

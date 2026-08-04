@@ -224,8 +224,8 @@ export default function CalendarioPage() {
       const [visitsData, pendingData, activitiesData, eventActivitiesData, calendarEventsData, blockedDaysData] = await Promise.all([
         getVisits({ date_from: dateFrom, date_to: dateTo }),
         getPendingVisits(),
-        getActivities().catch(() => [] as Activity[]),
-        getAllEventActivitiesForCalendar(eventActUserId, assignedEventIds).catch(() => [] as EventActivityWithEvent[]),
+        getActivities({ date_from: dateFrom, date_to: dateTo }).catch(() => [] as Activity[]),
+        getAllEventActivitiesForCalendar(eventActUserId, assignedEventIds, { dateFrom, dateTo }).catch(() => [] as EventActivityWithEvent[]),
         getEventsForCalendar(dateFrom, dateTo, {
           userProfileId: currentId,
           isSupervisor: isSup,
