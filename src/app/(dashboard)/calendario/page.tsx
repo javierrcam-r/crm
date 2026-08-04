@@ -38,7 +38,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import CreatedByInfo from '@/components/ui/CreatedByInfo';
 import { REMINDER_OPTIONS } from '@/components/ui/ActivityReminder';
-import { getVisits, getPendingVisits, type Visit } from '@/lib/services/visits';
+import { getVisits, getPendingVisits, updateVisit, type Visit } from '@/lib/services/visits';
 import { 
   getActivities, 
   updateActivity, 
@@ -51,7 +51,7 @@ import {
   getActivityComments,
   getStrategicObjectivesForSelection
 } from '@/lib/services/activities';
-import { getAllEventActivitiesForCalendar, getVendorEvents, getEditorEvents, getEventsForCalendar, getEventCalendarDate, type Event, type EventActivity } from '@/lib/services/events';
+import { getAllEventActivitiesForCalendar, getVendorEvents, getEditorEvents, getEventsForCalendar, getEventCalendarDate, updateEventActivity, updateEvent, type Event, type EventActivity } from '@/lib/services/events';
 import { getBlockedDays, isDateBlocked } from '@/lib/services/blockedDays';
 import { getUsersOnVacationOnDate } from '@/lib/services/vacations';
 import { createNotificationsForUsers } from '@/lib/services/notificationsDb';
@@ -112,6 +112,16 @@ const CALENDAR_EVENT_BADGE = 'text-[10px] px-1.5 py-0.5 rounded-full font-medium
 
 type EventActivityWithEvent = EventActivity & { events: { id: string; nombre: string; estado: string } | null };
 
+// Elemento del calendario que puede reprogramarse (mover de día/hora)
+type RescheduleKind = 'visit' | 'activity' | 'eventActivity' | 'event';
+type RescheduleItem = {
+  kind: RescheduleKind;
+  id: string;
+  title: string;
+  start: string;
+  end?: string | null;
+};
+
 export default function CalendarioPage() {
   const { userProfile } = useAuth();
   const [visits, setVisits] = useState<Visit[]>([]);
@@ -139,6 +149,12 @@ export default function CalendarioPage() {
   const [blockedDaysSet, setBlockedDaysSet] = useState<Set<string>>(new Set());
   const [showCalendIA, setShowCalendIA] = useState(false);
   const [showRecomendCalend, setShowRecomendCalend] = useState(false);
+  // Reprogramación (arrastrar para mover de día/hora)
+  const [draggedItem, setDraggedItem] = useState<RescheduleItem | null>(null);
+  const [rescheduleItem, setRescheduleItem] = useState<RescheduleItem | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
+  const [savingReschedule, setSavingReschedule] = useState(false);
 
   // Detectar móvil
   useEffect(() => {
@@ -527,6 +543,94 @@ export default function CalendarioPage() {
       setSubmittingComment(false);
     }
   }
+
+  // =====================================================
+  // REPROGRAMAR: arrastrar para mover de día y hora
+  // =====================================================
+  // Fecha de referencia del elemento (para eventos es la fecha de fin, si existe).
+  const getRescheduleRef = (item: RescheduleItem) =>
+    item.kind === 'event' ? (item.end || item.start) : item.start;
+
+  // Props para hacer arrastrable un elemento del calendario.
+  const dragProps = (item: RescheduleItem) => ({
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.id);
+      setDraggedItem(item);
+    },
+    onDragEnd: () => setDraggedItem(null),
+  });
+
+  // Props para convertir un día en zona donde soltar.
+  const dropProps = (day: Date) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (draggedItem) e.preventDefault();
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      handleDropOnDay(day);
+    },
+  });
+
+  const openReschedule = (item: RescheduleItem, presetDay?: Date) => {
+    const ref = new Date(getRescheduleRef(item));
+    const base = presetDay
+      ? new Date(presetDay.getFullYear(), presetDay.getMonth(), presetDay.getDate(), ref.getHours(), ref.getMinutes())
+      : ref;
+    setRescheduleItem(item);
+    setRescheduleDate(format(base, 'yyyy-MM-dd'));
+    setRescheduleTime(format(base, 'HH:mm'));
+  };
+
+  const handleDropOnDay = (day: Date) => {
+    const item = draggedItem;
+    setDraggedItem(null);
+    if (!item) return;
+    // Si se suelta en el mismo día del que salió, igual abrimos el modal para ajustar la hora.
+    openReschedule(item, day);
+  };
+
+  const saveReschedule = async () => {
+    if (!rescheduleItem || !rescheduleDate || !rescheduleTime) return;
+    try {
+      setSavingReschedule(true);
+      const [y, m, d] = rescheduleDate.split('-').map(Number);
+      const [hh, mm] = rescheduleTime.split(':').map(Number);
+      const newRef = new Date(y, m - 1, d, hh, mm, 0, 0);
+      const oldRef = new Date(getRescheduleRef(rescheduleItem));
+      const delta = newRef.getTime() - oldRef.getTime();
+      const shift = (iso?: string | null) =>
+        iso ? new Date(new Date(iso).getTime() + delta).toISOString() : null;
+
+      const item = rescheduleItem;
+      if (item.kind === 'visit') {
+        await updateVisit(item.id, { scheduled_at: newRef.toISOString() });
+      } else if (item.kind === 'activity') {
+        await updateActivity(item.id, {
+          fecha_inicio: shift(item.start)!,
+          ...(item.end ? { fecha_fin: shift(item.end) } : {}),
+        });
+      } else if (item.kind === 'eventActivity') {
+        await updateEventActivity(item.id, {
+          fecha_inicio: shift(item.start)!,
+          ...(item.end ? { fecha_fin: shift(item.end) } : {}),
+        });
+      } else if (item.kind === 'event') {
+        await updateEvent(item.id, {
+          fecha_inicio: shift(item.start)!,
+          ...(item.end ? { fecha_fin: shift(item.end) } : {}),
+        });
+      }
+      toast.success('Reprogramado correctamente');
+      setRescheduleItem(null);
+      await loadData();
+    } catch (error: any) {
+      toast.error(error?.message || 'No se pudo reprogramar');
+    } finally {
+      setSavingReschedule(false);
+    }
+  };
 
   const navigatePrevious = () => {
     if (view === 'month') {
@@ -958,12 +1062,14 @@ export default function CalendarioPage() {
                 <div
                   key={index}
                   onClick={() => setSelectedDate(day)}
+                  {...dropProps(day)}
                   className={cn(
                     'calendar-day min-h-[80px] lg:min-h-[100px] cursor-pointer',
                     !isCurrentMonth && 'calendar-day-other-month',
                     today && 'calendar-day-today',
                     isSelected && 'ring-2 ring-indigo-500 ring-inset',
-                    isBlocked && 'bg-amber-50/70 dark:bg-amber-900/20'
+                    isBlocked && 'bg-amber-50/70 dark:bg-amber-900/20',
+                    draggedItem && 'hover:ring-2 hover:ring-indigo-400 hover:ring-inset'
                   )}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -994,6 +1100,7 @@ export default function CalendarioPage() {
                         key={`cal-evt-${event.id}`}
                         href={`/eventos/${event.id}`}
                         onClick={(e) => e.stopPropagation()}
+                        {...dragProps({ kind: 'event', id: event.id, title: event.nombre, start: event.fecha_inicio, end: event.fecha_fin })}
                         className={CALENDAR_EVENT_CLASS.cell}
                       >
                         <span className="font-medium">{format(new Date(displayDate), 'HH:mm')}</span>
@@ -1009,6 +1116,7 @@ export default function CalendarioPage() {
                         key={`evt-${ea.id}`}
                         href={`/eventos/${ea.event_id}`}
                         onClick={(e) => e.stopPropagation()}
+                        {...dragProps({ kind: 'eventActivity', id: ea.id, title: ea.nombre, start: ea.fecha_inicio, end: ea.fecha_fin })}
                         className={`calendar-event block cursor-pointer border-l-2 ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}
                       >
                         <span className="font-medium">{format(new Date(ea.fecha_inicio), 'HH:mm')}</span>
@@ -1023,6 +1131,7 @@ export default function CalendarioPage() {
                         <div
                           key={`act-strategic-${activity.id}`}
                           onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
+                          {...dragProps({ kind: 'activity', id: activity.id, title: activity.titulo, start: activity.fecha_inicio, end: activity.fecha_fin })}
                           className={`calendar-event block cursor-pointer transition-colors ${style.bg}`}
                         >
                           <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
@@ -1037,6 +1146,7 @@ export default function CalendarioPage() {
                         <div
                           key={`act-daily-${activity.id}`}
                           onClick={(e) => { e.stopPropagation(); openActivityDetail(activity); }}
+                          {...dragProps({ kind: 'activity', id: activity.id, title: activity.titulo, start: activity.fecha_inicio, end: activity.fecha_fin })}
                           className={`calendar-event block cursor-pointer transition-colors ${style.bg}`}
                         >
                           <span className="font-medium">{format(new Date(activity.fecha_inicio), 'HH:mm')}</span>
@@ -1052,6 +1162,7 @@ export default function CalendarioPage() {
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
                         onClick={(e) => e.stopPropagation()}
+                        {...dragProps({ kind: 'visit', id: visit.id, title: visit.customer?.nombre || 'Visita', start: visit.scheduled_at })}
                         className={cn(
                           'calendar-event block border-l-2',
                           isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-500' : 'bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-gray-400'
@@ -1283,7 +1394,7 @@ export default function CalendarioPage() {
               const today = isToday(day);
 
               return (
-                <div key={index} className="min-h-[400px]">
+                <div key={index} {...dropProps(day)} className={cn('min-h-[400px]', draggedItem && 'ring-1 ring-inset ring-indigo-300 dark:ring-indigo-700')}>
                   <div className={cn('p-3 text-center border-b border-gray-200 dark:border-dark-500', today && 'bg-indigo-50 dark:bg-indigo-900/30')}>
                     <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
                       {format(day, 'EEEE', { locale: es })}
@@ -1298,7 +1409,7 @@ export default function CalendarioPage() {
                     {dayCalendarEvents.map((event) => {
                       const displayDate = getEventCalendarDate(event);
                       return (
-                      <Link key={`wcal-${event.id}`} href={`/eventos/${event.id}`} className={CALENDAR_EVENT_CLASS.week}>
+                      <Link key={`wcal-${event.id}`} href={`/eventos/${event.id}`} {...dragProps({ kind: 'event', id: event.id, title: event.nombre, start: event.fecha_inicio, end: event.fecha_fin })} className={CALENDAR_EVENT_CLASS.week}>
                         <div className="flex items-center justify-between mb-0.5">
                           <p className="font-semibold flex items-center gap-1">🎯 {format(new Date(displayDate), 'HH:mm')}</p>
                           <span className={CALENDAR_EVENT_BADGE}>Evento</span>
@@ -1310,7 +1421,7 @@ export default function CalendarioPage() {
                     {dayEventActs.map((ea) => {
                       const isTecEvt = isEventActivityFromTecnico(ea);
                       return (
-                      <Link key={`wevt-${ea.id}`} href={`/eventos/${ea.event_id}`} className={`block p-2 rounded-lg text-sm border-l-4 transition-colors ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}>
+                      <Link key={`wevt-${ea.id}`} href={`/eventos/${ea.event_id}`} {...dragProps({ kind: 'eventActivity', id: ea.id, title: ea.nombre, start: ea.fecha_inicio, end: ea.fecha_fin })} className={`block p-2 rounded-lg text-sm border-l-4 transition-colors ${isTecEvt ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-500 hover:bg-amber-200 dark:hover:bg-amber-900/60' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 border-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/60'}`}>
                         <div className="flex items-center justify-between mb-0.5">
                           <p className="font-semibold flex items-center gap-1">{isTecEvt ? '👷' : '🎯'} {format(new Date(ea.fecha_inicio), 'HH:mm')}</p>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isTecEvt ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200' : 'bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200'}`}>Evento</span>
@@ -1323,7 +1434,7 @@ export default function CalendarioPage() {
                     {getFilteredStrategicForDay(day).map((activity) => {
                       const style = getActivityStyle(activity, true);
                       return (
-                        <div key={`act-strategic-${activity.id}`} className={`block p-2 rounded-lg text-sm cursor-pointer transition-colors ${style.bgLarge}`} onClick={() => openActivityDetail(activity)}>
+                        <div key={`act-strategic-${activity.id}`} {...dragProps({ kind: 'activity', id: activity.id, title: activity.titulo, start: activity.fecha_inicio, end: activity.fecha_fin })} className={`block p-2 rounded-lg text-sm cursor-pointer transition-colors ${style.bgLarge}`} onClick={() => openActivityDetail(activity)}>
                           <div className="flex items-center justify-between mb-0.5">
                             <p className="font-semibold flex items-center gap-1">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
@@ -1335,7 +1446,7 @@ export default function CalendarioPage() {
                     {getFilteredDailyForDay(day).map((activity) => {
                       const style = getActivityStyle(activity, false);
                       return (
-                        <div key={`act-daily-${activity.id}`} className={`block p-2 rounded-lg text-sm cursor-pointer transition-colors ${style.bgLarge}`} onClick={() => openActivityDetail(activity)}>
+                        <div key={`act-daily-${activity.id}`} {...dragProps({ kind: 'activity', id: activity.id, title: activity.titulo, start: activity.fecha_inicio, end: activity.fecha_fin })} className={`block p-2 rounded-lg text-sm cursor-pointer transition-colors ${style.bgLarge}`} onClick={() => openActivityDetail(activity)}>
                           <div className="flex items-center justify-between mb-0.5">
                             <p className="font-semibold">{style.icon} {format(new Date(activity.fecha_inicio), 'HH:mm')}</p>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${style.badgeClass}`}>{style.badge}</span>
@@ -1347,7 +1458,7 @@ export default function CalendarioPage() {
                     {dayVisits.map((visit) => {
                       const isTecV = isVisitFromTecnico(visit);
                       return (
-                      <Link key={visit.id} href={`/calendario/${visit.id}`} className={`block p-2 rounded-lg text-sm border-l-4 ${isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-500' : 'bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-gray-400'}`}>
+                      <Link key={visit.id} href={`/calendario/${visit.id}`} {...dragProps({ kind: 'visit', id: visit.id, title: visit.customer?.nombre || 'Visita', start: visit.scheduled_at })} className={`block p-2 rounded-lg text-sm border-l-4 ${isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-500' : 'bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 border-gray-400'}`}>
                         <p className="font-semibold">{isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}</p>
                         <p className="truncate">{visit.customer?.nombre}</p>
                       </Link>
@@ -2902,6 +3013,67 @@ export default function CalendarioPage() {
               </Button>
               <Button onClick={handleSaveEdit}>
                 Guardar Cambios
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={!!rescheduleItem}
+        onClose={() => setRescheduleItem(null)}
+        title="Reprogramar"
+        size="sm"
+      >
+        {rescheduleItem && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 p-3">
+              <CalendarCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-300 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-indigo-500 dark:text-indigo-300 font-medium">
+                  {rescheduleItem.kind === 'visit' ? 'Visita'
+                    : rescheduleItem.kind === 'event' ? 'Evento'
+                    : rescheduleItem.kind === 'eventActivity' ? 'Actividad de evento'
+                    : 'Actividad'}
+                </p>
+                <p className="font-semibold text-gray-900 dark:text-white">{rescheduleItem.title}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Nuevo día</label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-dark-500 bg-white dark:bg-dark-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Nueva hora</label>
+                <input
+                  type="time"
+                  value={rescheduleTime}
+                  onChange={(e) => setRescheduleTime(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-dark-500 bg-white dark:bg-dark-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            {rescheduleDate && blockedDaysSet.has(rescheduleDate) && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 p-2.5 text-amber-800 dark:text-amber-200 text-sm">
+                <CalendarOff className="h-4 w-4 flex-shrink-0" />
+                <span>Ese día está marcado como no laborable.</span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setRescheduleItem(null)} disabled={savingReschedule}>
+                Cancelar
+              </Button>
+              <Button variant="primary" onClick={saveReschedule} disabled={savingReschedule || !rescheduleDate || !rescheduleTime}>
+                {savingReschedule ? 'Guardando...' : 'Reprogramar'}
               </Button>
             </div>
           </div>
