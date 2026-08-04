@@ -63,6 +63,8 @@ import {
   endOfMonth,
   startOfWeek,
   endOfWeek,
+  startOfDay,
+  endOfDay,
   eachDayOfInterval,
   isSameMonth,
   isSameDay,
@@ -71,8 +73,12 @@ import {
   subMonths,
   addWeeks,
   subWeeks,
+  addDays,
+  subDays,
   parseISO,
 } from 'date-fns';
+import { useRouter } from 'next/navigation';
+import TimeGridCalendar, { type GridItem } from '@/components/calendar/TimeGridCalendar';
 import { es } from 'date-fns/locale';
 import {
   formatTime,
@@ -98,7 +104,7 @@ const estadoLabels: Record<string, string> = {
   cancelado: 'Cancelado',
 };
 
-type ViewType = 'month' | 'week' | 'list';
+type ViewType = 'month' | 'week' | 'day' | 'list';
 type CalendarFilterType = 'todos' | 'visitas' | 'diarias' | 'estrategicas' | 'eventos';
 
 const CALENDAR_EVENT_CLASS = {
@@ -124,6 +130,7 @@ type RescheduleItem = {
 
 export default function CalendarioPage() {
   const { userProfile } = useAuth();
+  const router = useRouter();
   const [visits, setVisits] = useState<Visit[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [eventActivities, setEventActivities] = useState<EventActivityWithEvent[]>([]);
@@ -205,6 +212,9 @@ export default function CalendarioPage() {
         const end = endOfWeek(currentDate, { locale: es });
         dateFrom = start.toISOString();
         dateTo = end.toISOString();
+      } else if (view === 'day') {
+        dateFrom = startOfDay(currentDate).toISOString();
+        dateTo = endOfDay(currentDate).toISOString();
       } else {
         const start = new Date();
         start.setDate(start.getDate() - 7);
@@ -637,6 +647,8 @@ export default function CalendarioPage() {
       setCurrentDate(subMonths(currentDate, 1));
     } else if (view === 'week') {
       setCurrentDate(subWeeks(currentDate, 1));
+    } else if (view === 'day') {
+      setCurrentDate(subDays(currentDate, 1));
     }
   };
 
@@ -645,6 +657,8 @@ export default function CalendarioPage() {
       setCurrentDate(addMonths(currentDate, 1));
     } else if (view === 'week') {
       setCurrentDate(addWeeks(currentDate, 1));
+    } else if (view === 'day') {
+      setCurrentDate(addDays(currentDate, 1));
     }
   };
 
@@ -839,6 +853,157 @@ export default function CalendarioPage() {
   const weekEnd = endOfWeek(currentDate, { locale: es });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+  // =====================================================
+  // REJILLA HORARIA (vistas Día / Semana): mover + estirar
+  // =====================================================
+  const gridDays = view === 'day' ? [currentDate] : weekDays;
+  // Vista Semana antigua (lista por columnas) desactivada: reemplazada por la rejilla horaria.
+  const showLegacyWeek = false as boolean;
+  const isSupervisorRole =
+    userProfile?.rol === 'admin' ||
+    userProfile?.rol === 'supervisor' ||
+    userProfile?.rol === 'supervisor_nivel1' ||
+    userProfile?.rol === 'supervisor_vendedor';
+
+  const isOwnVisit = (v: Visit) => {
+    const ids = [userProfile?.id, (userProfile as any)?.user_id].filter(Boolean);
+    return ids.includes(v.user_id);
+  };
+  const canMoveVisit = (v: Visit) =>
+    (v.status === 'programada' || v.status === 'reprogramada') && (isSupervisorRole || isOwnVisit(v));
+  const canMoveActivity = (a: Activity) =>
+    a.estado !== 'realizado' && a.estado !== 'cancelado' &&
+    (isSupervisorRole || a.created_by_user_id === userProfile?.id);
+
+  const buildGridItems = (): GridItem[] => {
+    const out: GridItem[] = [];
+    const seen = new Set<string>();
+    const oneHour = 60 * 60000;
+    for (const day of gridDays) {
+      for (const v of getFilteredVisitsForDay(day)) {
+        if (seen.has(`v-${v.id}`)) continue;
+        seen.add(`v-${v.id}`);
+        const start = new Date(v.scheduled_at);
+        const tec = isVisitFromTecnico(v);
+        out.push({
+          kind: 'visit', id: v.id,
+          title: v.customer?.nombre || 'Visita',
+          subtitle: v.location_text || v.customer?.direccion || '',
+          icon: tec ? '👷' : '🏠',
+          start: start.toISOString(),
+          end: new Date(start.getTime() + oneHour).toISOString(),
+          color: tec ? 'amber' : 'gray',
+          movable: canMoveVisit(v), resizable: false, ownerId: v.user_id,
+        });
+      }
+      const pushActivity = (a: Activity, strategic: boolean) => {
+        if (seen.has(`a-${a.id}`)) return;
+        seen.add(`a-${a.id}`);
+        const start = new Date(a.fecha_inicio);
+        let end = a.fecha_fin ? new Date(a.fecha_fin) : new Date(start.getTime() + oneHour);
+        if (end.getTime() <= start.getTime()) end = new Date(start.getTime() + oneHour);
+        const tec = isActivityFromTecnico(a);
+        const canMove = canMoveActivity(a);
+        out.push({
+          kind: 'activity', id: a.id,
+          title: a.titulo,
+          subtitle: a.ubicacion || '',
+          icon: tec ? '👷' : strategic ? '⭐' : '📋',
+          start: start.toISOString(), end: end.toISOString(),
+          color: tec ? 'amber' : strategic ? 'purple' : 'blue',
+          movable: canMove, resizable: canMove, ownerId: a.created_by_user_id,
+        });
+      };
+      for (const a of getFilteredStrategicForDay(day)) pushActivity(a, true);
+      for (const a of getFilteredDailyForDay(day)) pushActivity(a, false);
+    }
+    return out;
+  };
+  const gridItems = (view === 'day' || view === 'week') ? buildGridItems() : [];
+
+  // Conflicto de horario con otras citas del mismo responsable/colaborador.
+  const hasScheduleConflict = (item: GridItem, ns: Date, ne: Date) => {
+    if (!item.ownerId) return false;
+    const oneHour = 60 * 60000;
+    const s = ns.getTime();
+    const e = ne.getTime();
+    const overlaps = (a: number, b: number) => s < b && e > a;
+    for (const v of visits) {
+      if (item.kind === 'visit' && v.id === item.id) continue;
+      if (v.user_id !== item.ownerId) continue;
+      if (v.status === 'cancelada' || v.status === 'no_atendio') continue;
+      const vs = new Date(v.scheduled_at).getTime();
+      if (overlaps(vs, vs + oneHour)) return true;
+    }
+    for (const a of activities) {
+      if (item.kind === 'activity' && a.id === item.id) continue;
+      if (a.created_by_user_id !== item.ownerId) continue;
+      if (a.estado === 'cancelado') continue;
+      const as = new Date(a.fecha_inicio).getTime();
+      const ae = a.fecha_fin ? new Date(a.fecha_fin).getTime() : as + oneHour;
+      if (overlaps(as, ae > as ? ae : as + oneHour)) return true;
+    }
+    return false;
+  };
+
+  const undoGridChange = async (item: GridItem, prevStart: string, prevEnd: string) => {
+    try {
+      if (item.kind === 'visit') await updateVisit(item.id, { scheduled_at: prevStart });
+      else await updateActivity(item.id, { fecha_inicio: prevStart, fecha_fin: prevEnd });
+      await loadData();
+      toast.success('Cambio revertido');
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo deshacer');
+    }
+  };
+
+  const commitGridChange = async (item: GridItem, newStart: Date, newEnd: Date) => {
+    if (hasScheduleConflict(item, newStart, newEnd)) {
+      toast.error('Conflicto de horario con otra cita del mismo responsable');
+      return { ok: false, error: 'conflict' };
+    }
+    const prevStart = item.start;
+    const prevEnd = item.end;
+    try {
+      if (item.kind === 'visit') {
+        await updateVisit(item.id, { scheduled_at: newStart.toISOString() });
+      } else {
+        await updateActivity(item.id, { fecha_inicio: newStart.toISOString(), fecha_fin: newEnd.toISOString() });
+      }
+      await loadData();
+      const label = format(newStart, "d MMM HH:mm", { locale: es });
+      const durMin = Math.round((newEnd.getTime() - newStart.getTime()) / 60000);
+      toast((t) => (
+        <div className="flex items-center gap-3">
+          <span className="text-sm">
+            {item.resizable && item.kind === 'activity' && new Date(item.start).getTime() === newStart.getTime()
+              ? `Duración: ${durMin} min (termina ${format(newEnd, 'HH:mm')})`
+              : `Movido a ${label}`}
+          </span>
+          <button
+            onClick={() => { toast.dismiss(t.id); undoGridChange(item, prevStart, prevEnd); }}
+            className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm underline whitespace-nowrap"
+          >
+            Deshacer
+          </button>
+        </div>
+      ), { duration: 8000 });
+      return { ok: true };
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo guardar el cambio');
+      return { ok: false, error: e?.message };
+    }
+  };
+
+  const handleGridItemClick = (item: GridItem) => {
+    if (item.kind === 'visit') {
+      router.push(`/calendario/${item.id}`);
+    } else {
+      const a = activities.find((x) => x.id === item.id);
+      if (a) openActivityDetail(a);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -992,6 +1157,8 @@ export default function CalendarioPage() {
                 ? format(currentDate, 'MMMM yyyy', { locale: es })
                 : view === 'week'
                 ? `${format(weekStart, 'd MMM', { locale: es })} - ${format(weekEnd, 'd MMM', { locale: es })}`
+                : view === 'day'
+                ? format(currentDate, "EEEE d 'de' MMMM", { locale: es })
                 : 'Próximas'}
             </h2>
             <Button variant="ghost" size="sm" onClick={navigateNext}>
@@ -1017,6 +1184,14 @@ export default function CalendarioPage() {
             >
               <CalendarIcon className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Semana</span>
+            </Button>
+            <Button
+              variant={view === 'day' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => { setView('day'); setSelectedDayMobile(null); }}
+            >
+              <Clock className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Día</span>
             </Button>
             <Button
               variant={view === 'list' ? 'primary' : 'ghost'}
@@ -1383,9 +1558,23 @@ export default function CalendarioPage() {
         </Card>
       )}
 
-      {view === 'week' && (
+      {(view === 'week' || view === 'day') && (
+        <Card padding="sm">
+          <div className="mb-2 px-1 text-[11px] text-gray-400 dark:text-gray-500">
+            Arrastra una cita para moverla · arrastra el borde inferior de una actividad para cambiar su duración
+          </div>
+          <TimeGridCalendar
+            days={gridDays}
+            items={gridItems}
+            isDayBlocked={isDayBlocked}
+            onItemClick={handleGridItemClick}
+            onCommit={commitGridChange}
+          />
+        </Card>
+      )}
+      {showLegacyWeek && (
         <Card padding="none">
-          {/* Desktop: grid 7 columnas */}
+          {/* Desktop: grid 7 columnas (legacy, reemplazado por la rejilla horaria) */}
           <div className="hidden md:grid grid-cols-7 divide-x divide-gray-200 dark:divide-dark-500">
             {weekDays.map((day, index) => {
               const dayVisits = getFilteredVisitsForDay(day);
