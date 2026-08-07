@@ -1,10 +1,10 @@
-# fly.toml app configuration file generated for crm-xsu-uq on 2026-01-09T19:37:43Z
+# fly.toml app configuration file generated for crm-xsu-uq on 2026-01-09T19:41:18Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'crm-xsu-uq'
-primary_region = 'gru'
+primary_region = 'iad'
 
 [build]
   dockerfile = "Dockerfile"
