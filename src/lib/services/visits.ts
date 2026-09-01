@@ -12,15 +12,41 @@ async function attachCreators(visits: Visit[]): Promise<Visit[]> {
   const userIds = Array.from(new Set(visits.map(v => v.user_id).filter(Boolean)));
   if (userIds.length === 0) return visits;
 
+  // visit.user_id puede ser el id de perfil o el user_id (auth), así que resolvemos por ambos.
+  const inList = `(${userIds.join(',')})`;
   const { data: creators } = await supabase
     .from('users_profile')
-    .select('id, nombre_completo, email')
-    .in('id', userIds);
+    .select('id, user_id, nombre_completo, email, rol')
+    .or(`id.in.${inList},user_id.in.${inList}`);
 
   return visits.map(visit => ({
     ...visit,
-    creator: (creators || []).find(c => c.id === visit.user_id) as Visit['creator'],
+    creator: (creators || []).find(
+      c => c.id === visit.user_id || (c as any).user_id === visit.user_id
+    ) as Visit['creator'],
   }));
+}
+
+/**
+ * Devuelve TODAS las visitas de un cliente, sin filtrar por vendedor.
+ * Se usa en la ficha del cliente para que los vendedores que comparten un
+ * cliente puedan ver la actividad (visitas, resultados) hecha por los demás.
+ * El acceso al cliente ya está validado antes de llamar a esta función.
+ */
+export async function getCustomerVisits(customerId: string) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('visits')
+    .select(`
+      *,
+      customer:customers(id, nombre, telefono, direccion, zona, ciudad, latitud, longitud, user_id)
+    `)
+    .eq('customer_id', customerId)
+    .is('deleted_at', null)
+    .order('scheduled_at', { ascending: false });
+
+  if (error) throw error;
+  return attachCreators(data as Visit[]);
 }
 
 export async function getVisits(filters?: VisitFilters) {

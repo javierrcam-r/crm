@@ -9,7 +9,9 @@ import { es } from 'date-fns/locale';
 // =====================================================
 
 export type GridItemKind = 'visit' | 'activity';
-export type GridColor = 'indigo' | 'purple' | 'blue' | 'gray' | 'amber' | 'rose' | 'teal';
+export type GridColor =
+  | 'indigo' | 'purple' | 'blue' | 'gray' | 'amber' | 'rose' | 'teal'
+  | 'emerald' | 'sky' | 'orange' | 'pink' | 'cyan' | 'fuchsia' | 'lime';
 
 export interface GridItem {
   kind: GridItemKind;
@@ -23,6 +25,9 @@ export interface GridItem {
   movable: boolean;
   resizable: boolean;
   ownerId?: string | null;
+  badge?: string;   // etiqueta corta de estado (p. ej. "✓", "Cancelada")
+  dim?: boolean;    // atenuar (completadas)
+  strike?: boolean; // tachar título (canceladas / no asistió)
 }
 
 interface TimeGridCalendarProps {
@@ -49,6 +54,24 @@ const COLOR_CLASSES: Record<GridColor, string> = {
   amber: 'bg-amber-100 dark:bg-amber-900/50 border-amber-500 text-amber-800 dark:text-amber-100',
   rose: 'bg-rose-100 dark:bg-rose-900/50 border-rose-500 text-rose-800 dark:text-rose-100',
   teal: 'bg-teal-100 dark:bg-teal-900/50 border-teal-500 text-teal-800 dark:text-teal-100',
+  emerald: 'bg-emerald-100 dark:bg-emerald-900/50 border-emerald-500 text-emerald-800 dark:text-emerald-100',
+  sky: 'bg-sky-100 dark:bg-sky-900/50 border-sky-500 text-sky-800 dark:text-sky-100',
+  orange: 'bg-orange-100 dark:bg-orange-900/50 border-orange-500 text-orange-800 dark:text-orange-100',
+  pink: 'bg-pink-100 dark:bg-pink-900/50 border-pink-500 text-pink-800 dark:text-pink-100',
+  cyan: 'bg-cyan-100 dark:bg-cyan-900/50 border-cyan-500 text-cyan-800 dark:text-cyan-100',
+  fuchsia: 'bg-fuchsia-100 dark:bg-fuchsia-900/50 border-fuchsia-500 text-fuchsia-800 dark:text-fuchsia-100',
+  lime: 'bg-lime-100 dark:bg-lime-900/50 border-lime-600 text-lime-800 dark:text-lime-100',
+};
+
+// Paleta para asignar color por responsable/vendedor.
+export const OWNER_PALETTE: GridColor[] = ['indigo', 'emerald', 'sky', 'orange', 'pink', 'cyan', 'fuchsia', 'lime', 'teal', 'rose', 'purple', 'blue'];
+
+// Color sólido del punto para leyendas.
+export const GRID_DOT_CLASS: Record<GridColor, string> = {
+  indigo: 'bg-indigo-500', purple: 'bg-purple-500', blue: 'bg-blue-500', gray: 'bg-gray-400',
+  amber: 'bg-amber-500', rose: 'bg-rose-500', teal: 'bg-teal-500', emerald: 'bg-emerald-500',
+  sky: 'bg-sky-500', orange: 'bg-orange-500', pink: 'bg-pink-500', cyan: 'bg-cyan-500',
+  fuchsia: 'bg-fuchsia-500', lime: 'bg-lime-600',
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -328,20 +351,23 @@ export default function TimeGridCalendar({
                         key={item.id}
                         type="button"
                         onPointerDown={(e) => startGesture(e, 'move', item, dayIndex)}
-                        className={`group absolute rounded-lg border-l-4 px-1.5 py-1 text-left overflow-hidden shadow-sm transition-shadow hover:shadow-md hover:z-10 ${COLOR_CLASSES[item.color]} ${item.movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                        className={`group absolute rounded-lg border-l-4 px-1.5 py-1 text-left overflow-hidden shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md hover:z-10 ${COLOR_CLASSES[item.color]} ${item.dim ? 'opacity-60' : ''} ${item.movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
                         style={{ top: minToTop(startMin) + 1, height: h - 2, left: `calc(${col * widthPct}% + 2px)`, width: `calc(${widthPct}% - 4px)`, touchAction: 'none' }}
-                        title={`${item.title} · ${fmtMin(startMin)}${item.resizable ? `–${fmtMin(startMin + durMin)}` : ''}`}
+                        title={`${item.title} · ${fmtMin(startMin)}${item.resizable ? `–${fmtMin(startMin + durMin)}` : ''}${item.badge ? ` · ${item.badge}` : ''}`}
                       >
+                        {item.badge && !compact && (
+                          <span className="absolute top-0.5 right-0.5 text-[8px] font-bold px-1 rounded-full bg-black/10 dark:bg-white/15">{item.badge}</span>
+                        )}
                         {compact ? (
-                          <div className="text-[10px] font-medium leading-tight truncate">
-                            <span className="font-semibold">{fmtMin(startMin)}</span> {item.icon} {item.title}
+                          <div className={`text-[10px] font-medium leading-tight truncate ${item.strike ? 'line-through' : ''}`}>
+                            <span className="font-semibold no-underline">{fmtMin(startMin)}</span> {item.icon} {item.title}
                           </div>
                         ) : (
                           <>
                             <div className="text-[10px] font-semibold leading-tight truncate opacity-90">
                               {item.icon ? `${item.icon} ` : ''}{fmtMin(startMin)}{item.resizable ? `–${fmtMin(startMin + durMin)}` : ''}
                             </div>
-                            <div className="text-[11px] font-semibold leading-tight truncate">{item.title}</div>
+                            <div className={`text-[11px] font-semibold leading-tight truncate ${item.strike ? 'line-through' : ''}`}>{item.title}</div>
                             {item.subtitle && durMin >= 45 && (
                               <div className="text-[9px] opacity-70 leading-tight truncate">{item.subtitle}</div>
                             )}

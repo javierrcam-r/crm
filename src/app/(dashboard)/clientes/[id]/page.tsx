@@ -22,13 +22,15 @@ import {
   IdCard,
   Cake,
   Hash,
+  User,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { getCustomer, deleteCustomer, type Customer } from '@/lib/services/customers';
-import { getVisits, type Visit } from '@/lib/services/visits';
+import { getCustomerVisits, type Visit } from '@/lib/services/visits';
+import { getCurrentUserProfile } from '@/lib/auth/getCurrentUserId';
 import {
   formatDate,
   formatDateTime,
@@ -62,6 +64,14 @@ export default function ClienteDetailPage() {
   const [deleting, setDeleting] = useState(false);
 
   const customerId = params.id as string;
+  const currentProfile = getCurrentUserProfile();
+  // visit.user_id puede ser el id de perfil o el user_id (auth); consideramos ambos como "propios".
+  const myIds = [currentProfile?.id, currentProfile?.user_id].filter(Boolean) as string[];
+  const isOwnVisit = (v: Visit) => myIds.includes(v.user_id);
+
+  // ¿Hay visitas de más de un vendedor? (cliente compartido)
+  const vendorIds = Array.from(new Set(visits.map((v) => v.user_id).filter(Boolean)));
+  const isSharedCustomer = vendorIds.length > 1;
 
   useEffect(() => {
     loadData();
@@ -71,7 +81,7 @@ export default function ClienteDetailPage() {
     try {
       const [customerData, visitsData] = await Promise.all([
         getCustomer(customerId),
-        getVisits({ customer_id: customerId }),
+        getCustomerVisits(customerId),
       ]);
       setCustomer(customerData);
       setVisits(visitsData);
@@ -399,6 +409,11 @@ export default function ClienteDetailPage() {
                 <Badge variant="blue" className="ml-2">
                   {visits.length}
                 </Badge>
+                {isSharedCustomer && (
+                  <Badge variant="purple" className="ml-2">
+                    {vendorIds.length} vendedores
+                  </Badge>
+                )}
               </h2>
               <Link href={`/calendario/nueva?customer=${customerId}`}>
                 <Button variant="ghost" size="sm" icon={<Plus className="h-4 w-4" />}>
@@ -428,6 +443,15 @@ export default function ClienteDetailPage() {
                           <p className="font-medium text-gray-900 dark:text-white">
                             {formatDateTime(visit.scheduled_at)}
                           </p>
+                          {visit.creator?.nombre_completo && (
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                              <User className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{visit.creator.nombre_completo}</span>
+                              {!isOwnVisit(visit) && (
+                                <Badge variant="gray" className="ml-1">Otro vendedor</Badge>
+                              )}
+                            </p>
+                          )}
                           {visit.objetivo && (
                             <p className="text-sm text-gray-500 dark:text-gray-300 mt-1 break-words">
                               {visit.objetivo}

@@ -78,7 +78,7 @@ import {
   parseISO,
 } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import TimeGridCalendar, { type GridItem } from '@/components/calendar/TimeGridCalendar';
+import TimeGridCalendar, { type GridItem, type GridColor, OWNER_PALETTE, GRID_DOT_CLASS } from '@/components/calendar/TimeGridCalendar';
 import { es } from 'date-fns/locale';
 import {
   formatTime,
@@ -703,6 +703,10 @@ export default function CalendarioPage() {
   const getUserById = (id: string | null | undefined) =>
     id ? users.find(u => u.id === id) : undefined;
 
+  // Resuelve un usuario por su id de perfil o su user_id (auth), para colorear/leyenda por vendedor.
+  const getUserByAnyId = (id: string | null | undefined) =>
+    id ? users.find(u => u.id === id || (u as any).user_id === id) : undefined;
+
   const isActivityFromTecnico = (activity: Activity) => {
     if (!showTecnicoActivities) return false;
     const creator = getUserById(activity.created_by_user_id);
@@ -875,6 +879,34 @@ export default function CalendarioPage() {
     a.estado !== 'realizado' && a.estado !== 'cancelado' &&
     (isSupervisorRole || a.created_by_user_id === userProfile?.id);
 
+  // Color por vendedor cuando hay varios responsables en la vista (útil para supervisores);
+  // si solo hay uno, se colorea por estado de la visita para poder distinguirlas.
+  const visitOwnerIds = Array.from(
+    new Set(visits.map(v => v.user_id).filter(Boolean) as string[])
+  ).sort();
+  const colorVisitsByOwner = visitOwnerIds.length > 1;
+  const ownerColorMap = new Map<string, GridColor>();
+  visitOwnerIds.forEach((id, i) => ownerColorMap.set(id, OWNER_PALETTE[i % OWNER_PALETTE.length]));
+  const STATUS_COLOR: Record<string, GridColor> = {
+    programada: 'sky',
+    reprogramada: 'amber',
+    completada: 'emerald',
+    cancelada: 'rose',
+    no_atendio: 'orange',
+  };
+  const visitVisual = (v: Visit): { color: GridColor; badge?: string; dim?: boolean; strike?: boolean } => {
+    const base: GridColor = colorVisitsByOwner
+      ? (ownerColorMap.get(v.user_id) || 'gray')
+      : (STATUS_COLOR[v.status] || 'gray');
+    switch (v.status) {
+      case 'completada': return { color: base, badge: '✓', dim: true };
+      case 'cancelada': return { color: base, badge: '✕', dim: true, strike: true };
+      case 'no_atendio': return { color: base, badge: '∅', dim: true, strike: true };
+      case 'reprogramada': return { color: base, badge: '↻' };
+      default: return { color: base };
+    }
+  };
+
   const buildGridItems = (): GridItem[] => {
     const out: GridItem[] = [];
     const seen = new Set<string>();
@@ -887,6 +919,7 @@ export default function CalendarioPage() {
         const durMin = v.duracion_minutos && v.duracion_minutos >= 15 ? v.duracion_minutos : 60;
         const tec = isVisitFromTecnico(v);
         const canMove = canMoveVisit(v);
+        const vis = visitVisual(v);
         out.push({
           kind: 'visit', id: v.id,
           title: v.customer?.nombre || 'Visita',
@@ -894,7 +927,8 @@ export default function CalendarioPage() {
           icon: tec ? '👷' : '🏠',
           start: start.toISOString(),
           end: new Date(start.getTime() + durMin * 60000).toISOString(),
-          color: tec ? 'amber' : 'gray',
+          color: vis.color,
+          badge: vis.badge, dim: vis.dim, strike: vis.strike,
           movable: canMove, resizable: canMove, ownerId: v.user_id,
         });
       }
@@ -922,6 +956,36 @@ export default function CalendarioPage() {
     return out;
   };
   const gridItems = (view === 'day' || view === 'week') ? buildGridItems() : [];
+
+  // Leyenda de colores para la rejilla (día/semana).
+  const gridLegend: { label: string; color: GridColor }[] = (() => {
+    if (view !== 'day' && view !== 'week') return [];
+    const legend: { label: string; color: GridColor }[] = [];
+    const ownersInView = Array.from(new Set(gridItems.filter(i => i.kind === 'visit').map(i => i.ownerId).filter(Boolean) as string[]));
+    if (colorVisitsByOwner) {
+      ownersInView
+        .sort((a, b) => (visitOwnerIds.indexOf(a) - visitOwnerIds.indexOf(b)))
+        .forEach(id => {
+          const u = getUserByAnyId(id);
+          legend.push({ label: u?.nombre_completo || 'Sin responsable', color: ownerColorMap.get(id) || 'gray' });
+        });
+    } else {
+      const statuses = [
+        { s: 'programada', label: 'Programada' },
+        { s: 'reprogramada', label: 'Reprogramada' },
+        { s: 'completada', label: 'Completada' },
+        { s: 'cancelada', label: 'Cancelada' },
+        { s: 'no_atendio', label: 'No asistió' },
+      ];
+      const present = new Set(visits.map(v => v.status));
+      statuses.filter(o => present.has(o.s as Visit['status'])).forEach(o => legend.push({ label: o.label, color: STATUS_COLOR[o.s] }));
+    }
+    // Tipos de actividad presentes en la vista.
+    if (gridItems.some(i => i.kind === 'activity' && i.color === 'purple')) legend.push({ label: 'Obj. estratégico', color: 'purple' });
+    if (gridItems.some(i => i.kind === 'activity' && i.color === 'blue')) legend.push({ label: 'Actividad diaria', color: 'blue' });
+    if (gridItems.some(i => i.kind === 'activity' && i.color === 'amber')) legend.push({ label: 'Técnico', color: 'amber' });
+    return legend;
+  })();
 
   // Conflicto de horario con otras citas del mismo responsable/colaborador.
   const hasScheduleConflict = (item: GridItem, ns: Date, ne: Date) => {
@@ -1566,6 +1630,19 @@ export default function CalendarioPage() {
 
       {(view === 'week' || view === 'day') && (
         <Card padding="sm">
+          {gridLegend.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+              <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                {colorVisitsByOwner ? 'Responsable:' : 'Estado:'}
+              </span>
+              {gridLegend.map((l, i) => (
+                <span key={`${l.label}-${i}`} className="inline-flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-gray-300">
+                  <span className={`h-2.5 w-2.5 rounded-full ${GRID_DOT_CLASS[l.color]}`} />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="mb-2 px-1 text-[11px] text-gray-400 dark:text-gray-500">
             Arrastra una cita para moverla · arrastra el borde inferior de una actividad para cambiar su duración
           </div>
