@@ -155,6 +155,14 @@ export default function VisitaDetailPage() {
 
   const visitId = params.id as string;
 
+  // Ruta de retorno: si venimos de la ficha de un cliente (u otra vista), volvemos ahí.
+  const [backHref, setBackHref] = useState('/calendario');
+  useEffect(() => {
+    const from = new URLSearchParams(window.location.search).get('from');
+    if (from && from.startsWith('/')) setBackHref(from);
+  }, []);
+  const fromParam = backHref !== '/calendario' ? `?from=${encodeURIComponent(backHref)}` : '';
+
   useEffect(() => {
     loadVisit();
   }, [visitId]);
@@ -235,7 +243,7 @@ export default function VisitaDetailPage() {
       if (nextVisitDate) {
         toast.success('Nueva visita programada automáticamente');
       }
-      router.push('/calendario');
+      router.push(backHref);
     } catch (error) {
       console.error('Error completando visita:', error);
       toast.error('Error al completar la visita');
@@ -254,7 +262,7 @@ export default function VisitaDetailPage() {
       });
 
       toast.success('Visita cancelada');
-      router.push('/calendario');
+      router.push(backHref);
     } catch (error) {
       console.error('Error cancelando visita:', error);
       toast.error('Error al cancelar la visita');
@@ -295,7 +303,7 @@ export default function VisitaDetailPage() {
       const newVisit = await createVisitFromReschedule(visit, new Date(newScheduledAt).toISOString());
 
       toast.success('Visita reprogramada');
-      router.push(`/calendario/${newVisit.id}`);
+      router.push(`/calendario/${newVisit.id}${fromParam}`);
     } catch (error) {
       console.error('Error reprogramando:', error);
       toast.error('Error al reprogramar');
@@ -328,7 +336,7 @@ export default function VisitaDetailPage() {
     try {
       await deleteVisit(visitId);
       toast.success('Visita eliminada');
-      router.push('/calendario');
+      router.push(backHref);
     } catch (error) {
       console.error('Error eliminando:', error);
       toast.error('Error al eliminar');
@@ -412,9 +420,9 @@ export default function VisitaDetailPage() {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl text-gray-900 dark:text-white">Visita no encontrada</h2>
-        <Link href="/calendario">
+        <Link href={backHref}>
           <Button variant="secondary" className="mt-4">
-            Volver al Calendario
+            {backHref.startsWith('/clientes') ? 'Volver al Cliente' : 'Volver al Calendario'}
           </Button>
         </Link>
       </div>
@@ -428,7 +436,7 @@ export default function VisitaDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <Link href="/calendario">
+          <Link href={backHref}>
             <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
               <span className="hidden sm:inline">Volver</span>
             </Button>

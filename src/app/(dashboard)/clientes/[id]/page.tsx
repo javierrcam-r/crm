@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -23,6 +23,14 @@ import {
   Cake,
   Hash,
   User,
+  Activity as ActivityIcon,
+  CheckCircle,
+  TrendingUp,
+  RefreshCw,
+  Sparkles,
+  Loader2,
+  Lightbulb,
+  BarChart3,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -31,6 +39,7 @@ import Modal from '@/components/ui/Modal';
 import { getCustomer, deleteCustomer, type Customer } from '@/lib/services/customers';
 import { getCustomerVisits, type Visit } from '@/lib/services/visits';
 import { getCurrentUserProfile } from '@/lib/auth/getCurrentUserId';
+import VisitsTimeline from '@/components/clientes/VisitsTimeline';
 import {
   formatDate,
   formatDateTime,
@@ -62,6 +71,8 @@ export default function ClienteDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [aiProfile, setAiProfile] = useState<{ resumen: string; insights: string[]; recomendaciones: string[] } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const customerId = params.id as string;
   const currentProfile = getCurrentUserProfile();
@@ -72,6 +83,93 @@ export default function ClienteDetailPage() {
   // ¿Hay visitas de más de un vendedor? (cliente compartido)
   const vendorIds = Array.from(new Set(visits.map((v) => v.user_id).filter(Boolean)));
   const isSharedCustomer = vendorIds.length > 1;
+
+  // KPIs derivados de las visitas
+  const kpis = useMemo(() => {
+    const DAY = 86400000;
+    const now = Date.now();
+    const total = visits.length;
+    const countBy = (s: string) => visits.filter((v) => v.status === s).length;
+    const completadas = countBy('completada');
+    const canceladas = countBy('cancelada');
+    const noAtendio = countBy('no_atendio');
+    const programadas = countBy('programada');
+    const fallidas = canceladas + noAtendio;
+    const denom = completadas + fallidas;
+    const tasaCumplimiento = denom > 0 ? Math.round((completadas / denom) * 100) : null;
+
+    const completedTs = visits
+      .filter((v) => v.status === 'completada' && v.scheduled_at)
+      .map((v) => new Date(v.scheduled_at).getTime())
+      .filter((t) => !isNaN(t))
+      .sort((a, b) => a - b);
+    const lastCompleted = completedTs.length ? completedTs[completedTs.length - 1] : null;
+    const diasDesdeUltima = lastCompleted ? Math.floor((now - lastCompleted) / DAY) : null;
+
+    const futureProg = visits
+      .filter((v) => v.status === 'programada' && v.scheduled_at && new Date(v.scheduled_at).getTime() >= now)
+      .map((v) => new Date(v.scheduled_at).getTime())
+      .sort((a, b) => a - b);
+    const proximaVisita = futureProg.length ? futureProg[0] : null;
+
+    let promedioDias: number | null = null;
+    if (completedTs.length >= 2) {
+      let sum = 0;
+      for (let i = 1; i < completedTs.length; i++) sum += completedTs[i] - completedTs[i - 1];
+      promedioDias = Math.round(sum / (completedTs.length - 1) / DAY);
+    }
+
+    return {
+      total, completadas, canceladas, noAtendio, programadas, fallidas,
+      tasaCumplimiento, diasDesdeUltima, proximaVisita, lastCompleted, promedioDias,
+    };
+  }, [visits]);
+
+  const generateProfile = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/customer-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer: customer && {
+            nombre: customer.nombre,
+            tipo: customer.tipo,
+            etapa_embudo: customer.etapa_embudo,
+            forma_pago: customer.forma_pago,
+            calidad_pago: customer.calidad_pago,
+            categoria_compra: customer.categoria_compra,
+            notas: customer.notas,
+          },
+          visits: visits.map((v) => ({
+            fecha: v.scheduled_at ? formatDate(v.scheduled_at) : '',
+            estado: visitStatusLabels[v.status],
+            objetivo: v.objetivo,
+            resultado: v.resultado,
+            observaciones: v.observaciones,
+          })),
+          kpis: {
+            total: kpis.total,
+            completadas: kpis.completadas,
+            tasaCumplimiento: kpis.tasaCumplimiento,
+            fallidas: kpis.fallidas,
+            diasDesdeUltima: kpis.diasDesdeUltima,
+            promedioDias: kpis.promedioDias,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error');
+      setAiProfile(data);
+    } catch (e: any) {
+      const msg = typeof e?.message === 'string' && e.message.includes('OPENAI')
+        ? 'Falta configurar la IA (OPENAI_API_KEY)'
+        : 'No se pudo generar el perfil';
+      toast.error(msg);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -401,6 +499,117 @@ export default function ClienteDetailPage() {
 
         {/* Timeline */}
         <div className="lg:col-span-2 space-y-6">
+          {/* KPIs */}
+          <Card>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+              Indicadores
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <KpiCard icon={<ActivityIcon className="h-4 w-4" />} color="indigo" label="Total visitas" value={String(kpis.total)} />
+              <KpiCard icon={<CheckCircle className="h-4 w-4" />} color="emerald" label="Completadas" value={String(kpis.completadas)} />
+              <KpiCard
+                icon={<TrendingUp className="h-4 w-4" />}
+                color="blue"
+                label="Cumplimiento"
+                value={kpis.tasaCumplimiento !== null ? `${kpis.tasaCumplimiento}%` : '—'}
+              />
+              <KpiCard
+                icon={<Clock className="h-4 w-4" />}
+                color="amber"
+                label="Última visita"
+                value={kpis.diasDesdeUltima !== null ? (kpis.diasDesdeUltima === 0 ? 'Hoy' : `Hace ${kpis.diasDesdeUltima} d`) : '—'}
+              />
+              <KpiCard
+                icon={<Calendar className="h-4 w-4" />}
+                color="purple"
+                label="Próxima visita"
+                value={kpis.proximaVisita ? formatDate(new Date(kpis.proximaVisita).toISOString()) : '—'}
+              />
+              <KpiCard
+                icon={<RefreshCw className="h-4 w-4" />}
+                color="rose"
+                label="Frecuencia media"
+                value={kpis.promedioDias !== null ? `${kpis.promedioDias} d` : '—'}
+              />
+            </div>
+          </Card>
+
+          {/* Perfil IA */}
+          <Card>
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+                Perfil del Cliente (IA)
+              </h2>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={generateProfile}
+                loading={aiLoading}
+                disabled={visits.length === 0}
+                icon={aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              >
+                {aiProfile ? 'Regenerar' : 'Generar'}
+              </Button>
+            </div>
+
+            {aiProfile ? (
+              <div className="space-y-4">
+                {aiProfile.resumen && (
+                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    {aiProfile.resumen}
+                  </p>
+                )}
+                {aiProfile.insights.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                      <Lightbulb className="h-3.5 w-3.5 text-amber-500" /> Hallazgos
+                    </p>
+                    <ul className="space-y-1.5">
+                      {aiProfile.insights.map((t, i) => (
+                        <li key={i} className="text-sm text-gray-700 dark:text-gray-200 flex gap-2">
+                          <span className="text-indigo-400 mt-0.5">•</span>
+                          <span>{t}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiProfile.recomendaciones.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-500" /> Recomendaciones
+                    </p>
+                    <ul className="space-y-1.5">
+                      {aiProfile.recomendaciones.map((t, i) => (
+                        <li key={i} className="text-sm text-gray-700 dark:text-gray-200 flex gap-2">
+                          <CheckCircle className="h-3.5 w-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <span>{t}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                {visits.length === 0
+                  ? 'Aún no hay visitas para analizar.'
+                  : 'Genera un perfil comercial del cliente a partir de su historial de visitas.'}
+              </p>
+            )}
+          </Card>
+
+          {/* Serie de tiempo de visitas */}
+          <Card>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+              Visitas en el tiempo
+            </h2>
+            <VisitsTimeline visits={visits} />
+          </Card>
+
           {/* Visitas */}
           <Card>
             <div className="flex items-center justify-between mb-4">
@@ -431,7 +640,7 @@ export default function ClienteDetailPage() {
                 {visits.map((visit) => (
                   <Link
                     key={visit.id}
-                    href={`/calendario/${visit.id}`}
+                    href={`/calendario/${visit.id}?from=${encodeURIComponent(`/clientes/${customerId}`)}`}
                     className="block p-3 rounded-lg bg-gray-50 dark:bg-dark-800 hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -505,6 +714,27 @@ export default function ClienteDetailPage() {
           </div>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+const KPI_COLORS: Record<string, string> = {
+  indigo: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30',
+  emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30',
+  blue: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30',
+  amber: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
+  purple: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30',
+  rose: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30',
+};
+
+function KpiCard({ icon, color, label, value }: { icon: React.ReactNode; color: string; label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-gray-100 dark:border-dark-500 bg-gray-50 dark:bg-dark-800 p-3">
+      <div className={`inline-flex items-center justify-center h-8 w-8 rounded-lg mb-2 ${KPI_COLORS[color] || KPI_COLORS.indigo}`}>
+        {icon}
+      </div>
+      <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate" title={value}>{value}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
     </div>
   );
 }
