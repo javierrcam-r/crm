@@ -226,7 +226,7 @@ export default function CalendarioPage() {
 
       const currentId = userProfile?.id;
       const currentRol = userProfile?.rol;
-      const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor';
+      const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor' || currentRol === 'marketing';
 
       // Supervisores/admin ven todas las actividades de eventos; otros ven las suyas + las de eventos asignados
       // Si Ver Técnico está activo, cargar todas para poder mostrar las del técnico

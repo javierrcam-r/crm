@@ -51,13 +51,14 @@ export default function EventosPage() {
   const [editorEventIds, setEditorEventIds] = useState<Set<string>>(new Set());
 
   const isSupervisor = isEventSupervisorRole(userProfile?.rol);
-  const isVendor = isEventVendorRole(userProfile?.rol) || userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant';
+  const canViewAllEvents = isSupervisor || userProfile?.rol === 'marketing';
+  const isVendor = isEventVendorRole(userProfile?.rol) || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant';
   const isRuleta = userProfile?.rol === 'ruleta';
-  const canView = isSupervisor || isVendor || isRuleta || editorEventIds.size > 0;
+  const canView = canViewAllEvents || isVendor || isRuleta || editorEventIds.size > 0;
 
   useEffect(() => {
     if (!userProfile) return;
-    if (isSupervisor || isVendor || isRuleta) {
+    if (canViewAllEvents || isVendor || isRuleta) {
       loadEvents();
       return;
     }
@@ -74,7 +75,7 @@ export default function EventosPage() {
     if (!userProfile) return;
     setLoading(true);
     try {
-      if (isSupervisor) {
+      if (canViewAllEvents) {
         const [data, expenses, participants] = await Promise.all([
           getEvents(),
           getAllEventExpenses().catch(() => []),
@@ -160,7 +161,7 @@ export default function EventosPage() {
             <span className="hidden sm:inline">Gestión de Eventos</span>
             <span className="sm:hidden">Eventos</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-300 mt-1">{isSupervisor ? 'Planifica, ejecuta y monitorea eventos con control financiero' : 'Eventos en los que participas'}</p>
+          <p className="text-gray-500 dark:text-gray-300 mt-1">{isSupervisor ? 'Planifica, ejecuta y monitorea eventos con control financiero' : canViewAllEvents ? 'Vista general de todos los eventos' : 'Eventos en los que participas'}</p>
         </div>
         {isSupervisor && (
           <Link href="/eventos/nuevo">
