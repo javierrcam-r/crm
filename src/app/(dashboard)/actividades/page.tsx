@@ -434,15 +434,12 @@ export default function ActividadesPage() {
     setSelectedActivity(activity);
     setShowDetailModal(true);
     setNewComment('');
-    
-    // Cargar comentarios actualizados si no están incluidos
-    if (!activity.comments) {
-      try {
-        const comments = await getActivityComments(activity.id);
-        setSelectedActivity(prev => prev ? { ...prev, comments } : null);
-      } catch (error) {
-        console.error('Error loading comments:', error);
-      }
+
+    try {
+      const comments = await getActivityComments(activity.id);
+      setSelectedActivity(prev => prev ? { ...prev, comments } : null);
+    } catch (error) {
+      console.error('Error loading comments:', error);
     }
   }
   

@@ -61,46 +61,55 @@ export async function getActivities(filters?: ActivityFilters): Promise<Activity
   }
   
   // Obtener participantes, comentarios y creadores para todas las actividades
+  // Se dividen en lotes de 100 para evitar exceder el límite de URL de PostgREST
   const activityIds = activities.map(a => a.id);
   const creatorIds = [...new Set(activities.map(a => a.created_by_user_id))];
-  
-  const { data: participants, error: partError } = await supabase
-    .from('activity_participants')
-    .select(`
-      *,
-      user_profile:users_profile(id, nombre_completo, email, rol)
-    `)
-    .in('activity_id', activityIds);
-  
-  if (partError) {
-    console.error('Error fetching participants:', partError);
-    // No lanzar error, solo continuar sin participantes
+
+  const BATCH_SIZE = 100;
+
+  async function fetchInBatches<T>(
+    table: string,
+    selectQuery: string,
+    filterCol: string,
+    ids: string[],
+    orderCol?: string,
+  ): Promise<T[]> {
+    const results: T[] = [];
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batch = ids.slice(i, i + BATCH_SIZE);
+      let q = supabase.from(table).select(selectQuery).in(filterCol, batch);
+      if (orderCol) q = q.order(orderCol, { ascending: true });
+      const { data, error } = await q;
+      if (error) {
+        console.error(`Error fetching ${table} batch ${i / BATCH_SIZE}:`, error);
+      } else if (data) {
+        results.push(...(data as T[]));
+      }
+    }
+    return results;
   }
-  
-  const { data: comments, error: commentsError } = await supabase
-    .from('activity_comments')
-    .select(`
-      *,
-      user_profile:users_profile(id, nombre_completo)
-    `)
-    .in('activity_id', activityIds)
-    .order('created_at', { ascending: true });
-  
-  if (commentsError) {
-    console.error('Error fetching comments:', commentsError);
-    // No lanzar error, solo continuar sin comentarios
-  }
-  
-  // Obtener información de los creadores
-  const { data: creators, error: creatorsError } = await supabase
-    .from('users_profile')
-    .select('id, nombre_completo, email')
-    .in('id', creatorIds);
-  
-  if (creatorsError) {
-    console.error('Error fetching creators:', creatorsError);
-    // No lanzar error, solo continuar sin creadores
-  }
+
+  const [participants, comments, creators] = await Promise.all([
+    fetchInBatches<any>(
+      'activity_participants',
+      '*, user_profile:users_profile(id, nombre_completo, email, rol)',
+      'activity_id',
+      activityIds,
+    ),
+    fetchInBatches<any>(
+      'activity_comments',
+      '*, user_profile:users_profile(id, nombre_completo)',
+      'activity_id',
+      activityIds,
+      'created_at',
+    ),
+    fetchInBatches<any>(
+      'users_profile',
+      'id, nombre_completo, email',
+      'id',
+      creatorIds,
+    ),
+  ]);
   
   // Combinar actividades con sus participantes, comentarios y creadores
   const activitiesWithRelations = activities.map(activity => ({
