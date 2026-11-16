@@ -145,7 +145,7 @@ export default function CalendarioPage() {
   const [users, setUsers] = useState<Pick<UserProfile, 'id' | 'nombre_completo' | 'email' | 'rol'>[]>([]);
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
-  const [showTecnicoActivities, setShowTecnicoActivities] = useState(false);
+  const [selectedTecnicoId, setSelectedTecnicoId] = useState<string>('');
   const [tecnicoUserIds, setTecnicoUserIds] = useState<string[]>([]);
   const [tecnicoAuthIds, setTecnicoAuthIds] = useState<string[]>([]);
   const [tecnicoEventIds, setTecnicoEventIds] = useState<string[]>([]);
@@ -195,7 +195,7 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     loadData();
-  }, [currentDate, view, showTecnicoActivities, filterByUser]);
+  }, [currentDate, view, selectedTecnicoId, filterByUser]);
 
   const loadData = async () => {
     try {
@@ -229,11 +229,12 @@ export default function CalendarioPage() {
       const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor' || currentRol === 'supervisor_tecnico' || currentRol === 'marketing';
 
       // Supervisores/admin ven todas las actividades de eventos; otros ven las suyas + las de eventos asignados
-      // Si Ver Técnico está activo, cargar todas para poder mostrar las del técnico
-      const eventActUserId = (isSup || showTecnicoActivities) ? undefined : currentId;
+      // Si hay técnico seleccionado, cargar todas para poder mostrar las del técnico
+      const showingTecnico = !!selectedTecnicoId;
+      const eventActUserId = (isSup || showingTecnico) ? undefined : currentId;
 
       let assignedEventIds: string[] | undefined;
-      if (!isSup && !showTecnicoActivities && currentId) {
+      if (!isSup && !showingTecnico && currentId) {
         const [vendorEvents, editorEvents] = await Promise.all([
           getVendorEvents(currentId).catch(() => []),
           getEditorEvents(currentId).catch(() => []),
@@ -284,47 +285,42 @@ export default function CalendarioPage() {
       setVisits(filteredVisits);
       setPendingVisits(filteredPending);
       
-      // Obtener IDs de técnicos si el filtro está activo.
-      // "Tecnico puro" => todas sus actividades, visitas y eventos cuentan.
-      // "Vendedor + Técnico" => solo sus actividades CATEGORIZADAS como `tipo='tecnico'`
-      // cuentan; sus visitas/eventos siguen siendo trabajo de venta y NO se incluyen.
+      // Obtener datos del técnico seleccionado si hay uno activo.
       let tecnicoIds: string[] = [];
       let tecnicoAuths: string[] = [];
-      if (showTecnicoActivities) {
-        const tecUsers = allUsers.filter(u => u.rol === 'tecnico' || u.rol === 'vendedor_tecnico' || u.rol === 'supervisor_tecnico');
-        tecnicoIds = tecUsers.map(u => u.id);
-        tecnicoAuths = tecUsers.map(u => (u as any).user_id).filter(Boolean);
-        setTecnicoUserIds(tecnicoIds);
-        setTecnicoAuthIds(tecnicoAuths);
+      if (showingTecnico) {
+        const selectedTec = allUsers.find(u => u.id === selectedTecnicoId);
+        if (selectedTec) {
+          tecnicoIds = [selectedTec.id];
+          const authId = (selectedTec as any).user_id;
+          tecnicoAuths = authId ? [authId] : [];
+          setTecnicoUserIds(tecnicoIds);
+          setTecnicoAuthIds(tecnicoAuths);
 
-        // Sólo técnicos puros aportan visitas/eventos al filtro técnico
-        const pureTecUsers = tecUsers.filter(u => u.rol === 'tecnico');
-        const pureTecnicoIds = pureTecUsers.map(u => u.id);
-        const pureTecnicoAuths = pureTecUsers.map(u => (u as any).user_id).filter(Boolean);
+          // Obtener eventos asignados al técnico seleccionado
+          const tecEventResults = await getVendorEvents(selectedTec.id).catch(() => []);
+          const allTecEventIds = new Set<string>();
+          for (const evt of tecEventResults) allTecEventIds.add(evt.id);
+          setTecnicoEventIds(Array.from(allTecEventIds));
 
-        // Obtener eventos asignados a técnicos puros
-        const tecEventPromises = pureTecnicoIds.map(tid => getVendorEvents(tid).catch(() => []));
-        const tecEventResults = await Promise.all(tecEventPromises);
-        const allTecEventIds = new Set<string>();
-        for (const evts of tecEventResults) {
-          for (const evt of evts) allTecEventIds.add(evt.id);
-        }
-        setTecnicoEventIds(Array.from(allTecEventIds));
-        // Incluir visitas del técnico puro en las visitas mostradas
-        const tecnicoVisits = visitsData.filter(v => pureTecnicoAuths.includes(v.user_id));
-        for (const tv of tecnicoVisits) {
-          if (!filteredVisits.some(fv => fv.id === tv.id)) {
-            filteredVisits.push(tv);
+          // Incluir visitas del técnico seleccionado
+          if (tecnicoAuths.length > 0) {
+            const tecnicoVisits = visitsData.filter(v => tecnicoAuths.includes(v.user_id));
+            for (const tv of tecnicoVisits) {
+              if (!filteredVisits.some(fv => fv.id === tv.id)) {
+                filteredVisits.push(tv);
+              }
+            }
+            const tecnicoPending = pendingData.filter(v => tecnicoAuths.includes(v.user_id));
+            for (const tp of tecnicoPending) {
+              if (!filteredPending.some(fp => fp.id === tp.id)) {
+                filteredPending.push(tp);
+              }
+            }
           }
+          setVisits(filteredVisits);
+          setPendingVisits(filteredPending);
         }
-        const tecnicoPending = pendingData.filter(v => pureTecnicoAuths.includes(v.user_id));
-        for (const tp of tecnicoPending) {
-          if (!filteredPending.some(fp => fp.id === tp.id)) {
-            filteredPending.push(tp);
-          }
-        }
-        setVisits(filteredVisits);
-        setPendingVisits(filteredPending);
       } else {
         setTecnicoUserIds([]);
         setTecnicoAuthIds([]);
@@ -341,15 +337,11 @@ export default function CalendarioPage() {
         const isParticipant = Array.isArray(activity.participants) && 
           activity.participants.some(p => p.user_profile_id === currentId);
         
-        if (showTecnicoActivities) {
-          const creatorRol = userRolById.get(activity.created_by_user_id || '') || '';
-          const createdByPureTecnico = creatorRol === 'tecnico';
-          const createdByVendedorTecnicoMarked = (creatorRol === 'vendedor_tecnico' || creatorRol === 'supervisor_tecnico') && activity.tipo === 'tecnico';
-          const isTipoTecnico = activity.tipo === 'tecnico';
-          const involvesPureTecnico = Array.isArray(activity.participants) &&
-            activity.participants.some(p => userRolById.get(p.user_profile_id) === 'tecnico');
-          // Cuando "Ver Técnico" está activo, mostrar SOLO actividades técnicas
-          return createdByPureTecnico || createdByVendedorTecnicoMarked || isTipoTecnico || involvesPureTecnico;
+        // Si hay técnico seleccionado, incluir actividades del técnico + las normales del usuario
+        if (showingTecnico) {
+          const isTecActivity = activity.created_by_user_id === selectedTecnicoId ||
+            (Array.isArray(activity.participants) && activity.participants.some(p => p.user_profile_id === selectedTecnicoId));
+          if (isTecActivity) return true;
         }
         
         if (currentRol === 'admin') return true;
@@ -367,13 +359,8 @@ export default function CalendarioPage() {
       let finalActivities = myActivities;
       let finalEventActivities = eventActivitiesData;
 
-      // Si "Ver Técnico" está activo, filtrar event activities a solo las de técnicos
-      if (showTecnicoActivities) {
-        finalEventActivities = eventActivitiesData.filter(ea => {
-          const responsableRol = userRolById.get(ea.responsable_id || '') || '';
-          return responsableRol === 'tecnico' || tecnicoEventIds.includes(ea.event_id);
-        });
-      }
+      // Si hay técnico seleccionado, agregar sus event activities (no reemplazar las existentes)
+      // Las event activities del técnico se sumarán y se pintarán en amarillo
 
       if (filterByUser && isSup) {
         finalActivities = myActivities.filter(a => 
@@ -712,57 +699,30 @@ export default function CalendarioPage() {
     id ? users.find(u => u.id === id || (u as any).user_id === id) : undefined;
 
   const isActivityFromTecnico = (activity: Activity) => {
-    if (!showTecnicoActivities) return false;
-    const creator = getUserById(activity.created_by_user_id);
-    const creatorRol = creator?.rol || '';
-    // Técnico puro: cuenta cualquier actividad suya
-    if (creatorRol === 'tecnico') return true;
-    // Vendedor + Técnico: sólo cuentan las actividades categorizadas como técnicas
-    if ((creatorRol === 'vendedor_tecnico' || creatorRol === 'supervisor_tecnico') && activity.tipo === 'tecnico') return true;
-    // Cualquier actividad cuyo tipo sea "tecnico" (la categoría manda)
-    if (activity.tipo === 'tecnico') return true;
-    // Si entre los participantes hay un técnico puro, también se muestra
-    const involvesPureTecnico = Array.isArray(activity.participants) &&
-      activity.participants.some(p => {
-        const u = getUserById(p.user_profile_id);
-        return u?.rol === 'tecnico';
-      });
-    return involvesPureTecnico;
+    if (!selectedTecnicoId) return false;
+    // La actividad pertenece al técnico seleccionado si él la creó o participa
+    if (activity.created_by_user_id === selectedTecnicoId) return true;
+    if (Array.isArray(activity.participants) && activity.participants.some(p => p.user_profile_id === selectedTecnicoId)) return true;
+    return false;
   };
 
-  // Devuelve el nombre del "técnico" responsable de la actividad para mostrar
-  // junto al badge en el calendario.
-  const getTecnicoNameForActivity = (activity: Activity): string | null => {
-    const creator = getUserById(activity.created_by_user_id);
-    if (creator && (creator.rol === 'tecnico' || creator.rol === 'vendedor_tecnico' || creator.rol === 'supervisor_tecnico')) {
-      return creator.nombre_completo;
-    }
-    // Si el creador no es técnico, buscar entre participantes a un técnico puro
-    if (Array.isArray(activity.participants)) {
-      for (const p of activity.participants) {
-        const u = getUserById(p.user_profile_id);
-        if (u?.rol === 'tecnico' || u?.rol === 'vendedor_tecnico' || u?.rol === 'supervisor_tecnico') {
-          return u.nombre_completo;
-        }
-      }
-    }
-    // Fallback: mostrar al creador (categorizada como técnica por alguien más)
-    return creator?.nombre_completo || null;
+  // Devuelve el nombre del técnico seleccionado
+  const getTecnicoNameForActivity = (_activity: Activity): string | null => {
+    if (!selectedTecnicoId) return null;
+    const tec = getUserById(selectedTecnicoId);
+    return tec?.nombre_completo || null;
   };
 
   const isEventActivityFromTecnico = (ea: EventActivityWithEvent) => {
-    if (!showTecnicoActivities) return false;
-    // Sólo técnicos puros aportan eventos
-    const responsable = getUserById(ea.responsable_id);
-    if (responsable?.rol === 'tecnico') return true;
-    return tecnicoEventIds.includes(ea.event_id);
+    if (!selectedTecnicoId) return false;
+    return ea.responsable_id === selectedTecnicoId;
   };
 
   const isVisitFromTecnico = (visit: Visit) => {
-    if (!showTecnicoActivities) return false;
-    // Sólo técnicos puros (las visitas de vendedor_tecnico siguen siendo de venta)
-    const visitUser = users.find(u => (u as any).user_id === visit.user_id);
-    return visitUser?.rol === 'tecnico';
+    if (!selectedTecnicoId) return false;
+    const selectedTec = users.find(u => u.id === selectedTecnicoId);
+    const authId = (selectedTec as any)?.user_id;
+    return visit.user_id === authId || visit.user_id === selectedTecnicoId;
   };
 
   const getCalendarEventsForDay = (date: Date) => {
@@ -1157,17 +1117,22 @@ export default function CalendarioPage() {
             ))}
           </div>
 
-          <button 
-            onClick={() => setShowTecnicoActivities(!showTecnicoActivities)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
-              showTecnicoActivities 
-                ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' 
-                : 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300'
+          <Select
+            value={selectedTecnicoId}
+            onChange={(e) => setSelectedTecnicoId(e.target.value)}
+            className={`w-full sm:w-52 text-sm ${
+              selectedTecnicoId 
+                ? 'ring-2 ring-amber-400 border-amber-400 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 font-medium' 
+                : ''
             }`}
           >
-            <span className="text-base">{showTecnicoActivities ? '✓' : '👷'}</span>
-            {showTecnicoActivities ? 'Viendo Técnico' : 'Ver Técnico'}
-          </button>
+            <option value="">👷 Ver Técnico</option>
+            {users.filter(u => u.rol === 'tecnico' || u.rol === 'vendedor_tecnico' || u.rol === 'supervisor_tecnico').map((u) => (
+              <option key={u.id} value={u.id}>
+                👷 {u.nombre_completo}
+              </option>
+            ))}
+          </Select>
           
           {/* Filtro por persona - Solo supervisores */}
           {(userProfile?.rol === 'admin' || userProfile?.rol?.includes('supervisor')) && (
