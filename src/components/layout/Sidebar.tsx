@@ -198,7 +198,10 @@ export default function Sidebar() {
         isCollapsed ? 'px-2 py-3' : 'px-4 py-3.5',
       )}>
         <div className={cn('flex items-center', isCollapsed ? 'flex-col gap-2' : 'gap-3')}>
-          <Image src="/logo-disfero.png" alt="Disfero" width={36} height={36} className="w-9 h-9 object-contain flex-shrink-0" />
+          <div className="relative flex-shrink-0">
+            <div className="absolute inset-0 rounded-xl bg-indigo-500/15 blur-lg scale-150" />
+            <Image src="/logo-disfero.png" alt="Disfero" width={36} height={36} className="relative w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(99,102,241,0.2)]" />
+          </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
               <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight truncate leading-tight">
