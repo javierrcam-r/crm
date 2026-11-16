@@ -35,8 +35,9 @@ const CARD_GLASS_CONFIG = {
   blurAmount: 0.3,
   refraction: 0.75,
   chromAberration: 0.06,
-  edgeHighlight: 0.12,
-  specular: 0.25,
+  edgeHighlight: 0.3,
+  specular: 0.4,
+  tintStrength: 0.1,
   fresnel: 1,
   brightness: -0.05,
   shadowOpacity: 0.45,
@@ -442,7 +443,7 @@ export default function LoginPage() {
         className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8"
       >
         {/* ===== BACKGROUND LAYERS (dentro del root para que el vidrio lo refracte) ===== */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden bg-[#080b14]">
           <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-600/25 blur-[150px]" />
           <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-purple-700/20 blur-[130px]" />
           <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full bg-violet-600/15 blur-[120px]" />
