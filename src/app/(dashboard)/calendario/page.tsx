@@ -2394,16 +2394,22 @@ export default function CalendarioPage() {
                   <div className="space-y-2">
                     {getVisitsForDay(selectedDate).map((visit) => {
                       const isTecV = isVisitFromTecnico(visit);
+                      const ownerName = getUserByAnyId(visit.user_id)?.nombre_completo || visit.creator?.nombre_completo;
                       return (
                       <Link
                         key={visit.id}
                         href={`/calendario/${visit.id}`}
-                        className={`flex items-center justify-between p-3 rounded-lg ${isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-l-4 border-amber-500' : 'bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-300'}`}
+                        className={`flex items-center justify-between gap-3 p-3 rounded-lg ${isTecV ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-l-4 border-amber-500' : 'bg-gray-100 dark:bg-dark-600 text-gray-600 dark:text-gray-300'}`}
                       >
-                        <div>
+                        <div className="min-w-0">
                           <p className="font-semibold">{isTecV ? '👷 ' : ''}{formatTime(visit.scheduled_at)}</p>
-                          <p>{visit.customer?.nombre}</p>
+                          <p className="truncate">{visit.customer?.nombre}</p>
                         </div>
+                        {ownerName && (
+                          <span className="flex-shrink-0 max-w-[40%] truncate text-[11px] text-gray-500 dark:text-gray-400" title={ownerName}>
+                            {ownerName}
+                          </span>
+                        )}
                       </Link>
                       );
                     })}
