@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -26,6 +26,23 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const EASE_EXPO: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+const LIQUID_GLASS_CDN = 'https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js';
+
+const CARD_GLASS_CONFIG = {
+  cornerRadius: 16,
+  zRadius: 28,
+  blurAmount: 0.3,
+  refraction: 0.75,
+  chromAberration: 0.06,
+  edgeHighlight: 0.12,
+  specular: 0.25,
+  fresnel: 1,
+  brightness: -0.05,
+  shadowOpacity: 0.45,
+  shadowSpread: 24,
+  shadowOffsetY: 6,
+};
 
 const cardVariants = {
   idle: { scale: 1, filter: 'blur(0px)', opacity: 1 },
@@ -175,6 +192,37 @@ export default function LoginPage() {
   type Phase = 'form' | 'glow' | 'splitting' | 'welcome' | 'done';
   const [phase, setPhase] = useState<Phase>('form');
   const [welcomeName, setWelcomeName] = useState('');
+  const glassRootRef = useRef<HTMLDivElement>(null);
+  const glassCardRef = useRef<HTMLDivElement>(null);
+  const [glassReady, setGlassReady] = useState(false);
+
+  useEffect(() => {
+    const root = glassRootRef.current;
+    const card = glassCardRef.current;
+    if (loading || !root || !card) return;
+
+    let instance: { destroy: () => void } | null = null;
+    let cancelled = false;
+    card.dataset.config = JSON.stringify(CARD_GLASS_CONFIG);
+
+    import(/* webpackIgnore: true */ LIQUID_GLASS_CDN)
+      .then(({ LiquidGlass }) => LiquidGlass.init({ root, glassElements: [card] }))
+      .then((inst) => {
+        if (cancelled) {
+          inst.destroy();
+          return;
+        }
+        instance = inst;
+        setGlassReady(true);
+      })
+      .catch((err) => console.warn('LiquidGlass no disponible, usando fallback CSS:', err));
+
+    return () => {
+      cancelled = true;
+      instance?.destroy();
+      setGlassReady(false);
+    };
+  }, [loading]);
 
   useEffect(() => {
     if (!loading && userProfile && phase === 'form') {
@@ -303,20 +351,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#080b14] overflow-hidden relative">
-      {/* ===== BACKGROUND LAYERS ===== */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Ambient orbs */}
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-600/15 blur-[150px]" />
-        <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-purple-700/10 blur-[130px]" />
-        <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full bg-violet-600/8 blur-[120px]" />
-
-        {/* Subtle noise texture */}
-        <div className="absolute inset-0 opacity-[0.015]" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
-        }} />
-
-        <FlowingWaves />
-      </div>
 
       {/* ===== CINEMATIC TRANSITION ===== */}
       <AnimatePresence>
@@ -402,10 +436,19 @@ export default function LoginPage() {
 
       {/* ===== MAIN CONTENT ===== */}
       <motion.div
+        ref={glassRootRef}
         variants={cardVariants}
         animate={phase === 'glow' ? 'glow' : phase === 'form' ? 'idle' : 'exit'}
         className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8"
       >
+        {/* ===== BACKGROUND LAYERS (dentro del root para que el vidrio lo refracte) ===== */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-600/25 blur-[150px]" />
+          <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-purple-700/20 blur-[130px]" />
+          <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full bg-violet-600/15 blur-[120px]" />
+          <FlowingWaves />
+        </div>
+
         {/* Glow overlay on card phase */}
         <AnimatePresence>
           {phase === 'glow' && (
@@ -422,8 +465,14 @@ export default function LoginPage() {
         </AnimatePresence>
 
         {/* ===== GLASS CARD ===== */}
-        <div className="w-full max-w-[420px]">
-          <div className="relative rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-2xl shadow-[0_8px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)] overflow-hidden">
+        <div ref={glassCardRef} className="relative w-full max-w-[420px] rounded-2xl">
+          <div
+            className={`relative z-10 rounded-2xl overflow-hidden transition-colors duration-500 ${
+              glassReady
+                ? 'border border-transparent'
+                : 'border border-white/[0.07] bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-2xl shadow-[0_8px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)]'
+            }`}
+          >
             {/* Top glow line */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-[1px] bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent" />
 
@@ -559,7 +608,7 @@ export default function LoginPage() {
         </div>
 
         {/* ===== BRANDS SECTION ===== */}
-        <div className="w-full max-w-3xl mt-12 text-center">
+        <div className="relative w-full max-w-3xl mt-12 text-center">
           <div className="flex items-center justify-center gap-3 mb-5">
             <div className="h-px w-12 bg-gradient-to-r from-transparent to-white/10" />
             <p className="text-[11px] text-slate-500 tracking-wide">
@@ -584,7 +633,7 @@ export default function LoginPage() {
         </div>
 
         {/* ===== FEATURES BADGES ===== */}
-        <div className="w-full max-w-3xl mt-10 mb-4">
+        <div className="relative w-full max-w-3xl mt-10 mb-4">
           <div className="flex items-stretch justify-center gap-3 sm:gap-4 flex-wrap">
             {FEATURES.map((f) => (
               <div
