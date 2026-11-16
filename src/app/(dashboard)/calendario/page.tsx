@@ -343,16 +343,13 @@ export default function CalendarioPage() {
         
         if (showTecnicoActivities) {
           const creatorRol = userRolById.get(activity.created_by_user_id || '') || '';
-          // Pure "tecnico" role: todas sus actividades cuentan
           const createdByPureTecnico = creatorRol === 'tecnico';
-          // "vendedor_tecnico": solo cuentan las que él/ella categoriza como técnicas
           const createdByVendedorTecnicoMarked = (creatorRol === 'vendedor_tecnico' || creatorRol === 'supervisor_tecnico') && activity.tipo === 'tecnico';
-          // Cualquier actividad cuyo tipo sea "tecnico" se considera categorizada como técnica
           const isTipoTecnico = activity.tipo === 'tecnico';
-          // Participantes que sean técnicos puros también activan la visibilidad
           const involvesPureTecnico = Array.isArray(activity.participants) &&
             activity.participants.some(p => userRolById.get(p.user_profile_id) === 'tecnico');
-          if (createdByPureTecnico || createdByVendedorTecnicoMarked || isTipoTecnico || involvesPureTecnico) return true;
+          // Cuando "Ver Técnico" está activo, mostrar SOLO actividades técnicas
+          return createdByPureTecnico || createdByVendedorTecnicoMarked || isTipoTecnico || involvesPureTecnico;
         }
         
         if (currentRol === 'admin') return true;
@@ -369,12 +366,21 @@ export default function CalendarioPage() {
       // Si hay filtro por usuario, filtrar actividades y actividades de eventos
       let finalActivities = myActivities;
       let finalEventActivities = eventActivitiesData;
+
+      // Si "Ver Técnico" está activo, filtrar event activities a solo las de técnicos
+      if (showTecnicoActivities) {
+        finalEventActivities = eventActivitiesData.filter(ea => {
+          const responsableRol = userRolById.get(ea.responsable_id || '') || '';
+          return responsableRol === 'tecnico' || tecnicoEventIds.includes(ea.event_id);
+        });
+      }
+
       if (filterByUser && isSup) {
         finalActivities = myActivities.filter(a => 
           a.created_by_user_id === filterByUser ||
           (Array.isArray(a.participants) && a.participants.some(p => p.user_profile_id === filterByUser))
         );
-        finalEventActivities = eventActivitiesData.filter(ea => ea.responsable_id === filterByUser);
+        finalEventActivities = finalEventActivities.filter(ea => ea.responsable_id === filterByUser);
       }
       
       setActivities(finalActivities);
