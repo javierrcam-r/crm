@@ -48,7 +48,7 @@ const getRoleBadge = (rol: UserRole) => {
     supervisor: { label: 'Supervisor', variant: 'green', icon: UserCheck },
     supervisor_nivel1: { label: 'Supervisor N1', variant: 'purple', icon: UserCheck },
     supervisor_vendedor: { label: 'Sup. + Vendedor', variant: 'blue', icon: UserCheck },
-    supervisor_tecnico: { label: 'Sup. + Técnico', variant: 'teal', icon: UserCheck },
+    supervisor_tecnico: { label: 'Sup. + Técnico', variant: 'purple', icon: UserCheck },
     vendedor_tecnico: { label: 'Vendedor + Técnico', variant: 'yellow', icon: Wrench },
     marketing: { label: 'Marketing', variant: 'green', icon: Megaphone },
     tecnico: { label: 'Técnico', variant: 'yellow', icon: Wrench },
