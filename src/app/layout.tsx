@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import './globals.css';
 
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
+const plusJakarta = localFont({
+  src: './fonts/PlusJakartaSans-latin.woff2',
   variable: '--font-jakarta',
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700'],
+  weight: '300 700',
 });
 
 export const metadata: Metadata = {
