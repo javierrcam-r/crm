@@ -1086,7 +1086,7 @@ export default function CalendarioPage() {
     <div className="space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 md:pr-12">
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white min-w-0">Calendario</h1>
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {canCreate && (
