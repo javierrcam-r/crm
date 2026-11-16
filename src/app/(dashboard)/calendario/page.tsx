@@ -26,6 +26,10 @@ import {
   CalendarOff,
   Sparkles,
   CalendarCheck,
+  ChevronUp,
+  ChevronDown,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 import CalendIAModal from '@/components/calendar/CalendIAModal';
 import RecomendCalendModal from '@/components/calendar/RecomendCalendModal';
@@ -156,6 +160,20 @@ export default function CalendarioPage() {
   const [blockedDaysSet, setBlockedDaysSet] = useState<Set<string>>(new Set());
   const [showCalendIA, setShowCalendIA] = useState(false);
   const [showRecomendCalend, setShowRecomendCalend] = useState(false);
+  const [sidePanelCollapsed, setSidePanelCollapsed] = useState(false);
+  const [pendingListOpen, setPendingListOpen] = useState(true);
+  const [showAllPending, setShowAllPending] = useState(false);
+
+  useEffect(() => {
+    setSidePanelCollapsed(localStorage.getItem('calendario_side_panel_collapsed') === '1');
+  }, []);
+
+  const toggleSidePanel = () => {
+    setSidePanelCollapsed(prev => {
+      localStorage.setItem('calendario_side_panel_collapsed', prev ? '0' : '1');
+      return !prev;
+    });
+  };
   // Reprogramación (arrastrar para mover de día/hora)
   const [draggedItem, setDraggedItem] = useState<RescheduleItem | null>(null);
   const [rescheduleItem, setRescheduleItem] = useState<RescheduleItem | null>(null);
@@ -1047,60 +1065,72 @@ export default function CalendarioPage() {
     );
   }
 
+  const rol = userProfile?.rol || '';
+  const isMarketing = rol === 'marketing';
+  const isSupervisorView = rol === 'admin' || rol.includes('supervisor');
+  const canCreate = !isMarketing;
+  const showTecnicoFilter = !isMarketing;
+  const showPendingPanel = !isMarketing && pendingVisits.length > 0;
+  const calendarFilterOptions = ([
+    { value: 'todos', label: 'Todos', icon: '📅' },
+    { value: 'visitas', label: 'Visitas', icon: '🏠' },
+    { value: 'diarias', label: 'Diarias', icon: '📋' },
+    { value: 'estrategicas', label: 'Obj. Estratégicos', icon: '⭐' },
+    { value: 'eventos', label: 'Eventos', icon: '🎯' },
+  ] as { value: CalendarFilterType; label: string; icon: string }[]).filter(f =>
+    !isMarketing || f.value === 'todos' || f.value === 'eventos'
+  );
+  const visiblePending = showAllPending ? pendingVisits : pendingVisits.slice(0, 5);
+
   return (
-    <div className="space-y-4 md:space-y-6 px-2 sm:px-0">
+    <div className="space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Calendario</h1>
-            <p className="text-gray-500 dark:text-gray-300 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">
-              Gestiona tus actividades diarias, visitas y eventos estratégicos
-            </p>
-          </div>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white min-w-0">Calendario</h1>
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={() => setShowRecomendCalend(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs sm:text-sm font-medium hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 flex-shrink-0"
-              title="RecomendCalend"
-            >
-              <CalendarCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">RecomendCalend</span>
-              <span className="sm:hidden">Recom.</span>
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setShowRecomendCalend(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs sm:text-sm font-medium hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 flex-shrink-0"
+                title="RecomendCalend"
+              >
+                <CalendarCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">RecomendCalend</span>
+                <span className="sm:hidden">Recom.</span>
+              </button>
+            )}
             <button
               onClick={() => setShowCalendIA(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs sm:text-sm font-medium hover:from-violet-600 hover:to-indigo-700 transition-all shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 flex-shrink-0"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs sm:text-sm font-medium hover:from-violet-600 hover:to-indigo-700 transition-all shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 flex-shrink-0"
               title="CalendIA"
             >
               <Sparkles className="h-4 w-4" />
               <span className="hidden sm:inline">CalendIA</span>
               <span className="sm:hidden">IA</span>
             </button>
-            <Link href="/calendario/nueva-actividad" className="flex-shrink-0">
-              <Button size={isMobile ? 'sm' : 'md'} icon={<Plus className="h-4 w-4" />}>
-                <span className="hidden sm:inline">Actividad Diaria</span>
-                <span className="sm:hidden">Actividad</span>
-              </Button>
-            </Link>
-            <Link href="/calendario/nueva" className="flex-shrink-0">
-              <Button variant="secondary" size={isMobile ? 'sm' : 'md'} icon={<Plus className="h-4 w-4" />}>
-                <span className="hidden sm:inline">Nueva Visita</span>
-                <span className="sm:hidden">Visita</span>
-              </Button>
-            </Link>
+            {canCreate && (
+              <>
+                <Link href="/calendario/nueva-actividad" className="flex-shrink-0">
+                  <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />} className="sm:py-2">
+                    <span className="hidden sm:inline">Actividad diaria</span>
+                    <span className="sm:hidden">Actividad</span>
+                  </Button>
+                </Link>
+                <Link href="/calendario/nueva" className="flex-shrink-0">
+                  <Button size="sm" icon={<Plus className="h-4 w-4" />} className="sm:py-2">
+                    <span className="hidden sm:inline">Nueva visita</span>
+                    <span className="sm:hidden">Visita</span>
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Filtro por tipo */}
           <div className="flex items-center bg-gray-100 dark:bg-dark-600 rounded-xl p-0.5 gap-0.5">
-            {([
-              { value: 'todos', label: 'Todos', icon: '📅' },
-              { value: 'visitas', label: 'Visitas', icon: '🏠' },
-              { value: 'diarias', label: 'Diarias', icon: '📋' },
-              { value: 'estrategicas', label: 'Obj. Estratégicos', icon: '⭐' },
-              { value: 'eventos', label: 'Eventos', icon: '🎯' },
-            ] as { value: CalendarFilterType; label: string; icon: string }[]).map((f) => (
+            {calendarFilterOptions.map((f) => (
               <button
                 key={f.value}
                 onClick={() => setCalendarFilter(f.value)}
@@ -1117,74 +1147,52 @@ export default function CalendarioPage() {
             ))}
           </div>
 
-          <Select
-            value={selectedTecnicoId}
-            onChange={(e) => setSelectedTecnicoId(e.target.value)}
-            className={`w-full sm:w-52 text-sm ${
-              selectedTecnicoId 
-                ? 'ring-2 ring-amber-400 border-amber-400 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 font-medium' 
-                : ''
-            }`}
-          >
-            <option value="">👷 Ver Técnico</option>
-            {users.filter(u => u.rol === 'tecnico' || u.rol === 'vendedor_tecnico' || u.rol === 'supervisor_tecnico').map((u) => (
-              <option key={u.id} value={u.id}>
-                👷 {u.nombre_completo}
-              </option>
-            ))}
-          </Select>
-          
-          {/* Filtro por persona - Solo supervisores */}
-          {(userProfile?.rol === 'admin' || userProfile?.rol?.includes('supervisor')) && (
-            <Select
-              value={filterByUser}
-              onChange={(e) => setFilterByUser(e.target.value)}
-              className="w-full sm:w-48 text-sm"
-            >
-              <option value="">👥 Todos</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre_completo}
-                </option>
-              ))}
-            </Select>
+          {(showTecnicoFilter || isSupervisorView) && (
+            <div className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-white/10 mx-1" />
+          )}
+
+          {showTecnicoFilter && (
+            <div className="w-full sm:w-52">
+              <Select
+                value={selectedTecnicoId}
+                onChange={(e) => setSelectedTecnicoId(e.target.value)}
+                className={`text-sm py-2 ${
+                  selectedTecnicoId
+                    ? 'ring-2 ring-amber-400 border-amber-400 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 font-medium'
+                    : ''
+                }`}
+              >
+                <option value="">👷 Ver técnico</option>
+                {users.filter(u => u.rol === 'tecnico' || u.rol === 'vendedor_tecnico' || u.rol === 'supervisor_tecnico').map((u) => (
+                  <option key={u.id} value={u.id}>
+                    👷 {u.nombre_completo}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+
+          {isSupervisorView && (
+            <div className="w-full sm:w-48">
+              <Select
+                value={filterByUser}
+                onChange={(e) => setFilterByUser(e.target.value)}
+                className="text-sm py-2"
+              >
+                <option value="">👥 Todos</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nombre_completo}
+                  </option>
+                ))}
+              </Select>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Visitas Pendientes */}
-      {pendingVisits.length > 0 && (
-        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/20">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <h2 className="font-semibold text-gray-900 dark:text-white">
-              Visitas Vencidas
-              <Badge variant="yellow" className="ml-2">{pendingVisits.length}</Badge>
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {pendingVisits.slice(0, 6).map((visit) => (
-              <Link
-                key={visit.id}
-                href={`/calendario/${visit.id}`}
-                className="flex items-center gap-3 p-3 rounded-lg bg-amber-100/50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
-              >
-                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-white truncate">
-                    {visit.customer?.nombre}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {format(new Date(visit.scheduled_at), "dd MMM 'a las' HH:mm", { locale: es })}
-                  </p>
-                </div>
-                <CreatedByInfo creatorName={visit.creator?.nombre_completo} createdAt={visit.created_at} />
-              </Link>
-            ))}
-          </div>
-        </Card>
-      )}
-
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+      <div className="flex-1 min-w-0 w-full space-y-4">
       {/* Calendar Controls */}
       <Card padding="sm">
         <div className="flex items-center justify-between gap-2">
@@ -2631,6 +2639,98 @@ export default function CalendarioPage() {
           )}
         </Card>
       )}
+      </div>
+
+      {/* Panel lateral: Visitas vencidas (retráctil) */}
+      {showPendingPanel && (
+        sidePanelCollapsed ? (
+          <aside className="w-full lg:w-14 lg:sticky lg:top-4 flex-shrink-0">
+            <Card padding="none" className="flex lg:flex-col items-center gap-3 p-2 lg:py-4">
+              <button
+                onClick={toggleSidePanel}
+                className="p-2 rounded-xl text-gray-500 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-white/[0.08] transition-colors"
+                title="Mostrar visitas vencidas"
+                aria-label="Mostrar visitas vencidas"
+              >
+                <PanelRightOpen className="h-5 w-5" />
+              </button>
+              <button
+                onClick={toggleSidePanel}
+                className="flex lg:flex-col items-center gap-2 text-amber-600 dark:text-amber-400"
+                title="Visitas vencidas"
+              >
+                <AlertTriangle className="h-5 w-5" />
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-400/20">{pendingVisits.length}</span>
+                <span className="lg:hidden text-sm font-medium text-gray-700 dark:text-gray-200">Visitas vencidas</span>
+              </button>
+            </Card>
+          </aside>
+        ) : (
+          <aside className="w-full lg:w-80 xl:w-[340px] lg:sticky lg:top-4 flex-shrink-0">
+            <Card padding="none" className="flex flex-col lg:max-h-[calc(100vh-2rem)]">
+              <div className="flex items-center gap-2 px-4 py-3">
+                <AlertTriangle className="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                <h2 className="font-semibold text-gray-900 dark:text-white flex-1 truncate">Visitas vencidas</h2>
+                <Badge variant="yellow">{pendingVisits.length}</Badge>
+                <button
+                  onClick={() => setPendingListOpen(o => !o)}
+                  className="p-1.5 rounded-lg text-gray-500 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-white/[0.08] transition-colors"
+                  title={pendingListOpen ? 'Contraer lista' : 'Expandir lista'}
+                  aria-label={pendingListOpen ? 'Contraer lista' : 'Expandir lista'}
+                >
+                  {pendingListOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={toggleSidePanel}
+                  className="hidden lg:inline-flex p-1.5 rounded-lg text-gray-500 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-white/[0.08] transition-colors"
+                  title="Ocultar panel"
+                  aria-label="Ocultar panel"
+                >
+                  <PanelRightClose className="h-4 w-4" />
+                </button>
+              </div>
+
+              {pendingListOpen && (
+                <>
+                  <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 scrollbar-thin">
+                    {visiblePending.map((visit) => (
+                      <Link
+                        key={visit.id}
+                        href={`/calendario/${visit.id}`}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-gray-200/60 dark:border-white/[0.08] bg-white/40 dark:bg-white/[0.03] hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-300/60 dark:hover:border-amber-500/30 transition-colors group"
+                      >
+                        <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                            {visit.customer?.nombre}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {format(new Date(visit.scheduled_at), "d MMM 'a las' HH:mm", { locale: es })}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-amber-500 flex-shrink-0" />
+                      </Link>
+                    ))}
+                  </div>
+                  {pendingVisits.length > 5 && (
+                    <div className="px-3 pb-3 pt-1">
+                      <Button
+                        className="w-full"
+                        size="sm"
+                        onClick={() => setShowAllPending(s => !s)}
+                      >
+                        {showAllPending ? 'Ver menos' : `Ver las ${pendingVisits.length} visitas`}
+                        {!showAllPending && <ChevronRight className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          </aside>
+        )
+      )}
+      </div>
 
       {/* Modal de detalle de actividad */}
       <Modal
