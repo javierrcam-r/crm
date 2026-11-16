@@ -127,7 +127,7 @@ export default function ResumenVentasPage() {
   const [togglingVisibility, setTogglingVisibility] = useState(false);
 
   const esSupervisor = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' ||
-    userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
+    userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'supervisor_tecnico';
 
   useEffect(() => {
     if (!userProfile) return;

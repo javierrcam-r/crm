@@ -226,7 +226,7 @@ export default function CalendarioPage() {
 
       const currentId = userProfile?.id;
       const currentRol = userProfile?.rol;
-      const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor' || currentRol === 'marketing';
+      const isSup = currentRol === 'admin' || currentRol === 'supervisor' || currentRol === 'supervisor_nivel1' || currentRol === 'supervisor_vendedor' || currentRol === 'supervisor_tecnico' || currentRol === 'marketing';
 
       // Supervisores/admin ven todas las actividades de eventos; otros ven las suyas + las de eventos asignados
       // Si Ver Técnico está activo, cargar todas para poder mostrar las del técnico
@@ -291,7 +291,7 @@ export default function CalendarioPage() {
       let tecnicoIds: string[] = [];
       let tecnicoAuths: string[] = [];
       if (showTecnicoActivities) {
-        const tecUsers = allUsers.filter(u => u.rol === 'tecnico' || u.rol === 'vendedor_tecnico');
+        const tecUsers = allUsers.filter(u => u.rol === 'tecnico' || u.rol === 'vendedor_tecnico' || u.rol === 'supervisor_tecnico');
         tecnicoIds = tecUsers.map(u => u.id);
         tecnicoAuths = tecUsers.map(u => (u as any).user_id).filter(Boolean);
         setTecnicoUserIds(tecnicoIds);
@@ -346,7 +346,7 @@ export default function CalendarioPage() {
           // Pure "tecnico" role: todas sus actividades cuentan
           const createdByPureTecnico = creatorRol === 'tecnico';
           // "vendedor_tecnico": solo cuentan las que él/ella categoriza como técnicas
-          const createdByVendedorTecnicoMarked = creatorRol === 'vendedor_tecnico' && activity.tipo === 'tecnico';
+          const createdByVendedorTecnicoMarked = (creatorRol === 'vendedor_tecnico' || creatorRol === 'supervisor_tecnico') && activity.tipo === 'tecnico';
           // Cualquier actividad cuyo tipo sea "tecnico" se considera categorizada como técnica
           const isTipoTecnico = activity.tipo === 'tecnico';
           // Participantes que sean técnicos puros también activan la visibilidad
@@ -358,7 +358,7 @@ export default function CalendarioPage() {
         if (currentRol === 'admin') return true;
         
         // Supervisores: ven TODO (diarias, estratégicas, de todos)
-        if (currentRol === 'supervisor_nivel1' || currentRol === 'supervisor' || currentRol === 'supervisor_vendedor') {
+        if (currentRol === 'supervisor_nivel1' || currentRol === 'supervisor' || currentRol === 'supervisor_vendedor' || currentRol === 'supervisor_tecnico') {
           return true;
         }
         
@@ -673,7 +673,7 @@ export default function CalendarioPage() {
 
   // Roles que pueden gestionar actividades diarias desde el calendario
   // Todos los usuarios pueden crear y ver sus propias actividades diarias
-  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1';
+  const isSupervisorN1 = userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_tecnico';
   const canManageDailyActivities = true; // Todos pueden gestionar sus actividades diarias
 
   const getActivitiesForDay = (date: Date) => {
@@ -712,7 +712,7 @@ export default function CalendarioPage() {
     // Técnico puro: cuenta cualquier actividad suya
     if (creatorRol === 'tecnico') return true;
     // Vendedor + Técnico: sólo cuentan las actividades categorizadas como técnicas
-    if (creatorRol === 'vendedor_tecnico' && activity.tipo === 'tecnico') return true;
+    if ((creatorRol === 'vendedor_tecnico' || creatorRol === 'supervisor_tecnico') && activity.tipo === 'tecnico') return true;
     // Cualquier actividad cuyo tipo sea "tecnico" (la categoría manda)
     if (activity.tipo === 'tecnico') return true;
     // Si entre los participantes hay un técnico puro, también se muestra
@@ -728,14 +728,14 @@ export default function CalendarioPage() {
   // junto al badge en el calendario.
   const getTecnicoNameForActivity = (activity: Activity): string | null => {
     const creator = getUserById(activity.created_by_user_id);
-    if (creator && (creator.rol === 'tecnico' || creator.rol === 'vendedor_tecnico')) {
+    if (creator && (creator.rol === 'tecnico' || creator.rol === 'vendedor_tecnico' || creator.rol === 'supervisor_tecnico')) {
       return creator.nombre_completo;
     }
     // Si el creador no es técnico, buscar entre participantes a un técnico puro
     if (Array.isArray(activity.participants)) {
       for (const p of activity.participants) {
         const u = getUserById(p.user_profile_id);
-        if (u?.rol === 'tecnico' || u?.rol === 'vendedor_tecnico') {
+        if (u?.rol === 'tecnico' || u?.rol === 'vendedor_tecnico' || u?.rol === 'supervisor_tecnico') {
           return u.nombre_completo;
         }
       }
@@ -865,7 +865,8 @@ export default function CalendarioPage() {
     userProfile?.rol === 'admin' ||
     userProfile?.rol === 'supervisor' ||
     userProfile?.rol === 'supervisor_nivel1' ||
-    userProfile?.rol === 'supervisor_vendedor';
+    userProfile?.rol === 'supervisor_vendedor' ||
+    userProfile?.rol === 'supervisor_tecnico';
 
   const isOwnVisit = (v: Visit) => {
     const ids = [userProfile?.id, (userProfile as any)?.user_id].filter(Boolean);
@@ -2181,7 +2182,7 @@ export default function CalendarioPage() {
                 <span className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1">
                   <CalendarOff className="h-4 w-4" /> Día no laborable
                 </span>
-                {(userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor') && (
+                {(userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'supervisor_tecnico') && (
                   <Link href="/calendario/dias-no-laborables">
                     <Button variant="ghost" size="sm">Gestionar</Button>
                   </Link>

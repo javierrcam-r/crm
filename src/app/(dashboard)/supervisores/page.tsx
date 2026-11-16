@@ -91,7 +91,7 @@ export default function SupervisoresPage() {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor';
+  const canView = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'supervisor_tecnico';
 
   const getDateRange = () => {
     const today = new Date();
@@ -137,7 +137,7 @@ export default function SupervisoresPage() {
       const wEnd = endOfWeek(now, { locale: es });
 
       const filtered = activitiesData.filter(activity => {
-        const canSeeAll = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor';
+        const canSeeAll = userProfile?.rol === 'admin' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_tecnico';
         const isMine = activity.created_by_user_id === userProfile?.id || activity.participants?.some(p => p.user_profile_id === userProfile?.id);
         const isStrategic = activity.tipo === 'reunion' || activity.tipo === 'capacitacion' || activity.tipo === 'seguimiento';
         const hasParticipants = Array.isArray(activity.participants) && activity.participants.length > 0;

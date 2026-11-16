@@ -68,7 +68,7 @@ export default function DashboardPage() {
     if (userProfile) {
       const rol = userProfile.rol;
       // VENDEDOR, SUPERVISOR_VENDEDOR y VENDEDOR_TECNICO tienen acceso al dashboard
-      if (rol === 'admin' || rol === 'supervisor' || rol === 'supervisor_nivel1') {
+      if (rol === 'admin' || rol === 'supervisor' || rol === 'supervisor_nivel1' || rol === 'supervisor_tecnico') {
         router.replace('/supervisores');
       } else if (rol === 'marketing' || rol === 'tecnico') {
         router.replace('/actividades');

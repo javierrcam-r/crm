@@ -7,7 +7,7 @@ export async function getCustomers(filters?: CustomerFilters) {
   const userId = getCurrentUserId();
   const profile = getCurrentUserProfile();
   const isAdmin = isCurrentUserAdmin();
-  const isSupervisor = profile?.rol === 'supervisor' || profile?.rol === 'supervisor_nivel1' || profile?.rol === 'supervisor_vendedor';
+  const isSupervisor = profile?.rol === 'supervisor' || profile?.rol === 'supervisor_nivel1' || profile?.rol === 'supervisor_vendedor' || profile?.rol === 'supervisor_tecnico';
   
   if (!isAdmin && !isSupervisor && userId && profile) {
     // Usuarios normales: ver clientes propios + clientes asignados

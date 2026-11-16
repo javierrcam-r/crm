@@ -45,7 +45,8 @@ export default function VacacionesCalendarioPage() {
     userProfile?.rol === 'admin' ||
     userProfile?.rol === 'supervisor' ||
     userProfile?.rol === 'supervisor_nivel1' ||
-    userProfile?.rol === 'supervisor_vendedor';
+    userProfile?.rol === 'supervisor_vendedor' ||
+    userProfile?.rol === 'supervisor_tecnico';
 
   useEffect(() => {
     if (isSupervisor) loadData();

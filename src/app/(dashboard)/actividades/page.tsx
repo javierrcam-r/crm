@@ -217,7 +217,7 @@ export default function ActividadesPage() {
 
     // Filtro de visibilidad por rol (solo actividades estratégicas o con participantes)
     let matchesVisibility = true;
-    if (rol === 'admin' || rol === 'supervisor_nivel1' || rol === 'supervisor' || rol === 'supervisor_vendedor') {
+    if (rol === 'admin' || rol === 'supervisor_nivel1' || rol === 'supervisor' || rol === 'supervisor_vendedor' || rol === 'supervisor_tecnico') {
       matchesVisibility = true; // Supervisores ven todas las estratégicas
     } else {
       // Vendedores y otros: solo las suyas o donde participan
@@ -1159,6 +1159,7 @@ export default function ActividadesPage() {
                     supervisor: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200',
                     supervisor_nivel1: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200',
                     supervisor_vendedor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200',
+                    supervisor_tecnico: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-200',
                     vendedor_tecnico: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
                     marketing: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200',
                     tecnico: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
@@ -1193,6 +1194,7 @@ export default function ActividadesPage() {
                           <span className={`text-xs px-2 py-0.5 rounded-full ${rolColors[user.rol] || 'bg-gray-100 text-gray-700 dark:bg-dark-600 dark:text-gray-200'}`}>
                             {user.rol === 'supervisor_nivel1' ? 'Sup. N1' :
                             user.rol === 'supervisor_vendedor' ? 'Sup.+Vend.' :
+                            user.rol === 'supervisor_tecnico' ? 'Sup.+Téc.' :
                             user.rol === 'vendedor_tecnico' ? 'Vend.+Téc.' :
                             user.rol === 'marketing' ? 'Marketing' :
                             user.rol === 'tecnico' ? 'Técnico' : user.rol}

@@ -75,10 +75,11 @@ export default function ActividadDetailPage() {
   const [showLinkedVisits, setShowLinkedVisits] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const isSupervisor = userProfile?.rol === 'admin' || 
-    userProfile?.rol === 'supervisor' || 
-    userProfile?.rol === 'supervisor_nivel1' || 
-    userProfile?.rol === 'supervisor_vendedor';
+  const isSupervisor = userProfile?.rol === 'admin' ||
+    userProfile?.rol === 'supervisor' ||
+    userProfile?.rol === 'supervisor_nivel1' ||
+    userProfile?.rol === 'supervisor_vendedor' ||
+    userProfile?.rol === 'supervisor_tecnico';
 
   const isStrategic = activity?.tipo === 'reunion' || 
     activity?.tipo === 'capacitacion' || 

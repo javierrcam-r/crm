@@ -274,7 +274,7 @@ export default function Sidebar() {
           )}
 
           {/* Supervisor */}
-          {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor') && (
+          {(isUserAdmin || userProfile?.rol === 'supervisor' || userProfile?.rol === 'supervisor_nivel1' || userProfile?.rol === 'supervisor_vendedor' || userProfile?.rol === 'supervisor_tecnico') && (
             <>
               {!isCollapsed && (
                 <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
@@ -289,12 +289,12 @@ export default function Sidebar() {
           )}
 
           {/* Marketing/Técnico Calendar */}
-          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico') && isMenuVisible(sidebarConfig, 'calendario', userProfile?.rol || '') && (
+          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'supervisor_tecnico') && isMenuVisible(sidebarConfig, 'calendario', userProfile?.rol || '') && (
             <NavLink href="/calendario" icon={Calendar} name="Calendario" active={isActive('/calendario')} index={0} onClose={closeMobile} collapsed={isCollapsed} />
           )}
 
           {/* Marketing/Técnico/EventAssistant/Ruleta Events */}
-          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'event_assistant' || userProfile?.rol === 'ruleta') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
+          {(userProfile?.rol === 'marketing' || userProfile?.rol === 'tecnico' || userProfile?.rol === 'supervisor_tecnico' || userProfile?.rol === 'event_assistant' || userProfile?.rol === 'ruleta') && isMenuVisible(sidebarConfig, 'eventos', userProfile?.rol || '') && (
             <NavLink href="/eventos" icon={Calendar} name="Eventos" active={isActive('/eventos')} index={1} onClose={closeMobile} collapsed={isCollapsed} />
           )}
 
@@ -303,7 +303,7 @@ export default function Sidebar() {
             <>
               {!isCollapsed && (
                 <p className="text-[10px] font-semibold text-gray-400/80 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
-                  {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico') ? 'Menú Principal' : 'Gestión'}
+                  {(userProfile.rol === 'marketing' || userProfile.rol === 'tecnico' || userProfile.rol === 'supervisor_tecnico') ? 'Menú Principal' : 'Gestión'}
                 </p>
               )}
               {filterByConfig(actividadesEstrategicas).map((item, index) => (

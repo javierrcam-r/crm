@@ -18,6 +18,7 @@ export const EVENT_SUPERVISOR_ROLES: UserRole[] = [
   'supervisor',
   'supervisor_nivel1',
   'supervisor_vendedor',
+  'supervisor_tecnico',
 ];
 
 export function isEventSupervisorRole(rol: string | null | undefined): boolean {

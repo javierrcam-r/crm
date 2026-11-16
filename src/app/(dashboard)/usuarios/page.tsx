@@ -48,6 +48,7 @@ const getRoleBadge = (rol: UserRole) => {
     supervisor: { label: 'Supervisor', variant: 'green', icon: UserCheck },
     supervisor_nivel1: { label: 'Supervisor N1', variant: 'purple', icon: UserCheck },
     supervisor_vendedor: { label: 'Sup. + Vendedor', variant: 'blue', icon: UserCheck },
+    supervisor_tecnico: { label: 'Sup. + Técnico', variant: 'teal', icon: UserCheck },
     vendedor_tecnico: { label: 'Vendedor + Técnico', variant: 'yellow', icon: Wrench },
     marketing: { label: 'Marketing', variant: 'green', icon: Megaphone },
     tecnico: { label: 'Técnico', variant: 'yellow', icon: Wrench },
@@ -363,6 +364,7 @@ export default function UsuariosPage() {
               <option value="supervisor">Supervisor</option>
               <option value="supervisor_nivel1">Supervisor N1</option>
               <option value="supervisor_vendedor">Sup. + Vendedor</option>
+              <option value="supervisor_tecnico">Sup. + Técnico</option>
               <option value="vendedor_tecnico">Vendedor + Técnico</option>
               <option value="marketing">Marketing</option>
               <option value="tecnico">Técnico</option>
@@ -584,6 +586,7 @@ export default function UsuariosPage() {
               <option value="supervisor">Supervisor</option>
               <option value="supervisor_nivel1">Supervisor Nivel 1</option>
               <option value="supervisor_vendedor">Supervisor + Vendedor</option>
+              <option value="supervisor_tecnico">Supervisor + Técnico</option>
               <option value="vendedor_tecnico">Vendedor + Técnico</option>
               <option value="marketing">Marketing</option>
               <option value="tecnico">Técnico</option>
